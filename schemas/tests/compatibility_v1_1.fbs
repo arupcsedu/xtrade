@@ -1,0 +1,9 @@
+namespace aegis.mx.contracts.compat.v1_1;
+
+table CompatibilityProbe {
+  stable_value:ulong;
+  additive_value:ulong;
+}
+
+root_type CompatibilityProbe;
+file_identifier "ACMP";

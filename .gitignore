@@ -1,0 +1,14 @@
+/.cache/
+/.coverage
+/.mypy_cache/
+/.pytest_cache/
+/.ruff_cache/
+/.venv/
+/build/
+/dist/
+/_CPack_Packages/
+__pycache__/
+*.egg-info/
+*.py[cod]
+*.so
+compile_commands.json

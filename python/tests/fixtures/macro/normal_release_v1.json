@@ -1,0 +1,16 @@
+{
+  "fixture_type": "synthetic_replay",
+  "schema_version": "1.0.0",
+  "seed": 20260828,
+  "scenario": "normal_release",
+  "scheduled_wall_clock_utc_ns": 1800000000000000000,
+  "official_delay_ns": 0,
+  "receipt_lag_ns": 1000000,
+  "completeness": "COMPLETE",
+  "revision": 1,
+  "omit_field": null,
+  "provider_conflict": false,
+  "expected_phase": "RELEASE_COMPLETE",
+  "expected_decision": "PUBLISH",
+  "expected_reason_codes": []
+}

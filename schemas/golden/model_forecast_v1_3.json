@@ -1,0 +1,8 @@
+{
+  "file": "model_forecast_v1_3.amae",
+  "flatbuffers_version": "25.12.19",
+  "schema_version": "1.8.0",
+  "sha256": "3e020a5ae52df1191bdfabdec6051ffc6ece3468732fd604bd66c1b614f651cd",
+  "size_bytes": 648,
+  "test_seed": 20260828
+}

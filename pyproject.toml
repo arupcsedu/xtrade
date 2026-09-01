@@ -1,0 +1,160 @@
+[build-system]
+requires = ["hatchling==1.32.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aegis-mx-foundation"
+version = "0.1.0"
+description = "Aegis-MX Python engineering foundation"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = ["flatbuffers==25.12.19"]
+
+[project.scripts]
+timeseries-forecast-api = "aegis_mx_timeseries.cli:api_main"
+timeseries-forecast-worker = "aegis_mx_timeseries.cli:worker_main"
+timeseries-context-builder = "aegis_mx_timeseries.cli:context_builder_main"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+  "python/intelligence/aegis",
+  "python/intelligence/aegis_mx_intelligence",
+  "python/training/aegis_mx_training",
+  "python/model_serving/aegis_mx_timeseries",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/README.md",
+  "/pyproject.toml",
+  "/python/intelligence/aegis_mx_intelligence",
+  "/python/intelligence/aegis",
+  "/python/training/aegis_mx_training",
+  "/python/model_serving/aegis_mx_timeseries",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+extend-exclude = [".venv", "build", "dist", "python/intelligence/aegis"]
+
+[tool.ruff.format]
+docstring-code-format = true
+line-ending = "lf"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+  "COM812",
+  # Copyright ownership and repository licensing are not yet established.
+  "CPY001",
+  "D203",
+  "D213",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"python/intelligence/aegis_mx_intelligence/contracts.py" = [
+  "C901",
+  "EM101",
+  "FBT003",
+  "N813",
+  "PLR0912",
+  "PLR0915",
+  "TRY003",
+  "TRY301",
+]
+"python/intelligence/aegis_mx_intelligence/news_contract.py" = [
+  "ANN401",
+  "N813",
+  "PLR0915",
+  "TC001",
+]
+"python/intelligence/aegis_mx_intelligence/news_pipeline.py" = [
+  "C901",
+  "PLR0911",
+  "PLR0913",
+  "PLR0917",
+]
+"python/intelligence/aegis_mx_intelligence/options_pricing.py" = [
+  "PLR0911",
+  "PLR0913",
+  "PLR0917",
+]
+"python/intelligence/aegis_mx_intelligence/market_specialists.py" = [
+  "PLR0913",
+  "PLR0917",
+]
+"python/intelligence/aegis_mx_intelligence/options_types.py" = ["C901"]
+"python/tests/**/*.py" = ["D103", "INP001", "PLR2004", "S101"]
+"python/tests/test_news_pipeline.py" = [
+  "D102",
+  "D107",
+  "EM101",
+  "FBT003",
+  "PLR0913",
+  "SLF001",
+  "TC002",
+  "TRY003",
+]
+"python/tests/test_earnings_specialist.py" = ["SLF001"]
+"python/tests/test_macro_specialist.py" = ["FBT003", "PLR0913", "SLF001"]
+"python/tests/test_market_specialists.py" = [
+  "FBT003",
+  "PLR0913",
+  "PLR0915",
+  "PT011",
+  "SLF001",
+]
+"python/tests/test_options_analytics.py" = [
+  "D100",
+  "PLR0913",
+  "PLR0917",
+  "PT011",
+  "SLF001",
+]
+"python/tests/test_timeseries_forecasting.py" = [
+  "D102",
+  "D107",
+  "EM101",
+  "SLF001",
+  "TRY003",
+]
+"tools/**/*.py" = ["INP001", "S603", "S607", "T201"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = [
+  "python/intelligence",
+  "python/model_serving",
+  "python/training",
+  "python/tests",
+  "tools",
+]
+exclude = ["build", "dist", "^python/intelligence/aegis/"]
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+testpaths = ["python/tests"]
+addopts = [
+  "--strict-config",
+  "--strict-markers",
+  "--cov=aegis_mx_intelligence",
+  "--cov=aegis_mx_training",
+  "--cov=aegis_mx_timeseries",
+  "--cov-branch",
+  "--cov-report=term-missing",
+  "--cov-report=xml:build/reports/python/coverage.xml",
+  "--cov-fail-under=100",
+  "--junitxml=build/reports/python/junit.xml",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["aegis_mx_intelligence", "aegis_mx_timeseries", "aegis_mx_training"]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+skip_covered = false

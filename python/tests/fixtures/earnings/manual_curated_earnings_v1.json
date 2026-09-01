@@ -1,0 +1,32 @@
+{
+  "fixture_type": "manual-curated-fictional",
+  "schema_version": "1.0.0",
+  "seed": 20260828,
+  "issuer": "Manual Systems Corporation",
+  "fiscal_period": "FY2026-Q3",
+  "release_wall_clock_utc_ns": 1800100000000000000,
+  "as_of_wall_clock_utc_ns": 1800100000500000000,
+  "actuals": [
+    {"kind": "EPS", "basis": "GAAP", "unit": "CURRENCY_NANOS_PER_SHARE", "value": 1500000000, "source_id": "release"},
+    {"kind": "REVENUE", "basis": "GAAP", "unit": "CURRENCY_NANOS", "value": 800000000000000, "source_id": "release"}
+  ],
+  "consensus": [
+    {"kind": "EPS", "basis": "NON_GAAP", "unit": "CURRENCY_NANOS_PER_SHARE", "consensus": 1600000000, "dispersion": 50000000, "minimum": 1500000000, "maximum": 1700000000, "analysts": 5}
+  ],
+  "prior_reported": [
+    {"kind": "EPS", "basis": "GAAP", "unit": "CURRENCY_NANOS_PER_SHARE", "value": 1400000000}
+  ],
+  "guidance": {
+    "current": {"kind": "REVENUE", "basis": "GAAP", "unit": "CURRENCY_NANOS", "lower": 780000000000000, "upper": 820000000000000},
+    "prior": null
+  },
+  "option_implied_move_ppm": null,
+  "historical_reactions": [],
+  "post_release_features": null,
+  "hand_curated_expectations": [
+    "GAAP EPS must not be compared with non-GAAP consensus",
+    "Revenue has no consensus and must remain missing",
+    "Missing prior guidance must be explicit",
+    "No profitability claim is represented"
+  ]
+}

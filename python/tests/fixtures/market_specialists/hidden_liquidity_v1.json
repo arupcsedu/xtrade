@@ -1,0 +1,22 @@
+{
+  "fixture_version": "1.0.0",
+  "seed": 20260828,
+  "as_of_wall_clock_utc_ns": 1800000000000000000,
+  "as_of_exchange_event_time_ns": 1799999999999999000,
+  "candidate_price_ticks": 10000,
+  "candidate_side": "BID",
+  "displayed_quantities": [100, 100],
+  "execution_quantities": [150, 175, 200],
+  "replenishments": [100, 100, 75],
+  "partial_fill_sequences": [
+    {"initial_displayed_quantity": 100, "cumulative_executed_quantity": 450, "replenishment_count": 3, "duration_ns": 5000000},
+    {"initial_displayed_quantity": 100, "cumulative_executed_quantity": 300, "replenishment_count": 2, "duration_ns": 4000000}
+  ],
+  "price_impacts_ppm": [1000, -500, 800],
+  "venue_behavior": {
+    "baseline_replenishment_probability_ppm": 100000,
+    "false_positive_probability_ppm": 100000,
+    "typical_displayed_quantity": 100,
+    "maximum_latent_multiple_ppm": 5000000
+  }
+}

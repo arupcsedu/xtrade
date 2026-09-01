@@ -1,0 +1,163 @@
+name: Exhaustive Validation
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * 1-5"
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: exhaustive-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AEGIS_SKIP_MODULES: "1"
+  AEGIS_TEST_SEED: "20260828"
+  PYTHONHASHSEED: "20260828"
+
+jobs:
+  exhaustive:
+    name: Full checks, dependency scans, package, and SBOM
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: python/requirements-dev.lock
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: control/go.mod
+          cache-dependency-path: control/go.mod
+
+      - name: Install native quality tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ccache clang-format clang-tidy cmake ninja-build shellcheck
+
+      - name: Restore compiler cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .cache/ccache
+          key: exhaustive-ccache-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'cpp/**') }}
+          restore-keys: exhaustive-ccache-${{ runner.os }}-
+
+      - name: Bootstrap
+        env:
+          CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
+        run: make bootstrap
+
+      - name: Run non-sanitizer validation
+        env:
+          CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
+        run: |
+          make fast
+          make dependency-scan
+          make package
+
+      - name: Upload reports, packages, and SBOM
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: exhaustive-artifacts
+          path: |
+            build/reports
+            dist
+          if-no-files-found: error
+          retention-days: 30
+
+  cpp-sanitizers:
+    name: C++ ${{ matrix.sanitizer }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer:
+          - asan
+          - ubsan
+          - tsan
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: python/requirements-dev.lock
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: control/go.mod
+          cache-dependency-path: control/go.mod
+
+      - name: Install native tools
+        run: sudo apt-get update && sudo apt-get install --yes cmake ninja-build
+
+      - name: Bootstrap
+        run: make bootstrap
+
+      - name: Build and test sanitizer preset
+        run: |
+          mkdir -p build/reports/cpp
+          cmake --preset "${{ matrix.sanitizer }}"
+          cmake --build --preset "${{ matrix.sanitizer }}" --parallel
+          ctest --preset "${{ matrix.sanitizer }}" --output-junit "build/reports/cpp/${{ matrix.sanitizer }}-junit.xml"
+
+      - name: Upload sanitizer report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cpp-${{ matrix.sanitizer }}-report
+          path: build/reports/cpp
+          if-no-files-found: error
+          retention-days: 30
+
+  control-race:
+    name: Go race detector
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: control/go.mod
+          cache-dependency-path: control/go.mod
+      - name: Run race detector
+        run: |
+          mkdir -p build/reports/control
+          cd control
+          go test -race ./...
+          go test -race -json ./... > ../build/reports/control/race.json
+      - name: Upload race report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: control-race-report
+          path: build/reports/control
+          if-no-files-found: error
+          retention-days: 30

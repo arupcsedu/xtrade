@@ -1,0 +1,87 @@
+name: Fast Validation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fast-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AEGIS_SKIP_MODULES: "1"
+  AEGIS_TEST_SEED: "20260828"
+  PYTHONHASHSEED: "20260828"
+
+jobs:
+  validate:
+    name: Format, lint, test, and benchmark smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: python/requirements-dev.lock
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: control/go.mod
+          cache-dependency-path: control/go.mod
+
+      - name: Install native quality tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ccache clang-format clang-tidy cmake ninja-build shellcheck
+
+      - name: Restore compiler cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: .cache/ccache
+          key: fast-ccache-${{ runner.os }}-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'cpp/**') }}
+          restore-keys: fast-ccache-${{ runner.os }}-
+
+      - name: Bootstrap
+        env:
+          CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
+        run: make bootstrap
+
+      - name: Run fast validation
+        env:
+          CCACHE_DIR: ${{ github.workspace }}/.cache/ccache
+        run: make fast
+
+      - name: Upload test and benchmark reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fast-reports
+          path: build/reports
+          if-no-files-found: error
+          retention-days: 14
+
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0

@@ -1,0 +1,45 @@
+add_executable(
+  aegis_benchmark_smoke
+  allocation_probe.cpp
+  audit_contract_benchmark.cpp
+  backtester_benchmark.cpp
+  build_info_benchmark.cpp
+  event_bus_benchmark.cpp
+  ensemble_benchmark.cpp
+  execution_gateway_benchmark.cpp
+  execution_router_benchmark.cpp
+  feed_handler_benchmark.cpp
+  feature_engine_benchmark.cpp
+  journal_benchmark.cpp
+  market_state_benchmark.cpp
+  model_framework_benchmark.cpp
+  oms_benchmark.cpp
+  order_book_benchmark.cpp
+  portfolio_risk_benchmark.cpp
+  risk_benchmark.cpp
+  replay_benchmark.cpp
+  synthetic_exchange_benchmark.cpp
+  time_benchmark.cpp
+)
+set_source_files_properties(allocation_probe.cpp PROPERTIES SKIP_LINTING ON)
+target_link_libraries(
+  aegis_benchmark_smoke
+  PRIVATE
+    aegis::common
+    aegis::backtesting
+    aegis::event_bus
+    aegis::ensemble
+    aegis::execution
+    aegis::feed_handler
+    aegis::features
+    aegis::journal
+    aegis::models
+    aegis::order_book
+    aegis::oms
+    aegis::risk
+    aegis::replay
+    aegis::synthetic_exchange
+    aegis::time
+    benchmark::benchmark_main
+)
+aegis_apply_project_options(aegis_benchmark_smoke)

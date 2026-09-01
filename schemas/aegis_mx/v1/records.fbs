@@ -1,0 +1,547 @@
+include "aegis_mx/v1/common.fbs";
+
+namespace aegis.mx.contracts.v1;
+
+table InstrumentReferenceData {
+  schema_version:SchemaVersion;
+  instrument_id:InstrumentId;
+  venue_id:VenueId;
+  symbol:string (required);
+  currency_code:string (required);
+  price_unit:PriceUnit = UNKNOWN;
+  quantity_unit:QuantityUnit = UNKNOWN;
+  tick_value_currency_nanos:long;
+  lot_size_quantity_units:ulong;
+  minimum_order_quantity_units:ulong;
+  maximum_order_quantity_units:ulong;
+  valid_from_exchange_event_time:ExchangeEventTimeNs;
+  reference_data_version:ConfigurationVersion;
+  active:bool = false;
+}
+
+table DataQualityState {
+  schema_version:SchemaVersion;
+  venue_id:VenueId;
+  channel_id:ChannelId;
+  state:DataQualityCode = UNKNOWN;
+  observed_process_monotonic_time:ProcessMonotonicTimeNs;
+  last_good_exchange_event_time:ExchangeEventTimeNs;
+  last_good_nic_receive_time:NicReceiveTimeNs;
+  missing_sequence_count:ulong;
+  malformed_record_count:ulong;
+  stale_after_ns:ulong;
+}
+
+table ClockQualityState {
+  schema_version:SchemaVersion;
+  source_channel_id:ChannelId;
+  state:ClockQualityCode = UNKNOWN;
+  observed_process_monotonic_time:ProcessMonotonicTimeNs;
+  observed_wall_clock_utc_time:WallClockUtcTimeNs;
+  offset_from_reference_ns:long;
+  uncertainty_ns:ulong;
+  maximum_permitted_uncertainty_ns:ulong;
+}
+
+table BookUpdate {
+  schema_version:SchemaVersion;
+  global_event_id:GlobalEventId;
+  session_id:SessionId;
+  venue_id:VenueId;
+  instrument_id:InstrumentId;
+  channel_id:ChannelId;
+  channel_sequence:ulong;
+  exchange_event_time:ExchangeEventTimeNs;
+  nic_receive_time:NicReceiveTimeNs;
+  process_monotonic_time:ProcessMonotonicTimeNs;
+  side:BookSide = UNKNOWN;
+  action:BookAction = UNKNOWN;
+  price_unit:PriceUnit = UNKNOWN;
+  price_ticks:long;
+  quantity_unit:QuantityUnit = UNKNOWN;
+  quantity_units:ulong;
+  order_count:uint;
+}
+
+table TradeEvent {
+  schema_version:SchemaVersion;
+  global_event_id:GlobalEventId;
+  session_id:SessionId;
+  venue_id:VenueId;
+  instrument_id:InstrumentId;
+  channel_id:ChannelId;
+  channel_sequence:ulong;
+  exchange_event_time:ExchangeEventTimeNs;
+  nic_receive_time:NicReceiveTimeNs;
+  process_monotonic_time:ProcessMonotonicTimeNs;
+  aggressor_side:TradeSide = UNKNOWN;
+  price_unit:PriceUnit = UNKNOWN;
+  price_ticks:long;
+  quantity_unit:QuantityUnit = UNKNOWN;
+  quantity_units:ulong;
+  venue_trade_id:ulong;
+}
+
+table QuoteEvent {
+  schema_version:SchemaVersion;
+  global_event_id:GlobalEventId;
+  session_id:SessionId;
+  venue_id:VenueId;
+  instrument_id:InstrumentId;
+  channel_id:ChannelId;
+  channel_sequence:ulong;
+  exchange_event_time:ExchangeEventTimeNs;
+  nic_receive_time:NicReceiveTimeNs;
+  process_monotonic_time:ProcessMonotonicTimeNs;
+  price_unit:PriceUnit = UNKNOWN;
+  bid_price_ticks:long;
+  ask_price_ticks:long;
+  quantity_unit:QuantityUnit = UNKNOWN;
+  bid_quantity_units:ulong;
+  ask_quantity_units:ulong;
+}
+
+table AuctionImbalance {
+  schema_version:SchemaVersion;
+  global_event_id:GlobalEventId;
+  session_id:SessionId;
+  venue_id:VenueId;
+  instrument_id:InstrumentId;
+  channel_id:ChannelId;
+  channel_sequence:ulong;
+  exchange_event_time:ExchangeEventTimeNs;
+  nic_receive_time:NicReceiveTimeNs;
+  process_monotonic_time:ProcessMonotonicTimeNs;
+  imbalance_side:AuctionSide = UNKNOWN;
+  price_unit:PriceUnit = UNKNOWN;
+  indicative_price_ticks:long;
+  quantity_unit:QuantityUnit = UNKNOWN;
+  imbalance_quantity_units:ulong;
+  paired_quantity_units:ulong;
+}
+
+table TradingStatus {
+  schema_version:SchemaVersion;
+  global_event_id:GlobalEventId;
+  session_id:SessionId;
+  venue_id:VenueId;
+  instrument_id:InstrumentId;
+  channel_id:ChannelId;
+  channel_sequence:ulong;
+  exchange_event_time:ExchangeEventTimeNs;
+  nic_receive_time:NicReceiveTimeNs;
+  process_monotonic_time:ProcessMonotonicTimeNs;
+  status:TradingStatusCode = UNKNOWN;
+  reason_code:uint;
+}
+
+union MarketPayload {
+  BookUpdate,
+  TradeEvent,
+  QuoteEvent,
+  AuctionImbalance,
+  TradingStatus
+}
+
+table MarketEvent {
+  schema_version:SchemaVersion;
+  global_event_id:GlobalEventId;
+  session_id:SessionId;
+  venue_id:VenueId;
+  instrument_id:InstrumentId;
+  channel_id:ChannelId;
+  channel_sequence:ulong;
+  exchange_event_time:ExchangeEventTimeNs;
+  nic_receive_time:NicReceiveTimeNs;
+  process_monotonic_time:ProcessMonotonicTimeNs;
+  data_quality_state:DataQualityState (required);
+  clock_quality_state:ClockQualityState (required);
+  market_payload:MarketPayload;
+}
+
+table FeatureSnapshotMetadata {
+  schema_version:SchemaVersion;
+  feature_snapshot_id:FeatureSnapshotId;
+  session_id:SessionId;
+  instrument_id:InstrumentId;
+  feature_definition_version:ConfigurationVersion;
+  source_first_global_event_id:GlobalEventId;
+  source_last_global_event_id:GlobalEventId;
+  as_of_exchange_event_time:ExchangeEventTimeNs;
+  created_process_monotonic_time:ProcessMonotonicTimeNs;
+  feature_count:uint;
+  feature_payload_sha256:Sha256Digest;
+}
+
+table ModelForecast {
+  schema_version:SchemaVersion;
+  forecast_id:ForecastId;
+  session_id:SessionId;
+  model_id:ModelId;
+  model_version:ModelVersion;
+  instrument_id:InstrumentId;
+  feature_snapshot_id:FeatureSnapshotId;
+  configuration_version:ConfigurationVersion;
+  forecast_unit:ForecastUnit = UNKNOWN;
+  forecast_value:long;
+  confidence_ppm:uint;
+  horizon_ns:ulong;
+  created_process_monotonic_time:ProcessMonotonicTimeNs;
+  valid_until_process_monotonic_time:ProcessMonotonicTimeNs;
+  // Fields below were appended in schema v1.1. Values remain integer and
+  // explicitly scaled so that consumers never depend on binary floating point.
+  as_of_exchange_event_time:ExchangeEventTimeNs;
+  expected_return_ppm:long;
+  return_p10_ppm:long;
+  return_p50_ppm:long;
+  return_p90_ppm:long;
+  probability_down_ppm:uint;
+  probability_flat_ppm:uint;
+  probability_up_ppm:uint;
+  volatility_ppm:ulong;
+  calibration_score_ppm:uint;
+  data_quality_score_ppm:uint;
+  ood_score_ppm:uint;
+  has_transaction_cost_estimate:bool = false;
+  estimated_spread_cost_ppm:ulong;
+  estimated_market_impact_ppm:ulong;
+  estimated_fee_cost_ppm:ulong;
+  // Appended in v1.2 so the cost model never overloads impact with distinct
+  // slippage or adverse-selection estimates.
+  estimated_slippage_cost_ppm:ulong;
+  estimated_adverse_selection_cost_ppm:ulong;
+  // Appended in v1.3. Existing return fields retain their v1.1 meanings.
+  // Non-return publishers set those return fields to safe neutral values and
+  // publish the explicitly typed target distribution below.
+  forecast_target:ForecastTarget = UNKNOWN;
+  target_value:long;
+  target_p10:long;
+  target_p50:long;
+  target_p90:long;
+}
+
+// Fixed-layout per-expert audit item added in v1.5. Entries are emitted in
+// canonical model/version/forecast order. Ineligible experts retain zero weight.
+struct EnsembleModelWeight {
+  forecast_id:ForecastId;
+  model_id:ModelId;
+  model_version:ModelVersion;
+  role:EnsembleExpertRoleCode = UNKNOWN;
+  eligibility:EnsembleEligibilityCode = UNKNOWN;
+  weight_ppm:uint;
+  raw_gate_score:ulong;
+  freshness_ppm:uint;
+  forecast_hash:ulong;
+}
+
+table EnsembleDecisionExplanation {
+  gate_kind:EnsembleGateKind = UNKNOWN;
+  market_state:EnsembleMarketStateCode = UNKNOWN;
+  event_state:EnsembleEventStateCode = UNKNOWN;
+  input_data_quality_ppm:uint;
+  supplied_expert_count:uint;
+  eligible_expert_count:uint;
+  dominant_forecast_id:ForecastId;
+  dominant_model_id:ModelId;
+  dominant_model_version:ModelVersion;
+  dominant_reason:EnsembleDominantExpertReasonCode = UNKNOWN;
+  required_edge_ppm:ulong;
+  learned_gate_signature_hash:ulong;
+  explanation_hash:ulong;
+  contributing_expert_count:uint;
+  transaction_cost_forecast_hash:ulong;
+  market_state_snapshot_hash:ulong;
+  configuration_hash:ulong;
+}
+
+table EnsembleForecast {
+  schema_version:SchemaVersion;
+  forecast_id:ForecastId;
+  session_id:SessionId;
+  instrument_id:InstrumentId;
+  ensemble_model_id:ModelId;
+  ensemble_model_version:ModelVersion;
+  configuration_version:ConfigurationVersion;
+  forecast_unit:ForecastUnit = UNKNOWN;
+  forecast_value:long;
+  confidence_ppm:uint;
+  horizon_ns:ulong;
+  created_process_monotonic_time:ProcessMonotonicTimeNs;
+  valid_until_process_monotonic_time:ProcessMonotonicTimeNs;
+  contributing_forecast_ids:[ForecastId] (required);
+  // Fields below were appended in schema v1.5. All numeric forecast, cost,
+  // uncertainty, edge, and weight values use integer PPM. Variance is PPM^2.
+  expected_return_ppm:long;
+  probability_down_ppm:uint;
+  probability_flat_ppm:uint;
+  probability_up_ppm:uint;
+  variance_ppm_squared:ulong;
+  return_p10_ppm:long;
+  return_p50_ppm:long;
+  return_p90_ppm:long;
+  effective_uncertainty_ppm:ulong;
+  disagreement_ppm:ulong;
+  model_weights:[EnsembleModelWeight];
+  estimated_transaction_cost_ppm:ulong;
+  uncertainty_penalty_ppm:ulong;
+  safety_margin_ppm:ulong;
+  net_robust_edge_ppm:long;
+  abstain:bool = true;
+  primary_reason:EnsembleDecisionReasonCode = UNKNOWN;
+  reason_mask:ulong;
+  decision_explanation:EnsembleDecisionExplanation;
+  ensemble_hash:ulong;
+}
+
+table OrderIntent {
+  schema_version:SchemaVersion;
+  intent_id:IntentId;
+  session_id:SessionId;
+  strategy_id:StrategyId;
+  instrument_id:InstrumentId;
+  source_forecast_id:ForecastId;
+  // Present only for CANCEL. A cancel without an explicit target fails closed.
+  target_order_id:OrderId;
+  feature_snapshot_id:FeatureSnapshotId;
+  configuration_version:ConfigurationVersion;
+  action:IntentAction = UNKNOWN;
+  price_unit:PriceUnit = UNKNOWN;
+  has_limit_price:bool = false;
+  limit_price_ticks:long;
+  quantity_unit:QuantityUnit = UNKNOWN;
+  quantity_units:ulong;
+  created_process_monotonic_time:ProcessMonotonicTimeNs;
+  expire_process_monotonic_time:ProcessMonotonicTimeNs;
+  // Additive v1.6 routing/risk scope. Account is an authorization identity,
+  // not a credential or broker protocol field.
+  venue_id:VenueId;
+  account_id:AccountId;
+  intent_hash:ulong;
+}
+
+table RiskDecision {
+  schema_version:SchemaVersion;
+  global_event_id:GlobalEventId;
+  intent_id:IntentId;
+  session_id:SessionId;
+  risk_snapshot_id:RiskSnapshotId;
+  configuration_version:ConfigurationVersion;
+  decision:RiskDecisionCode = UNKNOWN;
+  reason:RiskReasonCode = UNKNOWN;
+  approved_quantity_unit:QuantityUnit = UNKNOWN;
+  approved_quantity_units:ulong;
+  intent_sha256:Sha256Digest;
+  evaluated_process_monotonic_time:ProcessMonotonicTimeNs;
+  valid_until_process_monotonic_time:ProcessMonotonicTimeNs;
+  // Additive v1.6 deterministic risk evidence. All monetary/price fields retain
+  // the integer units declared by their accompanying unit or field name.
+  account_id:AccountId;
+  strategy_id:StrategyId;
+  venue_id:VenueId;
+  instrument_id:InstrumentId;
+  intent_action:IntentAction = UNKNOWN;
+  trading_mode:TradingModeCode = UNKNOWN;
+  failed_check:RiskCheckCode = NONE;
+  approved_price_unit:PriceUnit = UNKNOWN;
+  approved_price_ticks:long;
+  intent_hash:ulong;
+  risk_snapshot_hash:ulong;
+  risk_context_hash:ulong;
+  position_generation:ulong;
+  authority_epoch:ulong;
+  policy_revision:ulong;
+  evaluation_ordinal:ulong;
+  journal_sequence:ulong;
+  reason_mask:ulong;
+  completed_check_mask:uint;
+  decision_hash:ulong;
+}
+
+table OrderEvent {
+  schema_version:SchemaVersion;
+  global_event_id:GlobalEventId;
+  order_id:OrderId;
+  intent_id:IntentId;
+  session_id:SessionId;
+  venue_id:VenueId;
+  instrument_id:InstrumentId;
+  configuration_version:ConfigurationVersion;
+  event:OrderEventCode = UNKNOWN;
+  price_unit:PriceUnit = UNKNOWN;
+  price_ticks:long;
+  quantity_unit:QuantityUnit = UNKNOWN;
+  order_quantity_units:ulong;
+  cumulative_fill_quantity_units:ulong;
+  remaining_quantity_units:ulong;
+  exchange_event_time:ExchangeEventTimeNs;
+  nic_receive_time:NicReceiveTimeNs;
+  process_monotonic_time:ProcessMonotonicTimeNs;
+  reason_code:uint;
+  // Additive v1.8 OMS state, authority, mapping, and replay evidence. External
+  // order IDs are normalized opaque words and do not imply a venue encoding.
+  account_id:AccountId;
+  strategy_id:StrategyId;
+  input_kind:OmsInputKindCode = UNKNOWN;
+  source:OmsEventSourceCode = UNKNOWN;
+  outcome:OmsApplyStatusCode = UNKNOWN;
+  previous_state:OmsOrderStateCode = UNKNOWN;
+  current_state:OmsOrderStateCode = UNKNOWN;
+  state_version:ulong;
+  exchange_session_epoch:ulong;
+  active_fencing_token:ulong;
+  external_order_id_high:ulong;
+  external_order_id_low:ulong;
+  client_order_id:string;
+  risk_decision_hash:ulong;
+  journal_sequence:ulong;
+  snapshot_sequence:ulong;
+  snapshot_hash:ulong;
+  order_event_hash:ulong;
+  journal_record_hash:ulong;
+}
+
+table FillEvent {
+  schema_version:SchemaVersion;
+  global_event_id:GlobalEventId;
+  order_id:OrderId;
+  intent_id:IntentId;
+  session_id:SessionId;
+  venue_id:VenueId;
+  instrument_id:InstrumentId;
+  venue_trade_id:ulong;
+  price_unit:PriceUnit = UNKNOWN;
+  fill_price_ticks:long;
+  quantity_unit:QuantityUnit = UNKNOWN;
+  fill_quantity_units:ulong;
+  currency_unit:CurrencyUnit = UNKNOWN;
+  fee_currency_nanos:long;
+  exchange_event_time:ExchangeEventTimeNs;
+  nic_receive_time:NicReceiveTimeNs;
+  process_monotonic_time:ProcessMonotonicTimeNs;
+}
+
+table PositionSnapshot {
+  schema_version:SchemaVersion;
+  global_event_id:GlobalEventId;
+  session_id:SessionId;
+  strategy_id:StrategyId;
+  instrument_id:InstrumentId;
+  risk_snapshot_id:RiskSnapshotId;
+  configuration_version:ConfigurationVersion;
+  quantity_unit:QuantityUnit = UNKNOWN;
+  net_quantity_units:long;
+  price_unit:PriceUnit = UNKNOWN;
+  average_price_ticks:long;
+  currency_unit:CurrencyUnit = UNKNOWN;
+  realized_pnl_currency_nanos:long;
+  unrealized_pnl_currency_nanos:long;
+  as_of_process_monotonic_time:ProcessMonotonicTimeNs;
+  // Additive v1.7 portfolio-risk and recovery evidence. PositionSnapshot
+  // remains one account/strategy/instrument row; portfolio-wide totals are
+  // repeated identically across all rows in one portfolio_sequence.
+  account_id:AccountId;
+  portfolio_sequence:ulong;
+  source_journal_sequence:ulong;
+  portfolio_snapshot_hash:ulong;
+  open_cost_currency_nanos:long;
+  pending_buy_quantity_units:ulong;
+  pending_sell_quantity_units:ulong;
+  gross_exposure_currency_nanos:ulong;
+  net_exposure_currency_nanos:long;
+  beta_exposure_currency_nanos:long;
+  liquidity_adjusted_exposure_currency_nanos:ulong;
+  event_exposure_currency_nanos:ulong;
+  drawdown_currency_nanos:ulong;
+  health:PortfolioHealthCode = UNKNOWN;
+  invariant:PortfolioInvariantCode = UNKNOWN;
+  ready:bool = false;
+}
+
+table IntelligenceEvidenceExcerpt {
+  excerpt_id:uint;
+  source_start_utf8_offset:uint;
+  source_end_utf8_offset:uint;
+  exact_text:string (required);
+  exact_text_sha256:Sha256Digest;
+}
+
+table IntelligenceFact {
+  name:string (required);
+  value:string (required);
+  unit:string (required);
+  uncertainty_ppm:uint;
+  evidence_excerpt_ids:[uint] (required);
+}
+
+table IntelligenceResolvedEntity {
+  entity_sha256:Sha256Digest;
+  canonical_name:string (required);
+  relationship:string (required);
+  instrument_id:InstrumentId;
+  confidence_ppm:uint;
+}
+
+table EventIntelligenceRecord {
+  schema_version:SchemaVersion;
+  global_event_id:GlobalEventId;
+  session_id:SessionId;
+  source_channel_id:ChannelId;
+  instrument_id:InstrumentId;
+  model_id:ModelId;
+  model_version:ModelVersion;
+  configuration_version:ConfigurationVersion;
+  trust:DataQualityCode = UNKNOWN;
+  text_trust:IntelligenceTrustCode = UNKNOWN;
+  provider_event_time:ExchangeEventTimeNs;
+  received_wall_clock_utc_time:WallClockUtcTimeNs;
+  processed_monotonic_time:ProcessMonotonicTimeNs;
+  relevance_ppm:uint;
+  classification_code:uint;
+  untrusted_source_content_sha256:Sha256Digest;
+  sanitized_content_sha256:Sha256Digest;
+  // Fields below were appended in schema v1.4. Document text remains
+  // untrusted data; only bounded, sanitized, evidence-backed fields cross the
+  // contract boundary. Deep records append immutable refinements and link to
+  // their fast parent instead of replacing it.
+  document_type:IntelligenceDocumentType = UNKNOWN;
+  event_type:IntelligenceEventType = UNKNOWN;
+  stage:IntelligenceStage = UNKNOWN;
+  adjudication:IntelligenceAdjudicationCode = UNKNOWN;
+  revision:uint;
+  parent_fast_global_event_id:GlobalEventId;
+  correction_of_global_event_id:GlobalEventId;
+  language_code:string;
+  source_provider_id:string;
+  source_document_id:string;
+  source_authentication_sha256:Sha256Digest;
+  novelty_ppm:uint;
+  materiality_ppm:uint;
+  source_trust_ppm:uint;
+  uncertainty_ppm:uint;
+  prompt_injection_detected:bool = false;
+  entities:[IntelligenceResolvedEntity];
+  facts:[IntelligenceFact];
+  evidence:[IntelligenceEvidenceExcerpt];
+  contradicts_global_event_ids:[GlobalEventId];
+}
+
+table KillSwitchEvent {
+  schema_version:SchemaVersion;
+  global_event_id:GlobalEventId;
+  session_id:SessionId;
+  configuration_version:ConfigurationVersion;
+  state:KillSwitchStateCode = UNKNOWN;
+  scope:KillSwitchScope = UNKNOWN;
+  target_venue_id:VenueId;
+  target_strategy_id:StrategyId;
+  reason:KillSwitchReasonCode = UNKNOWN;
+  effective_process_monotonic_time:ProcessMonotonicTimeNs;
+  recorded_wall_clock_utc_time:WallClockUtcTimeNs;
+  operator_authorization_sha256:Sha256Digest;
+  // Added in v1.6 for hierarchical risk kills. GLOBAL remains the canonical
+  // firm-wide scope.
+  target_instrument_id:InstrumentId;
+  target_account_id:AccountId;
+  command_sequence:ulong;
+  authority_epoch:ulong;
+}

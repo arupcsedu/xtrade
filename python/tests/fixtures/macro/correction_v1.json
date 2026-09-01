@@ -1,0 +1,17 @@
+{
+  "fixture_type": "synthetic_replay",
+  "schema_version": "1.0.0",
+  "seed": 20260828,
+  "scenario": "correction",
+  "scheduled_wall_clock_utc_ns": 1800000000000000000,
+  "official_delay_ns": 0,
+  "receipt_lag_ns": 2000000,
+  "completeness": "COMPLETE",
+  "revision": 2,
+  "omit_field": null,
+  "provider_conflict": false,
+  "headline_actual_override": 31000,
+  "expected_phase": "CORRECTED",
+  "expected_decision": "PUBLISH",
+  "expected_reason_codes": ["CORRECTED_RELEASE"]
+}

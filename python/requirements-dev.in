@@ -1,0 +1,15 @@
+build==1.6.0
+coverage==7.16.0
+detect-secrets==1.5.0
+editables==0.6
+hatchling==1.32.0
+mypy==2.3.1
+pip==26.2.1
+pip-audit==2.10.1
+pip-tools==7.6.1
+pytest==9.1.1
+pytest-cov==7.1.0
+ruff==0.16.5
+setuptools==84.0.0
+wheel==0.48.0
+flatbuffers==25.12.19

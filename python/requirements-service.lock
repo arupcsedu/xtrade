@@ -1,0 +1,4 @@
+# Runtime-only dependencies for the off-hot-path time-series service image.
+# Generated from python/requirements-dev.lock and installed with --require-hashes.
+flatbuffers==25.12.19 \
+    --hash=sha256:7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4

@@ -1,0 +1,96 @@
+%% A --> B means component A may depend on B's public contract.
+%% It does not mean B may call A, and it does not depict every runtime data flow.
+flowchart TB
+    subgraph Decision["Colocated production decision components"]
+        EdgeCore["edge-core"]
+        MarketData["market-data"]
+        OrderBook["order-book"]
+        FeatureEngine["feature-engine"]
+        ModelContracts["model-contracts"]
+        Ensemble["ensemble"]
+        Risk["risk"]
+        OMS["OMS"]
+        Gateways["gateways"]
+    end
+
+    subgraph OffPath["Near-real-time and asynchronous components"]
+        Intelligence["intelligence"]
+        ControlPlane["control-plane"]
+        Observability["observability"]
+    end
+
+    subgraph Offline["Offline and orchestration components"]
+        Replay["replay"]
+        Research["research"]
+        Deployment["deployment"]
+    end
+
+    subgraph Licensed["External authorized specifications"]
+        MarketSpecs["Licensed market-data and reference-data specifications"]
+        ExchangeSpecs["Licensed exchange order-entry and recovery specifications"]
+        NewsSpecs["Licensed news and filing provider specifications"]
+        DataLicenses["Dataset licenses and usage rights"]
+    end
+
+    MarketData --> EdgeCore
+    OrderBook --> MarketData
+    OrderBook --> EdgeCore
+    ModelContracts --> EdgeCore
+    FeatureEngine --> OrderBook
+    FeatureEngine --> MarketData
+    FeatureEngine --> ModelContracts
+    FeatureEngine --> EdgeCore
+    Ensemble --> ModelContracts
+    Ensemble --> EdgeCore
+    Risk --> OrderBook
+    Risk --> EdgeCore
+    OMS --> Risk
+    OMS --> EdgeCore
+    Gateways --> OMS
+    Gateways --> Risk
+    Gateways --> MarketData
+    Gateways --> EdgeCore
+
+    Intelligence --> ModelContracts
+    Intelligence --> EdgeCore
+    ControlPlane --> Gateways
+    ControlPlane --> Risk
+    ControlPlane --> EdgeCore
+    Observability --> EdgeCore
+
+    Replay --> MarketData
+    Replay --> OrderBook
+    Replay --> FeatureEngine
+    Replay --> ModelContracts
+    Replay --> Ensemble
+    Replay --> Risk
+    Replay --> OMS
+    Replay --> Gateways
+    Replay --> EdgeCore
+    Research --> Replay
+    Research --> FeatureEngine
+    Research --> ModelContracts
+    Deployment --> Gateways
+    Deployment --> Intelligence
+    Deployment --> ControlPlane
+    Deployment --> Observability
+    Deployment --> Replay
+
+    MarketData -.-> MarketSpecs
+    OrderBook -.-> MarketSpecs
+    Gateways -.-> ExchangeSpecs
+    OMS -.-> ExchangeSpecs
+    Intelligence -.-> NewsSpecs
+    Research -.-> DataLicenses
+
+    classDef hot fill:#fee2e2,stroke:#991b1b,color:#450a0a
+    classDef mixed fill:#fef3c7,stroke:#92400e,color:#451a03
+    classDef async fill:#dbeafe,stroke:#1e40af,color:#172554
+    classDef offline fill:#dcfce7,stroke:#166534,color:#052e16
+    classDef external fill:#f3e8ff,stroke:#6b21a8,color:#3b0764
+
+    class MarketData,OrderBook,FeatureEngine,Ensemble,Risk,OMS,Gateways hot
+    class EdgeCore,ModelContracts mixed
+    class Intelligence,ControlPlane,Observability async
+    class Replay,Research,Deployment offline
+    class MarketSpecs,ExchangeSpecs,NewsSpecs,DataLicenses external

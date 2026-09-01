@@ -1,0 +1,12 @@
+services:
+  dev:
+    build:
+      context: ../..
+      dockerfile: infra/dev/Dockerfile
+    environment:
+      AEGIS_SKIP_MODULES: "1"
+      AEGIS_TEST_SEED: "20260828"
+      PYTHONHASHSEED: "20260828"
+    volumes:
+      - ../..:/workspace/aegis-mx
+    working_dir: /workspace/aegis-mx

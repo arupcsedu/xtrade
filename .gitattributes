@@ -1,0 +1,4 @@
+* text=auto eol=lf
+*.bat text eol=crlf
+*.mmd text eol=lf linguist-language=Mermaid
+*.sh text eol=lf

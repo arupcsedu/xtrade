@@ -1,0 +1,40 @@
+{
+  "fixture_type": "synthetic",
+  "schema_version": "1.0.0",
+  "seed": 20260828,
+  "issuer": "Synthetic Devices Incorporated",
+  "fiscal_period": "FY2026-Q2",
+  "release_wall_clock_utc_ns": 1800000000000000000,
+  "as_of_wall_clock_utc_ns": 1800000001000000000,
+  "actuals": [
+    {"kind": "EPS", "basis": "GAAP", "unit": "CURRENCY_NANOS_PER_SHARE", "value": 2500000000, "source_id": "release"},
+    {"kind": "EPS", "basis": "NON_GAAP", "unit": "CURRENCY_NANOS_PER_SHARE", "value": 2900000000, "source_id": "release"},
+    {"kind": "REVENUE", "basis": "GAAP", "unit": "CURRENCY_NANOS", "value": 1200000000000000, "source_id": "release"},
+    {"kind": "FREE_CASH_FLOW", "basis": "GAAP", "unit": "CURRENCY_NANOS", "value": 180000000000000, "source_id": "filing"},
+    {"kind": "CAPEX", "basis": "GAAP", "unit": "CURRENCY_NANOS", "value": 90000000000000, "source_id": "filing"},
+    {"kind": "SEGMENT_REVENUE", "basis": "GAAP", "unit": "CURRENCY_NANOS", "segment_name": "Compute", "value": 650000000000000, "source_id": "segments"},
+    {"kind": "SEGMENT_REVENUE", "basis": "GAAP", "unit": "CURRENCY_NANOS", "segment_name": "Services", "value": 450000000000000, "source_id": "segments"}
+  ],
+  "consensus": [
+    {"kind": "EPS", "basis": "GAAP", "unit": "CURRENCY_NANOS_PER_SHARE", "consensus": 2300000000, "dispersion": 100000000, "minimum": 2100000000, "maximum": 2450000000, "analysts": 12},
+    {"kind": "EPS", "basis": "NON_GAAP", "unit": "CURRENCY_NANOS_PER_SHARE", "consensus": 2700000000, "dispersion": 100000000, "minimum": 2500000000, "maximum": 2850000000, "analysts": 10},
+    {"kind": "REVENUE", "basis": "GAAP", "unit": "CURRENCY_NANOS", "consensus": 1150000000000000, "dispersion": 25000000000000, "minimum": 1100000000000000, "maximum": 1190000000000000, "analysts": 14}
+  ],
+  "prior_reported": [
+    {"kind": "EPS", "basis": "GAAP", "unit": "CURRENCY_NANOS_PER_SHARE", "value": 2000000000},
+    {"kind": "REVENUE", "basis": "GAAP", "unit": "CURRENCY_NANOS", "value": 1000000000000000}
+  ],
+  "guidance": {
+    "current": {"kind": "REVENUE", "basis": "GAAP", "unit": "CURRENCY_NANOS", "lower": 1300000000000000, "upper": 1400000000000000},
+    "prior": {"kind": "REVENUE", "basis": "GAAP", "unit": "CURRENCY_NANOS", "lower": 1200000000000000, "upper": 1300000000000000}
+  },
+  "one_time_adjustment_currency_nanos": 150000000000000,
+  "option_implied_move_ppm": 80000,
+  "historical_reactions": [
+    {"id": "synthetic-history-1", "gap_return_ppm": 60000, "volatility_ppm": 120000, "discovery_duration_ns": 900000000000},
+    {"id": "synthetic-history-2", "gap_return_ppm": -40000, "volatility_ppm": 100000, "discovery_duration_ns": 1200000000000},
+    {"id": "synthetic-history-3", "gap_return_ppm": 90000, "volatility_ppm": 150000, "discovery_duration_ns": 1800000000000}
+  ],
+  "post_release_features": {"return_ppm": 60000, "realized_volatility_ppm": 140000},
+  "hand_calculated": {"gaap_eps_surprise_ppm": 2000000, "revenue_surprise_ppm": 2000000, "guidance_change_ppm": 80000}
+}

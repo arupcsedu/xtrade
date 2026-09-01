@@ -1,0 +1,16 @@
+#ifndef AEGIS_COMMON_BUILD_INFO_GENERATED_HPP
+#define AEGIS_COMMON_BUILD_INFO_GENERATED_HPP
+
+namespace aegis::common::generated {
+
+inline constexpr char kProject[] = "Aegis-MX";
+inline constexpr char kVersion[] = "@PROJECT_VERSION@";
+inline constexpr char kSourceRevision[] = "@AEGIS_RESOLVED_SOURCE_REVISION@";
+inline constexpr char kCompilerId[] = "@CMAKE_CXX_COMPILER_ID@";
+inline constexpr char kCompilerVersion[] = "@CMAKE_CXX_COMPILER_VERSION@";
+inline constexpr char kBuildType[] = "@CMAKE_BUILD_TYPE@";
+inline constexpr bool kLiveTradingCapable = @AEGIS_LIVE_TRADING_CAPABLE_LITERAL@;
+
+}  // namespace aegis::common::generated
+
+#endif  // AEGIS_COMMON_BUILD_INFO_GENERATED_HPP

@@ -1,0 +1,14 @@
+{
+  "name": "Aegis-MX Foundation",
+  "build": {
+    "dockerfile": "../infra/dev/Dockerfile",
+    "context": ".."
+  },
+  "containerEnv": {
+    "AEGIS_SKIP_MODULES": "1",
+    "AEGIS_TEST_SEED": "20260828",
+    "PYTHONHASHSEED": "20260828"
+  },
+  "postCreateCommand": "make bootstrap",
+  "remoteUser": "aegis"
+}

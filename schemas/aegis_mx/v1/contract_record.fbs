@@ -1,0 +1,38 @@
+include "aegis_mx/v1/records.fbs";
+
+namespace aegis.mx.contracts.v1;
+
+union ContractPayload {
+  InstrumentReferenceData,
+  MarketEvent,
+  BookUpdate,
+  TradeEvent,
+  QuoteEvent,
+  AuctionImbalance,
+  TradingStatus,
+  FeatureSnapshotMetadata,
+  ModelForecast,
+  EnsembleForecast,
+  OrderIntent,
+  RiskDecision,
+  OrderEvent,
+  FillEvent,
+  PositionSnapshot,
+  EventIntelligenceRecord,
+  DataQualityState,
+  ClockQualityState,
+  KillSwitchEvent
+}
+
+// The canonical serialized unit before integrity wrapping. record_type and the
+// union discriminator are intentionally redundant and must agree.
+table ContractRecord {
+  schema_version:SchemaVersion;
+  record_id:GlobalEventId;
+  record_type:RecordType = UNKNOWN;
+  payload:ContractPayload;
+}
+
+root_type ContractRecord;
+file_identifier "AMCR";
+file_extension "amcr";

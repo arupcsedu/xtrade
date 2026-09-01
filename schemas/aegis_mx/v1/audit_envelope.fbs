@@ -1,0 +1,23 @@
+include "aegis_mx/v1/contract_record.fbs";
+
+namespace aegis.mx.contracts.v1;
+
+// Persistence and network transport use a size-prefixed AuditEnvelope. The
+// payload is a complete AMCR ContractRecord FlatBuffer. SHA-256 is calculated
+// over the exact payload bytes. A zero previous digest denotes a chain origin.
+table AuditEnvelope {
+  schema_version:SchemaVersion;
+  envelope_id:GlobalEventId;
+  session_id:SessionId;
+  configuration_version:ConfigurationVersion;
+  created_process_monotonic_time:ProcessMonotonicTimeNs;
+  recorded_wall_clock_utc_time:WallClockUtcTimeNs;
+  record_type:RecordType = UNKNOWN;
+  payload:[ubyte] (required);
+  payload_sha256:Sha256Digest;
+  previous_envelope_sha256:Sha256Digest;
+}
+
+root_type AuditEnvelope;
+file_identifier "AMAE";
+file_extension "amae";

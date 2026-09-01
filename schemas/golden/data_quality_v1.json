@@ -1,0 +1,8 @@
+{
+  "file": "data_quality_v1.amae",
+  "flatbuffers_version": "25.12.19",
+  "schema_version": "1.8.0",
+  "sha256": "9b74d4f86d29caa309ec751d75a70c57c408b18b1e949a1895e9bf8d1f6ff31c",
+  "size_bytes": 360,
+  "test_seed": 20260828
+}

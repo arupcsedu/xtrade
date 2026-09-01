@@ -1,0 +1,8 @@
+{
+  "file": "event_intelligence_v1_4.amae",
+  "flatbuffers_version": "25.12.19",
+  "schema_version": "1.8.0",
+  "sha256": "ed23e71e09112a9db008c88ec0b3c067ecfb67ee4c4fec2b8739f4706e1184cc",
+  "size_bytes": 1352,
+  "test_seed": 20260828
+}

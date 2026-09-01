@@ -1,0 +1,16 @@
+namespace aegis.mx.contracts.compat.v1_8;
+
+table CompatibilityProbe {
+  stable_value:ulong;
+  additive_value:ulong;
+  second_additive_value:ulong;
+  third_additive_value:ulong;
+  fourth_additive_value:ulong;
+  fifth_additive_value:ulong;
+  sixth_additive_value:ulong;
+  seventh_additive_value:ulong;
+  eighth_additive_value:ulong;
+}
+
+root_type CompatibilityProbe;
+file_identifier "ACMP";

@@ -1,0 +1,42 @@
+{
+  "fixture_version": "1.0.0",
+  "seed": 20260828,
+  "as_of_wall_clock_utc_ns": 1800000000000000000,
+  "as_of_exchange_event_time_ns": 1799999999999999000,
+  "effective_auction_wall_clock_utc_ns": 1800000030000000000,
+  "rebalance": {
+    "index_id": "SYNTHETIC-100",
+    "revision": 1,
+    "old_weight_ppm": 10000,
+    "new_weight_ppm": 15000,
+    "float_adjusted_shares": 100000000,
+    "estimated_tracking_assets_currency_nanos": 5000000000000000000,
+    "tracking_assets_uncertainty_ppm": 100000,
+    "passive_participation_lower_ppm": 700000,
+    "passive_participation_upper_ppm": 1000000,
+    "reference_price_currency_nanos": 100000000000,
+    "etf_net_assets_currency_nanos": 1000000000000000000,
+    "etf_net_flow_currency_nanos": 10000000000000000,
+    "average_daily_volume_shares": 5000000,
+    "forecast_closing_auction_volume_shares": 1000000,
+    "historical": [
+      {"passive_demand_shares": 180000, "auction_volume_shares": 900000, "realized_impact_ppm": 8000, "reversed": true},
+      {"passive_demand_shares": 240000, "auction_volume_shares": 1000000, "realized_impact_ppm": 12000, "reversed": false},
+      {"passive_demand_shares": 150000, "auction_volume_shares": 800000, "realized_impact_ppm": 6000, "reversed": true}
+    ]
+  },
+  "auction": {
+    "signed_imbalance_quantity": 100000,
+    "paired_quantity": 500000,
+    "indicative_match_price_currency_nanos": 101000000000,
+    "reference_price_currency_nanos": 100000000000,
+    "cutoff_wall_clock_utc_ns": 1800000001000000000,
+    "forecast_quantity": 1000000,
+    "forecast_confidence_ppm": 900000,
+    "historical": [
+      {"signed_imbalance_quantity": 90000, "paired_quantity": 450000, "auction_volume_quantity": 900000, "clearing_return_ppm": 7000, "fill_probability_ppm": 750000},
+      {"signed_imbalance_quantity": 120000, "paired_quantity": 550000, "auction_volume_quantity": 1000000, "clearing_return_ppm": 11000, "fill_probability_ppm": 700000},
+      {"signed_imbalance_quantity": 80000, "paired_quantity": 400000, "auction_volume_quantity": 800000, "clearing_return_ppm": 6000, "fill_probability_ppm": 800000}
+    ]
+  }
+}

@@ -1,0 +1,593 @@
+namespace aegis.mx.contracts.v1;
+
+// Every identifier is an opaque, unsigned 128-bit value. All-zero is invalid
+// unless a containing table explicitly documents that the field is optional.
+struct VenueId {
+  high:ulong;
+  low:ulong;
+}
+
+struct InstrumentId {
+  high:ulong;
+  low:ulong;
+}
+
+struct ChannelId {
+  high:ulong;
+  low:ulong;
+}
+
+struct StrategyId {
+  high:ulong;
+  low:ulong;
+}
+
+struct ModelId {
+  high:ulong;
+  low:ulong;
+}
+
+struct ModelVersion {
+  high:ulong;
+  low:ulong;
+}
+
+struct OrderId {
+  high:ulong;
+  low:ulong;
+}
+
+struct IntentId {
+  high:ulong;
+  low:ulong;
+}
+
+struct ForecastId {
+  high:ulong;
+  low:ulong;
+}
+
+struct FeatureSnapshotId {
+  high:ulong;
+  low:ulong;
+}
+
+struct RiskSnapshotId {
+  high:ulong;
+  low:ulong;
+}
+
+struct ConfigurationVersion {
+  high:ulong;
+  low:ulong;
+}
+
+struct GlobalEventId {
+  high:ulong;
+  low:ulong;
+}
+
+struct SessionId {
+  high:ulong;
+  low:ulong;
+}
+
+// Added in v1.6 for account-scoped risk and kill-switch authorization.
+struct AccountId {
+  high:ulong;
+  low:ulong;
+}
+
+// Semantic compatibility is governed by major/minor. Patch identifies a
+// clarification or implementation revision that does not alter the wire.
+struct SchemaVersion {
+  major:ushort;
+  minor:ushort;
+  patch:uint;
+}
+
+// SHA-256 bytes in network/display order. Hex rendering is bytes[0] first.
+struct Sha256Digest {
+  bytes:[ubyte:32];
+}
+
+// Nanoseconds since 1970-01-01T00:00:00 UTC, originating at the venue.
+struct ExchangeEventTimeNs {
+  value:long;
+}
+
+// Nanoseconds since Unix epoch captured by a synchronized NIC hardware clock.
+struct NicReceiveTimeNs {
+  value:long;
+}
+
+// Nanoseconds from the process monotonic clock's session-local origin.
+struct ProcessMonotonicTimeNs {
+  value:ulong;
+}
+
+// Nanoseconds since 1970-01-01T00:00:00 UTC from the local wall clock.
+struct WallClockUtcTimeNs {
+  value:long;
+}
+
+enum PriceUnit : ubyte {
+  UNKNOWN = 0,
+  TICKS = 1
+}
+
+enum QuantityUnit : ubyte {
+  UNKNOWN = 0,
+  INSTRUMENT_UNITS = 1
+}
+
+enum CurrencyUnit : ubyte {
+  UNKNOWN = 0,
+  CURRENCY_NANOS = 1
+}
+
+enum BookSide : ubyte {
+  UNKNOWN = 0,
+  BID = 1,
+  ASK = 2
+}
+
+enum TradeSide : ubyte {
+  UNKNOWN = 0,
+  BUY = 1,
+  SELL = 2,
+  NOT_APPLICABLE = 3
+}
+
+enum BookAction : ubyte {
+  UNKNOWN = 0,
+  ADD = 1,
+  CHANGE = 2,
+  DELETE = 3,
+  CLEAR_SIDE = 4,
+  CLEAR_BOOK = 5
+}
+
+enum TradingStatusCode : ubyte {
+  UNKNOWN = 0,
+  PRE_OPEN = 1,
+  OPEN = 2,
+  HALTED = 3,
+  AUCTION = 4,
+  CLOSED = 5
+}
+
+enum DataQualityCode : ubyte {
+  UNKNOWN = 0,
+  VALID = 1,
+  DEGRADED = 2,
+  STALE = 3,
+  INVALID = 4
+}
+
+enum ClockQualityCode : ubyte {
+  UNKNOWN = 0,
+  SYNCHRONIZED = 1,
+  HOLDOVER = 2,
+  UNSYNCHRONIZED = 3,
+  INVALID = 4
+}
+
+enum ForecastUnit : ubyte {
+  UNKNOWN = 0,
+  RETURN_TICKS = 1,
+  FAIR_VALUE_TICKS = 2,
+  PROBABILITY_PPM = 3,
+  QUANTITY_UNITS = 4,
+  // Signed expected return in parts per million. Added in schema v1.1.
+  RETURN_PPM = 5,
+  // Additive v1.3 units for explicitly typed time-series targets.
+  VOLATILITY_PPM = 6,
+  VOLUME_UNITS = 7,
+  SPREAD_TICKS = 8,
+  FACTOR_PPM = 9
+}
+
+enum ForecastTarget : ubyte {
+  UNKNOWN = 0,
+  RETURN = 1,
+  REALIZED_VOLATILITY = 2,
+  VOLUME = 3,
+  SPREAD = 4,
+  MARKET_FACTOR = 5,
+  SECTOR_FACTOR = 6
+}
+
+enum IntentAction : ubyte {
+  UNKNOWN = 0,
+  BUY = 1,
+  SELL = 2,
+  CANCEL = 3
+}
+
+enum RiskDecisionCode : ubyte {
+  UNKNOWN = 0,
+  REJECTED = 1,
+  APPROVED = 2
+}
+
+enum RiskReasonCode : ushort {
+  UNKNOWN = 0,
+  WITHIN_LIMITS = 1,
+  KILL_SWITCH_ENGAGED = 2,
+  STALE_MARKET_DATA = 3,
+  INVALID_BOOK = 4,
+  CLOCK_UNSYNCHRONIZED = 5,
+  LIMIT_EXCEEDED = 6,
+  INVALID_INTENT = 7,
+  CONFIGURATION_MISMATCH = 8,
+  // Additive deterministic pre-trade risk reasons in v1.6. Existing values
+  // retain their original meaning and numeric encoding.
+  EXPIRED_INTENT = 9,
+  TRADING_MODE_UNAUTHORIZED = 10,
+  OPERATOR_SESSION_UNAUTHORIZED = 11,
+  STRATEGY_UNAUTHORIZED = 12,
+  SYMBOL_UNAUTHORIZED = 13,
+  RESTRICTED_INSTRUMENT = 14,
+  MARKET_STATE_UNSAFE = 15,
+  TRADING_HALTED = 16,
+  FEED_BOOK_UNHEALTHY = 17,
+  ORDER_QUANTITY_EXCEEDED = 18,
+  ORDER_NOTIONAL_EXCEEDED = 19,
+  PRICE_COLLAR_EXCEEDED = 20,
+  INVALID_TICK_SIZE = 21,
+  DUPLICATE_INTENT = 22,
+  ORDER_RATE_EXCEEDED = 23,
+  CANCEL_RATE_EXCEEDED = 24,
+  SYMBOL_POSITION_EXCEEDED = 25,
+  GROSS_EXPOSURE_EXCEEDED = 26,
+  NET_EXPOSURE_EXCEEDED = 27,
+  SECTOR_CONCENTRATION_EXCEEDED = 28,
+  FACTOR_EXPOSURE_EXCEEDED = 29,
+  DAILY_LOSS_EXCEEDED = 30,
+  STRATEGY_LOSS_EXCEEDED = 31,
+  DRAWDOWN_EXCEEDED = 32,
+  CREDIT_CAPITAL_EXCEEDED = 33,
+  SHORT_SALE_LOCATE_DENIED = 34,
+  SELF_TRADE_PREVENTION_DENIED = 35,
+  VENUE_UNAUTHORIZED = 36,
+  CONFIGURATION_STALE = 37,
+  STALE_POSITION = 38,
+  RISK_STATE_UNAVAILABLE = 39,
+  CONFIGURATION_ROLLBACK = 40,
+  SPLIT_BRAIN_EPOCH = 41,
+  ARITHMETIC_OVERFLOW = 42,
+  JOURNAL_UNAVAILABLE = 43,
+  ENGINE_BUSY = 44
+}
+
+enum RiskCheckCode : ubyte {
+  NONE = 0,
+  TRADING_MODE_AUTHORIZATION = 1,
+  OPERATOR_SESSION_AUTHORIZATION = 2,
+  STRATEGY_AUTHORIZATION = 3,
+  SYMBOL_AUTHORIZATION = 4,
+  RESTRICTED_LIST = 5,
+  MARKET_STATE = 6,
+  HALT = 7,
+  CLOCK_HEALTH = 8,
+  FEED_BOOK_HEALTH = 9,
+  MAXIMUM_ORDER_QUANTITY = 10,
+  MAXIMUM_ORDER_NOTIONAL = 11,
+  PRICE_COLLAR = 12,
+  TICK_SIZE = 13,
+  DUPLICATE_INTENT = 14,
+  ORDER_RATE = 15,
+  CANCEL_RATE = 16,
+  SYMBOL_POSITION = 17,
+  GROSS_EXPOSURE = 18,
+  NET_EXPOSURE = 19,
+  SECTOR_CONCENTRATION = 20,
+  FACTOR_EXPOSURE = 21,
+  DAILY_LOSS = 22,
+  STRATEGY_LOSS = 23,
+  DRAWDOWN = 24,
+  CREDIT_CAPITAL = 25,
+  SHORT_SALE_LOCATE = 26,
+  SELF_TRADE_PREVENTION = 27,
+  VENUE_AUTHORIZATION = 28,
+  KILL_SWITCH = 29,
+  CONFIGURATION_FRESHNESS = 30
+}
+
+enum TradingModeCode : ubyte {
+  UNKNOWN = 0,
+  SIMULATION = 1,
+  PAPER = 2,
+  LIVE = 3
+}
+
+enum OrderEventCode : ubyte {
+  UNKNOWN = 0,
+  ACCEPTED_BY_OMS = 1,
+  SUBMITTED_TO_GATEWAY = 2,
+  ACKNOWLEDGED = 3,
+  PARTIALLY_FILLED = 4,
+  FILLED = 5,
+  CANCEL_PENDING = 6,
+  CANCELLED = 7,
+  REJECTED = 8
+}
+
+enum AuctionSide : ubyte {
+  UNKNOWN = 0,
+  BUY_IMBALANCE = 1,
+  SELL_IMBALANCE = 2,
+  PAIRED = 3
+}
+
+enum IntelligenceTrustCode : ubyte {
+  UNKNOWN = 0,
+  UNTRUSTED = 1,
+  SANITIZED = 2,
+  VERIFIED_SOURCE = 3
+}
+
+enum IntelligenceDocumentType : ubyte {
+  UNKNOWN = 0,
+  NEWS_ARTICLE = 1,
+  FILING = 2,
+  PRESS_RELEASE = 3,
+  REGULATORY_NOTICE = 4,
+  MACRO_RELEASE = 5,
+  CORRECTION = 6
+}
+
+enum IntelligenceEventType : ubyte {
+  UNKNOWN = 0,
+  EARNINGS_RELEASE = 1,
+  GUIDANCE_UPDATE = 2,
+  MERGER_ACQUISITION = 3,
+  PRODUCT_RECALL = 4,
+  REGULATORY_ACTION = 5,
+  EXECUTIVE_CHANGE = 6,
+  FINANCING = 7,
+  BANKRUPTCY = 8,
+  LITIGATION = 9,
+  CYBERSECURITY_INCIDENT = 10,
+  ANALYST_ACTION = 11,
+  SUPPLY_CHAIN_DISRUPTION = 12,
+  TRADING_HALT = 13,
+  MACRO_RELEASE = 14,
+  RUMOR = 15,
+  CORRECTION = 16
+}
+
+enum IntelligenceStage : ubyte {
+  UNKNOWN = 0,
+  FAST = 1,
+  DEEP = 2
+}
+
+enum IntelligenceAdjudicationCode : ubyte {
+  UNKNOWN = 0,
+  PRELIMINARY = 1,
+  CONFIRMED = 2,
+  REFINED = 3,
+  DISPUTED = 4,
+  CORRECTED = 5
+}
+
+// Additive v1.5 ensemble contract enums. UNKNOWN is always invalid for a v1.5
+// writer and remains the fail-safe scalar default for older/malformed data.
+enum EnsembleGateKind : ubyte {
+  UNKNOWN = 0,
+  RULE_BASED = 1,
+  LINEAR = 2,
+  QUANTIZED_LEARNED = 3
+}
+
+enum EnsembleExpertRoleCode : ubyte {
+  UNKNOWN = 0,
+  GENERIC = 1,
+  MICROSTRUCTURE = 2,
+  TIMESERIES = 3,
+  EVENT = 4,
+  OPTIONS = 5,
+  MACRO = 6,
+  AUCTION = 7
+}
+
+enum EnsembleEligibilityCode : ubyte {
+  UNKNOWN = 0,
+  ELIGIBLE = 1,
+  MISSING_PROVENANCE = 2,
+  EXPIRED = 3,
+  MODEL_DISABLED = 4,
+  INVALID_INPUT_FEED = 5,
+  INCOMPATIBLE_STATE = 6,
+  EXCESSIVE_OOD = 7,
+  CALIBRATION_FAILED = 8,
+  DATA_QUALITY_FAILED = 9,
+  INVALID_FORECAST = 10,
+  SCOPE_MISMATCH = 11,
+  CONTROL_GENERATION_MISMATCH = 12,
+  DUPLICATE_EXPERT = 13
+}
+
+enum EnsembleDecisionReasonCode : ubyte {
+  UNKNOWN = 0,
+  COMBINED = 1,
+  INVALID_CONFIGURATION = 2,
+  INVALID_REQUEST = 3,
+  UNSAFE_MARKET_STATE = 4,
+  INVALID_INPUT_FEED = 5,
+  INVALID_TRANSACTION_COST = 6,
+  NO_ELIGIBLE_EXPERT = 7,
+  WEIGHT_CAP_INFEASIBLE = 8,
+  NO_POSITIVE_GATE_SCORE = 9,
+  INSUFFICIENT_ROBUST_EDGE = 10,
+  NUMERIC_ERROR = 11
+}
+
+enum EnsembleDominantExpertReasonCode : ubyte {
+  UNKNOWN = 0,
+  HIGHEST_WEIGHT = 1,
+  CANONICAL_TIE_BREAK = 2,
+  ONLY_ELIGIBLE_EXPERT = 3,
+  NO_ELIGIBLE_EXPERT = 4
+}
+
+enum EnsembleMarketStateCode : ubyte {
+  UNKNOWN = 0,
+  STARTUP = 1,
+  NORMAL = 2,
+  SCHEDULED_EVENT = 3,
+  BREAKING_NEWS = 4,
+  EVENT_PRICE_DISCOVERY = 5,
+  VOLATILITY_SPIKE = 6,
+  DATA_DEGRADED = 7,
+  HALTED = 8,
+  REOPENING = 9,
+  RECOVERY = 10,
+  SHUTDOWN = 11
+}
+
+enum EnsembleEventStateCode : ubyte {
+  UNKNOWN = 0,
+  NONE = 1,
+  SCHEDULED = 2,
+  BREAKING_NEWS = 3,
+  PRICE_DISCOVERY = 4,
+  VOLATILITY_SHOCK = 5
+}
+
+enum KillSwitchStateCode : ubyte {
+  UNKNOWN = 0,
+  ENGAGED = 1,
+  RESET = 2
+}
+
+enum KillSwitchScope : ubyte {
+  UNKNOWN = 0,
+  GLOBAL = 1,
+  VENUE = 2,
+  STRATEGY = 3,
+  SYMBOL = 4,
+  ACCOUNT = 5
+}
+
+enum KillSwitchReasonCode : ushort {
+  UNKNOWN = 0,
+  OPERATOR = 1,
+  RISK_SERVICE = 2,
+  CLOCK_QUALITY = 3,
+  MARKET_DATA_QUALITY = 4,
+  SPLIT_BRAIN = 5,
+  TRADING_HALT = 6,
+  INTERNAL_FAULT = 7
+}
+
+// Additive v1.7 portfolio snapshot health and reconciliation evidence.
+enum PortfolioHealthCode : ubyte {
+  UNKNOWN = 0,
+  STARTING = 1,
+  HEALTHY = 2,
+  RECONCILING = 3,
+  UNSAFE = 4,
+  STOPPED = 5
+}
+
+enum PortfolioInvariantCode : ubyte {
+  UNKNOWN = 0,
+  NONE = 1,
+  INVALID_CONFIGURATION = 2,
+  CONFLICTING_FILL = 3,
+  ORPHAN_FILL = 4,
+  ACCOUNTING_MISMATCH = 5,
+  ARITHMETIC_OVERFLOW = 6,
+  STALE_EVENT = 7,
+  UNSUPPORTED_CORPORATE_ACTION = 8,
+  JOURNAL_EXHAUSTED = 9
+}
+
+// Additive v1.8 deterministic OMS lifecycle and audit evidence. Numeric values
+// match the internal fixed-layout reference contract; UNKNOWN remains unsafe.
+enum OmsOrderStateCode : ubyte {
+  UNKNOWN = 0,
+  CREATED = 1,
+  READY = 2,
+  PENDING_ACK = 3,
+  WORKING = 4,
+  PARTIALLY_FILLED = 5,
+  PENDING_CANCEL = 6,
+  PENDING_REPLACE = 7,
+  FILLED = 8,
+  CANCELED = 9,
+  REJECTED = 10,
+  EXPIRED = 11,
+  UNKNOWN_RECOVERY = 12
+}
+
+enum OmsInputKindCode : ubyte {
+  UNKNOWN = 0,
+  ACCEPT_INTENT = 1,
+  MARK_READY = 2,
+  DISPATCH = 3,
+  CANCEL_INTENT = 4,
+  REPLACE_INTENT = 5,
+  ACKNOWLEDGEMENT = 6,
+  REJECTION = 7,
+  FILL = 8,
+  CANCEL_ACKNOWLEDGEMENT = 9,
+  CANCEL_REJECTION = 10,
+  REPLACE_ACKNOWLEDGEMENT = 11,
+  REPLACE_REJECTION = 12,
+  EXPIRE = 13,
+  RECOVERY_BEGIN = 14,
+  RECOVERY_OBSERVATION = 15,
+  AUTHORITY_UPDATE = 16
+}
+
+enum OmsEventSourceCode : ubyte {
+  UNKNOWN = 0,
+  INTERNAL = 1,
+  GATEWAY = 2,
+  DROP_COPY = 3,
+  RECOVERY = 4
+}
+
+enum OmsApplyStatusCode : ubyte {
+  UNKNOWN = 0,
+  APPLIED = 1,
+  DUPLICATE = 2,
+  RECONCILED = 3,
+  OUT_OF_ORDER_APPLIED = 4,
+  FORBIDDEN_TRANSITION = 5,
+  INVALID = 6,
+  NOT_FOUND = 7,
+  CAPACITY_EXHAUSTED = 8,
+  JOURNAL_UNAVAILABLE = 9,
+  FENCED = 10,
+  INHIBITED = 11,
+  BUSY = 12,
+  STOPPED = 13
+}
+
+enum RecordType : ubyte {
+  UNKNOWN = 0,
+  INSTRUMENT_REFERENCE_DATA = 1,
+  MARKET_EVENT = 2,
+  BOOK_UPDATE = 3,
+  TRADE_EVENT = 4,
+  QUOTE_EVENT = 5,
+  AUCTION_IMBALANCE = 6,
+  TRADING_STATUS = 7,
+  FEATURE_SNAPSHOT_METADATA = 8,
+  MODEL_FORECAST = 9,
+  ENSEMBLE_FORECAST = 10,
+  ORDER_INTENT = 11,
+  RISK_DECISION = 12,
+  ORDER_EVENT = 13,
+  FILL_EVENT = 14,
+  POSITION_SNAPSHOT = 15,
+  EVENT_INTELLIGENCE_RECORD = 16,
+  DATA_QUALITY_STATE = 17,
+  CLOCK_QUALITY_STATE = 18,
+  KILL_SWITCH_EVENT = 19
+}
