@@ -212,6 +212,30 @@ Affected components are `intelligence`, `market-data`, `order-book`,
 Current estimates are synthetic/provider-neutral infrastructure validation and
 do not claim compatibility, observed hidden liquidity, or predictive value.
 
+## Point-in-time research-data boundary
+
+### Implementable without licensed specifications
+
+- Immutable provider-neutral event/publication/receipt/processing/revision time,
+  business-validity interval, source identity, content hash, and version.
+- Append-only corporate-action, symbology, delisting, index-membership,
+  estimate, macro, news-correction, and filing-amendment fixture contracts.
+- Deterministic as-known/effective-time queries and leakage rejection for
+  future data, survivorship, label overlap, and randomized time-series splits.
+
+### Cannot be completed without authorized specifications and terms
+
+- Production source timestamp meaning, revision/correction identity, latency,
+  embargo, deletion, and late/canceled publication semantics.
+- Authoritative historical symbology, constituents, delistings, corporate
+  actions, estimate contributors, macro vintages, and document amendment chains.
+- Dataset/model-training rights, derived-data restrictions, retention,
+  redistribution, audit, and required deletion or correction propagation.
+
+The reference implementation proves internal semantics only. It cannot claim
+point-in-time completeness for a named provider or dataset without licensed
+source conformance and historical completeness evidence.
+
 ## Other external production inputs
 
 Some necessary inputs may not be “licensed protocol specifications” but are

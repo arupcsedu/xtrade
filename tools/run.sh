@@ -137,7 +137,8 @@ lint_sources() {
   require_environment
   check_format
   "$venv_dir/bin/ruff" check python tools
-  "$venv_dir/bin/mypy" python/intelligence python/model_serving python/tests tools
+  "$venv_dir/bin/mypy" \
+    python/intelligence python/model_serving python/research python/tests tools
   (
     cd control
     go vet ./...
@@ -271,6 +272,21 @@ run_benchmark() {
   "$python_bin" tools/benchmark_market_specialists.py \
     --iterations="${AEGIS_MARKET_SPECIALISTS_BENCHMARK_ITERATIONS:-100}" \
     --output=build/reports/benchmarks/market-specialists.json
+  "$python_bin" tools/benchmark_point_in_time.py \
+    --iterations="${AEGIS_POINT_IN_TIME_BENCHMARK_ITERATIONS:-100}" \
+    --records="${AEGIS_POINT_IN_TIME_BENCHMARK_RECORDS:-256}" \
+    --output=build/reports/benchmarks/point-in-time.json
+  (
+    cd control
+    go test -run '^$' \
+      -bench 'Benchmark(VerifySignedManifest|FeatureSchemaCompatibility|InspectLineage|DeploymentObservation)$' \
+      -benchmem -count=1 ./model_registry |
+      tee ../build/reports/benchmarks/model-registry.txt
+    go test -run '^$' \
+      -bench '^BenchmarkEdgeEvaluate$' \
+      -benchmem -count=1 ./config_service |
+      tee ../build/reports/benchmarks/config-service.txt
+  )
 }
 
 check_docs() {
@@ -340,6 +356,16 @@ package_artifacts() {
       -trimpath \
       -o ../dist/control/config_service.a \
       ./config_service
+    go build \
+      -buildvcs=false \
+      -trimpath \
+      -o ../dist/control/config-service \
+      ./cmd/config-service
+    go build \
+      -buildvcs=false \
+      -trimpath \
+      -o ../dist/control/model-registry \
+      ./cmd/model-registry
   )
   "$python_bin" tools/generate_sbom.py --output dist/aegis-mx.cdx.json
 }

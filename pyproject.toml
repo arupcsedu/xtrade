@@ -21,6 +21,7 @@ packages = [
   "python/intelligence/aegis_mx_intelligence",
   "python/training/aegis_mx_training",
   "python/model_serving/aegis_mx_timeseries",
+  "python/research/aegis_mx_research",
 ]
 
 [tool.hatch.build.targets.sdist]
@@ -31,6 +32,7 @@ include = [
   "/python/intelligence/aegis",
   "/python/training/aegis_mx_training",
   "/python/model_serving/aegis_mx_timeseries",
+  "/python/research/aegis_mx_research",
 ]
 
 [tool.ruff]
@@ -119,6 +121,12 @@ ignore = [
   "SLF001",
   "TRY003",
 ]
+"python/tests/test_point_in_time.py" = [
+  "FBT003",
+  "PLR0911",
+  "PLR0913",
+  "PT011",
+]
 "tools/**/*.py" = ["INP001", "S603", "S607", "T201"]
 
 [tool.mypy]
@@ -128,6 +136,7 @@ files = [
   "python/intelligence",
   "python/model_serving",
   "python/training",
+  "python/research",
   "python/tests",
   "tools",
 ]
@@ -143,6 +152,7 @@ addopts = [
   "--cov=aegis_mx_intelligence",
   "--cov=aegis_mx_training",
   "--cov=aegis_mx_timeseries",
+  "--cov=aegis_mx_research",
   "--cov-branch",
   "--cov-report=term-missing",
   "--cov-report=xml:build/reports/python/coverage.xml",
@@ -152,7 +162,12 @@ addopts = [
 
 [tool.coverage.run]
 branch = true
-source = ["aegis_mx_intelligence", "aegis_mx_timeseries", "aegis_mx_training"]
+source = [
+  "aegis_mx_intelligence",
+  "aegis_mx_research",
+  "aegis_mx_timeseries",
+  "aegis_mx_training",
+]
 
 [tool.coverage.report]
 fail_under = 100

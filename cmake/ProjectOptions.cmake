@@ -110,8 +110,11 @@ function(aegis_resolve_source_revision output_variable)
     set(resolved_revision "unversioned")
   endif()
 
-  if(NOT resolved_revision MATCHES "^(unversioned|[0-9a-f]{40})$")
-    message(FATAL_ERROR "AEGIS_SOURCE_REVISION must be 'unversioned' or a 40-character lowercase Git SHA")
+  if(NOT resolved_revision STREQUAL "unversioned")
+    string(LENGTH "${resolved_revision}" revision_length)
+    if(NOT revision_length EQUAL 40 OR NOT resolved_revision MATCHES "^[0-9a-f]+$")
+      message(FATAL_ERROR "AEGIS_SOURCE_REVISION must be 'unversioned' or a 40-character lowercase Git SHA")
+    endif()
   endif()
 
   set(${output_variable} "${resolved_revision}" PARENT_SCOPE)

@@ -320,6 +320,22 @@ The full benchmark task writes
 [architecture](../architecture/options-analytics.md), and
 [failure runbook](../operations/options-analytics-failure-runbook.md).
 
+### Point-in-time research data
+
+Run the immutable-vintage queries and adversarial leakage suite with:
+
+```bash
+AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts \
+  /scratch/djy8hg/env/aegis_mx_contracts/bin/pytest \
+  python/tests/test_point_in_time.py
+/scratch/djy8hg/env/aegis_mx_contracts/bin/python \
+  tools/benchmark_point_in_time.py --iterations 100 --records 256 \
+  --output build/reports/benchmarks/point-in-time.json
+```
+
+See the [point-in-time testing guide](point-in-time-data-testing.md) and
+[data contract](../architecture/point-in-time-data-contract.md).
+
 ### Control plane
 
 ```bash
@@ -327,10 +343,30 @@ The full benchmark task writes
 (cd control && go vet ./...)
 (cd control && go test ./...)
 (cd control && go test -race ./...)
+(cd control && go test -run '^$' \
+  -bench 'Benchmark(VerifySignedManifest|FeatureSchemaCompatibility|InspectLineage|DeploymentObservation)$' \
+  -benchmem -count=1 ./model_registry)
+(cd control && go test -run '^$' -bench '^BenchmarkEdgeEvaluate$' \
+  -benchmem -count=1 ./config_service)
 ```
 
-The current Go package is non-networked foundation metadata, not a configuration
-service implementation.
+The Go control plane includes non-networked foundation metadata, the local
+signed model registry, and a signed immutable configuration API/CLI with
+two-person approval, staged activation, rollback, emergency inhibits, and an
+RPC-free local edge cache. It has no trading or gateway transport capability;
+production authentication, HSM/KMS custody, and network distribution remain
+deployment adapters. See
+[model registry testing](model-registry-testing.md), the
+[registry architecture](../architecture/model-registry.md), and the
+[disable/rollback runbook](../operations/model-registry-rollback-runbook.md).
+The same package includes signed shadow/canary evaluation and fail-closed
+rollback; see [model deployment testing](model-deployment-testing.md), the
+[deployment-control architecture](../architecture/model-deployment-control.md),
+and the [deployment rollback runbook](../operations/model-deployment-rollback-runbook.md).
+Configuration-focused commands and limitations are in
+[configuration control testing](configuration-control-testing.md), the
+[control-plane architecture](../architecture/configuration-control-plane.md),
+and the [configuration runbook](../operations/configuration-control-runbook.md).
 
 ## Dependency and secret validation
 

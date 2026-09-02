@@ -3,9 +3,9 @@ package configservice
 
 const (
 	// Version is the immutable foundation package version.
-	Version = "0.1.0"
+	Version = "0.2.0"
 	// DefaultTestSeed is shared by deterministic control-plane tests.
-	DefaultTestSeed int64 = 20260828
+	DefaultTestSeed int64 = 20260902
 )
 
 // BuildInfo identifies this control-plane foundation build.

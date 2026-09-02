@@ -1,0 +1,100 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "title": "Model deployment rollback runbook",
+      "type": "link",
+      "url": "../../../../docs/operations/model-deployment-rollback-runbook.md"
+    }
+  ],
+  "panels": [
+    {
+      "description": "Current coordinator state. No state shown here authorizes trading or automatic promotion.",
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 4, "w": 8, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "value", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "name"},
+      "targets": [{"expr": "aegis_model_deployment_info{deployment=~\"$deployment\",state=~\"$state\"}", "legendFormat": "{{state}}", "refId": "A"}],
+      "title": "Deployment state",
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 4, "w": 8, "x": 8, "y": 0},
+      "id": 2,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"expr": "aegis_model_deployment_observations_total{deployment=~\"$deployment\"}", "legendFormat": "paired observations", "refId": "A"}],
+      "title": "Paired observations",
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 8, "x": 16, "y": 0},
+      "id": 3,
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"expr": "aegis_model_deployment_rollbacks_total{deployment=~\"$deployment\"}", "legendFormat": "rollbacks", "refId": "A"}],
+      "title": "Automatic rollbacks",
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 9, "w": 16, "x": 0, "y": 4},
+      "id": 4,
+      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "right", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"expr": "aegis_model_deployment_metric_ci_upper{deployment=~\"$deployment\",regime=~\"$regime\",metric=~\"$metric\"}", "legendFormat": "upper {{regime}} {{metric}}", "refId": "A"},
+        {"expr": "aegis_model_deployment_metric_threshold{deployment=~\"$deployment\",regime=~\"$regime\",metric=~\"$metric\"}", "legendFormat": "threshold {{regime}} {{metric}}", "refId": "B"}
+      ],
+      "title": "One-sided confidence upper bound vs signed threshold",
+      "type": "timeseries"
+    },
+    {
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 9, "w": 8, "x": 16, "y": 4},
+      "id": 5,
+      "options": {"displayMode": "gradient", "minVizHeight": 10, "minVizWidth": 0, "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "showUnfilled": true, "valueMode": "color"},
+      "targets": [{"expr": "aegis_model_deployment_metric_samples{deployment=~\"$deployment\",regime=~\"$regime\",metric=~\"$metric\"}", "legendFormat": "{{regime}} {{metric}}", "refId": "A"}],
+      "title": "Regime-specific sample counts",
+      "type": "bargauge"
+    },
+    {
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 7, "w": 12, "x": 0, "y": 13},
+      "id": 6,
+      "options": {"legend": {"displayMode": "table", "placement": "right", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "aegis_model_deployment_metric_triggered{deployment=~\"$deployment\"}", "legendFormat": "{{regime}} {{metric}}", "refId": "A"}],
+      "title": "Active statistical triggers",
+      "type": "timeseries"
+    },
+    {
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 7, "w": 12, "x": 12, "y": 13},
+      "id": 7,
+      "options": {"legend": {"displayMode": "table", "placement": "right", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [{"expr": "aegis_model_canary_rejections_total{deployment=~\"$deployment\"}", "legendFormat": "{{reason}}", "refId": "A"}],
+      "title": "Canary scope rejections",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["aegis-mx", "models", "shadow", "canary", "safety"],
+  "templating": {
+    "list": [
+      {"current": {}, "definition": "label_values(aegis_model_deployment_info, deployment)", "hide": 0, "includeAll": false, "label": "Deployment", "multi": false, "name": "deployment", "options": [], "query": {"query": "label_values(aegis_model_deployment_info, deployment)", "refId": "PrometheusVariableQueryEditor-VariableQuery"}, "refresh": 1, "regex": "", "skipUrlSync": false, "sort": 1, "type": "query"},
+      {"current": {}, "definition": "label_values(aegis_model_deployment_info{deployment=~\"$deployment\"}, state)", "hide": 0, "includeAll": true, "label": "State", "multi": true, "name": "state", "options": [], "query": {"query": "label_values(aegis_model_deployment_info{deployment=~\"$deployment\"}, state)", "refId": "PrometheusVariableQueryEditor-VariableQuery"}, "refresh": 1, "regex": "", "skipUrlSync": false, "sort": 1, "type": "query"},
+      {"current": {}, "definition": "label_values(aegis_model_deployment_metric_samples{deployment=~\"$deployment\"}, regime)", "hide": 0, "includeAll": true, "label": "Regime", "multi": true, "name": "regime", "options": [], "query": {"query": "label_values(aegis_model_deployment_metric_samples{deployment=~\"$deployment\"}, regime)", "refId": "PrometheusVariableQueryEditor-VariableQuery"}, "refresh": 1, "regex": "", "skipUrlSync": false, "sort": 1, "type": "query"},
+      {"current": {}, "definition": "label_values(aegis_model_deployment_metric_samples{deployment=~\"$deployment\"}, metric)", "hide": 0, "includeAll": true, "label": "Metric", "multi": true, "name": "metric", "options": [], "query": {"query": "label_values(aegis_model_deployment_metric_samples{deployment=~\"$deployment\"}, metric)", "refId": "PrometheusVariableQueryEditor-VariableQuery"}, "refresh": 1, "regex": "", "skipUrlSync": false, "sort": 1, "type": "query"}
+    ]
+  },
+  "time": {"from": "now-6h", "to": "now"},
+  "timezone": "utc",
+  "title": "Aegis-MX Model Deployment Safety",
+  "uid": "aegis-model-deployment",
+  "version": 1
+}

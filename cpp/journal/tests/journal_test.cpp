@@ -175,15 +175,18 @@ TEST(JournalWriter, ValidatesCanonicalAuditEnvelopeBeforeAppend) {
   common::ValidatedAuditEnvelopeView envelope{};
   ASSERT_TRUE(common::validate_size_prefixed_audit_envelope(bytes, &envelope).ok());
   ASSERT_NE(envelope.envelope, nullptr);
+  const auto* const envelope_id = envelope.envelope->envelope_id();
+  const auto* const created_time = envelope.envelope->created_process_monotonic_time();
+  const auto* const recorded_time = envelope.envelope->recorded_wall_clock_utc_time();
+  ASSERT_NE(envelope_id, nullptr);
+  ASSERT_NE(created_time, nullptr);
+  ASSERT_NE(recorded_time, nullptr);
   auto meta = test::metadata(
       9U, RecordKind::model_forecast, PayloadEncoding::canonical_audit_envelope,
       RecordPriority::mandatory, {.major = 1U, .minor = 8U, .patch = 0U});
-  meta.global_event_id = common::GlobalEventId(envelope.envelope->envelope_id()->high(),
-                                               envelope.envelope->envelope_id()->low());
-  meta.created_process_monotonic_time_ns =
-      envelope.envelope->created_process_monotonic_time()->value();
-  meta.recorded_wall_clock_utc_time_ns =
-      envelope.envelope->recorded_wall_clock_utc_time()->value();
+  meta.global_event_id = common::GlobalEventId(envelope_id->high(), envelope_id->low());
+  meta.created_process_monotonic_time_ns = created_time->value();
+  meta.recorded_wall_clock_utc_time_ns = recorded_time->value();
   EXPECT_EQ(writer.append({.metadata = meta, .payload = bytes}).status, Status::ok);
   auto malformed = bytes;
   malformed.back() ^= 0x1U;

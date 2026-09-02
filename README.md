@@ -6,7 +6,8 @@ canonical contracts, temporal-integrity library, deterministic synthetic
 market-data generator, bounded feed handler, deterministic order-book and
 feature engines, model contracts, infrastructure-only microstructure models,
 an off-hot-path time-series forecast service, deterministic risk and OMS
-kernels, and a repository-owned synthetic/paper gateway. It contains no real
+kernels, a signed append-only model registry, a shadow/canary deployment
+coordinator, and a repository-owned synthetic/paper gateway. It contains no real
 feed adapter, strategy, proprietary order-entry protocol, network transmitter,
 broker connection, credential, or live-trading behavior.
 
@@ -193,6 +194,20 @@ scheduled, publication, receipt, exchange, and monotonic times; retains prior
 values and revisions separately; integrates bounded cross-asset responses; and
 emits no forecast bytes for partial, conflicting, untrusted, or incomplete data.
 
+## Point-in-time research data
+
+The offline `aegis_mx_research` package stores immutable event, publication,
+receipt, processing, revision, and business-validity times for corporate
+actions, symbol mappings, delistings, index membership, estimate and macro
+vintages, corrected news, and filing amendments. Its dataset gate rejects
+look-ahead, survivorship, label overlap, and randomized time-series splits with
+stable reason codes. It has no order, gateway, or live-data connection.
+
+The normative semantics are in the
+[point-in-time data contract](docs/architecture/point-in-time-data-contract.md),
+with focused commands in
+[Point-in-time Data Testing](docs/testing/point-in-time-data-testing.md).
+
 ## Durable journal tools
 
 The C++ journal boundary provides bounded nonblocking publication, segmented
@@ -253,6 +268,81 @@ The simulation model and limitations are in the
 commands and deterministic test coverage are in
 [Event Backtester Testing](docs/testing/event-backtester-testing.md).
 
+## Signed model registry
+
+The off-hot-path Go model registry stores content-addressed artifacts, signed
+immutable provenance manifests, hash-chained approval/deployment events, and
+signed environment pointers. Exact feature-schema compatibility and every
+lifecycle transition fail closed. Full-production model promotion is never
+automatic: it requires an explicit command, external authorization reference,
+and a promoter different from the recorded approver. This lifecycle does not
+authorize live trading.
+
+Build and inspect the CLI without any service credential:
+
+```bash
+source tools/toolchain.sh
+(cd control && go test ./model_registry)
+(cd control && go build -trimpath -o ../build/model-registry ./cmd/model-registry)
+build/model-registry version
+```
+
+Mutation commands require externally supplied Ed25519 key paths and audited
+actor/reason fields. Exact register, validate, approve, shadow, canary,
+limited-risk, production, rollback, disable, and lineage commands are in
+[Model Registry Testing](docs/testing/model-registry-testing.md). Architecture
+and recovery behavior are in the
+[model registry design](docs/architecture/model-registry.md) and
+[rollback runbook](docs/operations/model-registry-rollback-runbook.md).
+
+## Signed configuration control plane
+
+The Go `config-service` manages one immutable snapshot for strategy and venue
+policy, integer risk limits, exact model eligibility, ensemble caps, sessions,
+event calendars, kill switches, simulation/paper mode, and operator roles.
+Snapshots are canonicalized, SHA-256 identified, Ed25519 signed, staged, and
+activated only after approval by a principal distinct from the author. Accepted
+actions form an fsynced signed hash chain. Emergency commands only engage
+hierarchical inhibits; they cannot clear them.
+
+The edge consumes an atomically published verified local snapshot and performs
+no control RPC or disk operation while evaluating it. Missing, expired, stale,
+clock-regressed, unauthorized, or killed state blocks new orders. An allow is
+still subject to the deterministic C++ market-state, risk, OMS, and gateway
+controls. This build accepts only `SIMULATION` and `PAPER`.
+
+```bash
+source tools/toolchain.sh
+(cd control && go test ./config_service)
+(cd control && go build -trimpath -o ../build/config-service ./cmd/config-service)
+build/config-service version
+```
+
+See [Configuration Control Testing](docs/testing/configuration-control-testing.md),
+the [architecture](docs/architecture/configuration-control-plane.md), and the
+[operations runbook](docs/operations/configuration-control-runbook.md).
+
+## Shadow and canary model deployment
+
+The off-hot-path Go deployment coordinator compares production and candidate
+forecasts only when both bind the identical feature snapshot. It records
+non-executable hypothetical decisions, evaluates all ten rollback dimensions in
+every signed required regime with deterministic paired confidence bounds, and
+never promotes automatically. Canary activation requires explicit second-person
+approval. Canary eligibility is limited by signed symbol, strategy, capital,
+order-rate, and fresh risk-snapshot controls and still cannot bypass normal risk,
+OMS, or gateway gates.
+
+Any configured confidence breach, invalid canary evidence, or audit failure
+initiates compatible signed rollback; a rollback failure globally disables the
+candidate. The full design is in
+[Model Deployment Control](docs/architecture/model-deployment-control.md), with
+focused commands in
+[Model Deployment Testing](docs/testing/model-deployment-testing.md), the
+[operational runbook](docs/operations/model-deployment-rollback-runbook.md), and
+the checked-in
+[Grafana dashboard](infra/observability/grafana/dashboards/model-deployment.json).
+
 ## Containerized development
 
 The development image uses a digest-pinned Ubuntu 24.04 base and a checksummed
@@ -285,7 +375,9 @@ Generated outputs are ignored by Git:
 - `build/reports/` — JUnit, coverage, Go JSON, and benchmark reports;
 - `dist/cpp/` — CPack foundation archive;
 - `dist/python/` — Python wheel and source distribution;
-- `dist/control/` — control-plane Go package archive; and
+- `dist/control/` — control-plane Go package archive plus `config-service` and
+  `model-registry` CLIs;
+  and
 - `dist/aegis-mx.cdx.json` — deterministic CycloneDX SBOM.
 
 ## CI

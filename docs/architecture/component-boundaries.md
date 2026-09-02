@@ -35,6 +35,12 @@ logical boundaries without changing their ownership or dependency direction.
 roots rather than domain components. Empty directories are reserved physical
 boundaries only; they are not stub implementations or phase-completion evidence.
 
+The implemented `control/model_registry` boundary also contains the asynchronous
+shadow/canary deployment coordinator. It consumes paired forecast observations,
+publishes only non-executable hypothetical/scope records, and invokes signed
+registry rollback or disable. It is forbidden from importing or bypassing C++
+risk, OMS, execution, or gateway paths.
+
 ## Boundary rules
 
 The target is a modular monorepo, not a distributed-service mandate. A component
@@ -354,14 +360,18 @@ artifacts. Promotion is a separate reviewed process.
 ### `control-plane/`
 
 **Purpose:** Own authenticated/authorized operator APIs, signed configuration
-distribution and verification support, activation workflow coordination,
-authorization leases, desired-state audit, and fleet/service status views.
+distribution and verification support, immutable model-artifact registration
+and promotion, activation workflow coordination, authorization leases,
+desired-state audit, and fleet/service status views.
 
-**Inputs:** Operator/compliance actions, signed configuration artifacts, service
+**Inputs:** Operator/compliance actions, signed configuration and model
+artifacts, exact feature contracts, replay/validation evidence, service
 health/readiness, and environment identity.
 
-**Outputs:** Scoped versioned control commands and configuration snapshots. A
-control command is evidence, not direct permission to bypass local gates.
+**Outputs:** Scoped versioned control commands, configuration snapshots, signed
+append-only model lifecycle events, and signed deployment pointers. A control
+command or model approval is evidence, not direct permission to bypass local
+gates.
 
 **Allowed dependencies:** Language-neutral control/health contracts owned by
 `edge-core`, `risk`, and `gateways`. Hot components never import a control-plane
@@ -369,6 +379,16 @@ client into their decision path.
 
 **Execution class:** Near-real-time safety actions and asynchronous management.
 Partitions or delays expire authority closed.
+
+**Implemented configuration slice (2026-09-02):** The standard-library Go
+configuration service owns canonical signed immutable snapshots, two-person
+critical approval, staged activation, compatible rollback, scoped engage-only
+emergency kills, signed hash-chained audit, RBAC/replay checks, and an atomic
+RPC-free local edge cache. It recognizes only simulation and paper as valid
+runtime modes. Authenticated network transport, production identity/HSM
+adapters, multi-host consensus, and an online signed rollback-selection
+distributor remain deployment boundaries. See the
+[configuration control-plane design](configuration-control-plane.md).
 
 ### `observability/`
 

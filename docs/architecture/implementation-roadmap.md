@@ -603,6 +603,29 @@ golden corpus remain open, so Phase 10 is not complete.
 
 ## Phase 11 — Control plane and safety coordination
 
+**Implementation status (2026-09-02):** A standard-library Go model-registry
+vertical slice now provides content-addressed artifacts, signed immutable
+provenance manifests, exact feature-schema compatibility, signed hash-chained
+approval/deployment audit, strict lifecycle transitions, explicit two-person
+production promotion, global disable, compatible rollback, lineage inspection,
+CLI/API operations, deterministic tests, race coverage, and control-plane
+benchmarks. A paired shadow/canary coordinator adds signed deterministic limits,
+identical-snapshot hypothetical comparison, exact regime-specific confidence
+gates, explicit second-person canary approval, bounded symbol/strategy/capital/
+rate/risk-freshness scope, all ten automatic rollback triggers, fail-closed
+disable, restart recovery, Prometheus metrics, dashboard, and runbook. It is local
+and off hot path. A general configuration slice now adds canonical signed
+immutable full snapshots, active/bootstrap RBAC,
+persistent anti-replay authorization, two-person critical approval, staged
+activation, compatible rollback, hierarchical engage-only emergency kills,
+signed hash-chained audit, and a lock-free-read local edge cache that expires
+closed without RPC. Simulation and paper are the only accepted venue modes.
+Production identity/HSM adapters, authenticated network transport, multi-host
+consensus/fencing, fleet status, and signed online rollback distribution remain
+open, so Phase 11 is not complete. See the
+[configuration control-plane design](configuration-control-plane.md) and
+[ADR 0033](../adr/0033-signed-two-person-configuration-control.md).
+
 **Inputs**
 
 - Versioned control/configuration/health contracts, service shell, risk and
@@ -665,10 +688,15 @@ macroeconomic calendar/release specialist with strict abstention, linked
   with integer ranges, explicit assumptions, symbol disablement, data-quality
   abstention, synthetic closing-auction fixtures, deterministic replay, and
   common return-forecast publication;
+  an offline bitemporal point-in-time store covering corporate actions,
+  symbology, delistings, index membership, analyst/macro vintages, news
+  corrections, and filing amendments, with fail-closed leakage validation for
+  future data, survivorship, label overlap, and randomized time-series splits;
 and adversarial replay tests are implemented.
 Production provider connectivity and a reviewed external deep-model runtime
-remain blocked, and the research promotion workflow is still open, so Phase 12
-is not complete.
+remain blocked. The local signed artifact-promotion slice is implemented, but
+distributed identity/HSM-backed promotion and production research governance
+remain open, so Phase 12 is not complete.
 
 **Inputs**
 
