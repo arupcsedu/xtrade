@@ -104,4 +104,6 @@ def test_live_transmission_boundary_requires_a_bound_capability() -> None:
         encoding="utf-8"
     )
     live_boundary = header[header.index("class ILiveTransmissionAdapter") :]
-    assert "const VerifiedLiveTransmissionCapability& capability" in live_boundary
+    assert "VerifiedLiveTransmissionCapability& capability" in live_boundary
+    assert "transmit_verified" in live_boundary
+    assert "capability.consume" in live_boundary

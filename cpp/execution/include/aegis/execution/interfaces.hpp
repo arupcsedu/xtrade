@@ -59,17 +59,28 @@ public:
                                              GatewayEvent& output) noexcept = 0;
 };
 
-#if AEGIS_LIVE_TRADING_COMPILED
 // Merely compiling this boundary does not authorize or implement live trading.
-// A future adapter must still implement every runtime activation interlock.
+// The non-virtual wrapper rechecks frame binding and consumes authority before
+// a future licensed adapter can reach its protected implementation hook.
 class ILiveTransmissionAdapter {
 public:
   virtual ~ILiveTransmissionAdapter() = default;
-  [[nodiscard]] virtual AdapterStatus
+  [[nodiscard]] AdapterStatus
   transmit(const OpaqueProtocolFrame& frame,
-           const VerifiedLiveTransmissionCapability& capability) noexcept = 0;
+           VerifiedLiveTransmissionCapability& capability) noexcept {
+    LiveTransmissionCapability evidence;
+    if (!capability.consume(evidence) ||
+        evidence.frame_sha256 != live_protocol_frame_sha256(frame)) {
+      return AdapterStatus::authorization_invalid;
+    }
+    return transmit_verified(frame, evidence);
+  }
+
+protected:
+  [[nodiscard]] virtual AdapterStatus
+  transmit_verified(const OpaqueProtocolFrame& frame,
+                    const LiveTransmissionCapability& evidence) noexcept = 0;
 };
-#endif
 
 } // namespace aegis::execution
 

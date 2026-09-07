@@ -86,8 +86,12 @@ not only at activation time.
 The dormant adapter boundary enforces this shape with a single-use
 `VerifiedLiveTransmissionCapability`. Its authenticated evidence binds the exact
 encoded frame and all authority digests above. Only the verifier can construct
-the type accepted by a future licensed transmitter. This is a structural guard,
-not a live implementation or venue certification.
+the type accepted by a future licensed transmitter. The non-virtual transmission
+wrapper consumes and invalidates it before invoking an adapter and rejects a
+different frame or a second use. The issuer itself is bound to the configured
+session, configuration digest/hash, epoch, fencing token, and clock-age policy;
+it refuses unsafe final state. This is a structural guard, not a live
+implementation or venue certification.
 
 ## Activation sequence
 

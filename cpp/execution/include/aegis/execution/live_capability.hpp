@@ -58,15 +58,12 @@ struct LiveTransmissionCapability {
 struct LiveTransmissionTrust {
   common::SessionId session_id;
   common::Sha256Digest configuration_sha256{};
+  std::uint64_t configuration_stable_hash{};
   common::Sha256Digest capability_key_id_sha256{};
   common::HmacSha256Key capability_key{};
   std::uint64_t exchange_session_epoch{};
   std::uint64_t fencing_token{};
-};
-
-struct LiveCapabilitySigningKey {
-  common::HmacSha256Key key{};
-  common::Sha256Digest key_id_sha256{};
+  std::uint64_t maximum_clock_age_ns{};
 };
 // NOLINTEND(misc-non-private-member-variables-in-classes)
 
@@ -77,8 +74,7 @@ valid_live_transmission_capability(const LiveTransmissionCapability& value) noex
 
 class LiveTransmissionCapabilityIssuer final {
 public:
-  explicit LiveTransmissionCapabilityIssuer(
-      LiveCapabilitySigningKey signing_key) noexcept;
+  explicit LiveTransmissionCapabilityIssuer(LiveTransmissionTrust trust) noexcept;
 
   [[nodiscard]] bool issue(common::GlobalEventId capability_id,
                            const OpaqueProtocolFrame& frame,
@@ -87,24 +83,37 @@ public:
                            LiveTransmissionCapability& output) const noexcept;
 
 private:
-  common::HmacSha256Key capability_key_{};
-  common::Sha256Digest capability_key_id_sha256_{};
+  LiveTransmissionTrust trust_{};
   bool initialized_{false};
 };
 
 class VerifiedLiveTransmissionCapability final {
 public:
+  VerifiedLiveTransmissionCapability(const VerifiedLiveTransmissionCapability&) =
+      delete;
+  VerifiedLiveTransmissionCapability&
+  operator=(const VerifiedLiveTransmissionCapability&) = delete;
+  VerifiedLiveTransmissionCapability(
+      VerifiedLiveTransmissionCapability&& other) noexcept;
+  VerifiedLiveTransmissionCapability&
+  operator=(VerifiedLiveTransmissionCapability&& other) noexcept;
+
   [[nodiscard]] const LiveTransmissionCapability& evidence() const noexcept {
     return evidence_;
   }
+  [[nodiscard]] bool valid() const noexcept { return valid_; }
 
 private:
   friend class LiveTransmissionCapabilityVerifier;
+  friend class ILiveTransmissionAdapter;
   explicit VerifiedLiveTransmissionCapability(
       const LiveTransmissionCapability& evidence) noexcept
-      : evidence_(evidence) {}
+      : evidence_(evidence), valid_(true) {}
+
+  [[nodiscard]] bool consume(LiveTransmissionCapability& output) noexcept;
 
   LiveTransmissionCapability evidence_;
+  bool valid_{false};
 };
 
 struct LiveCapabilityVerification {

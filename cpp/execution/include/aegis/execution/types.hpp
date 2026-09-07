@@ -167,6 +167,7 @@ enum class AdapterStatus : std::uint8_t {
   malformed = 3,
   unsupported = 4,
   output_too_small = 5,
+  authorization_invalid = 6,
 };
 
 enum class GatewayAuditKind : std::uint8_t {

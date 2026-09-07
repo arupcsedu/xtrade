@@ -83,6 +83,69 @@ canonical_capability(const LiveTransmissionCapability& value,
          value.operator_authorization_valid_until_ns != 0U;
 }
 
+[[nodiscard]] bool
+market_permits_transmission(const FinalSafetyState& safety) noexcept {
+  if (safety.official_trading_status == market_state::OfficialTradingStatus::open) {
+    return safety.market_state_snapshot.state == market_state::MarketState::normal ||
+           safety.market_state_snapshot.state ==
+               market_state::MarketState::scheduled_event ||
+           safety.market_state_snapshot.state ==
+               market_state::MarketState::breaking_news ||
+           safety.market_state_snapshot.state ==
+               market_state::MarketState::event_price_discovery ||
+           safety.market_state_snapshot.state ==
+               market_state::MarketState::volatility_spike;
+  }
+  return safety.official_trading_status ==
+             market_state::OfficialTradingStatus::auction &&
+         safety.market_state_snapshot.state == market_state::MarketState::reopening;
+}
+
+[[nodiscard]] bool current_clock(const FinalSafetyState& safety,
+                                 const std::uint64_t maximum_age_ns) noexcept {
+  const auto now_ns = safety.observed_process_monotonic_time_ns;
+  const auto observed_ns = safety.clock_quality_snapshot.observed_at.value();
+  const auto synchronized_ns =
+      safety.clock_quality_snapshot.last_synchronization_time.value();
+  return safety.clock_quality_snapshot.state == time::ClockQualityState::healthy &&
+         safety.clock_quality_snapshot.operation_mode ==
+             time::ClockOperationMode::normal &&
+         safety.clock_quality_snapshot.hardware_timestamp_available &&
+         safety.clock_quality_snapshot.source_id.valid() && observed_ns != 0U &&
+         synchronized_ns != 0U && observed_ns <= now_ns && synchronized_ns <= now_ns &&
+         now_ns - observed_ns <= maximum_age_ns &&
+         now_ns - synchronized_ns <= maximum_age_ns;
+}
+
+[[nodiscard]] bool safe_to_issue(const LiveTransmissionTrust& trust,
+                                 const GatewayRequest& request,
+                                 const LiveAuthorityEvidence& authority) noexcept {
+  const auto& safety = request.safety;
+  const auto now_ns = safety.observed_process_monotonic_time_ns;
+  return request.command.session_id == trust.session_id &&
+         safety.effective_configuration_hash == trust.configuration_stable_hash &&
+         authority.configuration_sha256 == trust.configuration_sha256 &&
+         request.command.authority.exchange_session_epoch ==
+             trust.exchange_session_epoch &&
+         request.command.authority.fencing_token == trust.fencing_token &&
+         safety.authority.exchange_session_epoch == trust.exchange_session_epoch &&
+         safety.authority.fencing_token == trust.fencing_token &&
+         authority.operator_authorization_valid_until_ns ==
+             safety.operator_authorization_valid_until_ns &&
+         request.risk_decision.decision == risk::DecisionCode::approved &&
+         request.risk_decision.evaluated_process_monotonic_time_ns <= now_ns &&
+         request.risk_decision.valid_until_process_monotonic_time_ns >= now_ns &&
+         request.command.generated_process_monotonic_time_ns <= now_ns &&
+         safety.signed_configuration_valid && safety.operator_authorized &&
+         safety.operator_authorization_valid_until_ns >= now_ns &&
+         safety.activation_record_durable && safety.activation_record_hash != 0U &&
+         safety.journal_ready && !safety.kill_switch_engaged &&
+         safety.feed_health == market_state::FeedHealth::healthy &&
+         safety.book_validity == market_state::BookValidity::valid &&
+         current_clock(safety, trust.maximum_clock_age_ns) &&
+         market_permits_transmission(safety);
+}
+
 [[nodiscard]] bool authenticate(const common::HmacSha256Key& key,
                                 const LiveTransmissionCapability& value,
                                 common::Sha256Digest& tag) noexcept {
@@ -129,11 +192,15 @@ bool valid_live_transmission_capability(
 }
 
 LiveTransmissionCapabilityIssuer::LiveTransmissionCapabilityIssuer(
-    const LiveCapabilitySigningKey signing_key) noexcept
-    : capability_key_(signing_key.key),
-      capability_key_id_sha256_(signing_key.key_id_sha256),
-      initialized_(!common::is_zero_digest(capability_key_) &&
-                   !common::is_zero_digest(capability_key_id_sha256_)) {}
+    const LiveTransmissionTrust trust) noexcept
+    : trust_(trust),
+      initialized_(trust_.session_id.valid() &&
+                   !common::is_zero_digest(trust_.configuration_sha256) &&
+                   trust_.configuration_stable_hash != 0U &&
+                   !common::is_zero_digest(trust_.capability_key_id_sha256) &&
+                   !common::is_zero_digest(trust_.capability_key) &&
+                   trust_.exchange_session_epoch != 0U && trust_.fencing_token != 0U &&
+                   trust_.maximum_clock_age_ns != 0U) {}
 
 bool LiveTransmissionCapabilityIssuer::issue(
     const common::GlobalEventId capability_id, const OpaqueProtocolFrame& frame,
@@ -143,8 +210,7 @@ bool LiveTransmissionCapabilityIssuer::issue(
   const auto now_ns = request.safety.observed_process_monotonic_time_ns;
   if (!initialized_ || !capability_id.valid() || !valid_frame(frame) ||
       !valid_gateway_request(request) || !nonzero_authority(authority) ||
-      authority.operator_authorization_valid_until_ns < now_ns ||
-      request.risk_decision.valid_until_process_monotonic_time_ns < now_ns) {
+      !safe_to_issue(trust_, request, authority)) {
     return false;
   }
   LiveTransmissionCapability result{
@@ -166,12 +232,42 @@ bool LiveTransmissionCapabilityIssuer::issue(
       .valid_until_process_monotonic_time_ns =
           std::min(request.risk_decision.valid_until_process_monotonic_time_ns,
                    authority.operator_authorization_valid_until_ns),
-      .capability_key_id_sha256 = capability_key_id_sha256_};
-  if (!authenticate(capability_key_, result, result.authentication_tag) ||
+      .capability_key_id_sha256 = trust_.capability_key_id_sha256};
+  if (!authenticate(trust_.capability_key, result, result.authentication_tag) ||
       !valid_live_transmission_capability(result)) {
     return false;
   }
   output = result;
+  return true;
+}
+
+VerifiedLiveTransmissionCapability::VerifiedLiveTransmissionCapability(
+    VerifiedLiveTransmissionCapability&& other) noexcept
+    : evidence_(other.evidence_), valid_(other.valid_) {
+  other.evidence_ = {};
+  other.valid_ = false;
+}
+
+VerifiedLiveTransmissionCapability& VerifiedLiveTransmissionCapability::operator=(
+    VerifiedLiveTransmissionCapability&& other) noexcept {
+  if (this != &other) {
+    evidence_ = other.evidence_;
+    valid_ = other.valid_;
+    other.evidence_ = {};
+    other.valid_ = false;
+  }
+  return *this;
+}
+
+bool VerifiedLiveTransmissionCapability::consume(
+    LiveTransmissionCapability& output) noexcept {
+  output = {};
+  if (!valid_) {
+    return false;
+  }
+  output = evidence_;
+  evidence_ = {};
+  valid_ = false;
   return true;
 }
 
@@ -180,9 +276,11 @@ LiveTransmissionCapabilityVerifier::LiveTransmissionCapabilityVerifier(
     : trust_(trust),
       initialized_(trust_.session_id.valid() &&
                    !common::is_zero_digest(trust_.configuration_sha256) &&
+                   trust_.configuration_stable_hash != 0U &&
                    !common::is_zero_digest(trust_.capability_key_id_sha256) &&
                    !common::is_zero_digest(trust_.capability_key) &&
-                   trust_.exchange_session_epoch != 0U && trust_.fencing_token != 0U) {}
+                   trust_.exchange_session_epoch != 0U && trust_.fencing_token != 0U &&
+                   trust_.maximum_clock_age_ns != 0U) {}
 
 bool LiveTransmissionCapabilityVerifier::consumed(
     const common::GlobalEventId capability_id) const noexcept {

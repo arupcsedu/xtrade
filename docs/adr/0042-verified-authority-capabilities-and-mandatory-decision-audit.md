@@ -34,6 +34,13 @@ they define the shape a future licensed implementation must use.
    authorization, durable activation record, fencing grant, session epoch,
    lease, and key identity. It is bounded and single use. A live adapter accepts
    only `VerifiedLiveTransmissionCapability`, which only the verifier can create.
+   The public transmission wrapper is non-virtual: it rechecks the exact frame,
+   consumes and invalidates the move-only authority object, and only then invokes
+   the protected adapter hook. Issuance is scoped to the verifier's session,
+   configuration, epoch, fencing token, and clock-age limit, and rejects any
+   non-approved risk, unsafe market/clock/feed/book state, kill, missing signed
+   configuration/operator authorization, non-durable activation, or unavailable
+   journal.
 4. The complete `DecisionExplanationRecord` has a canonical little-endian binary
    encoding that excludes ABI padding. The order path must publish it as a
    mandatory record to the bounded, fail-closed `AsyncJournal` before calling a
