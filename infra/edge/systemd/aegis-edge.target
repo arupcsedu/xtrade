@@ -1,0 +1,9 @@
+[Unit]
+Description=Aegis-MX colocated edge (non-live)
+Requires=aegis-edge-inhibit-initialize.service aegis-ptp-ready.service aegis-edge-journal.service aegis-edge-core.service aegis-paper-gateway.service
+Wants=aegis-edge-observability.service aegis-edge-health.timer
+After=aegis-paper-gateway.service aegis-edge-observability.service
+AllowIsolate=no
+
+[Install]
+WantedBy=multi-user.target

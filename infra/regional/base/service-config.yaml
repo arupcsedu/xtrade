@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: news-intelligence-config, namespace: aegis-intelligence}
+immutable: true
+data:
+  runtime.json: |
+    {"configuration_version":1,"provider_egress":"https://regional-egress-proxy.aegis-platform.svc.cluster.local:8443","publish_mode":"advisory_only","role":"news-intelligence"}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: filings-intelligence-config, namespace: aegis-intelligence}
+immutable: true
+data:
+  runtime.json: |
+    {"configuration_version":1,"provider_egress":"https://regional-egress-proxy.aegis-platform.svc.cluster.local:8443","publish_mode":"advisory_only","role":"filings-intelligence"}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: macro-intelligence-config, namespace: aegis-intelligence}
+immutable: true
+data:
+  runtime.json: |
+    {"configuration_version":1,"provider_egress":"https://regional-egress-proxy.aegis-platform.svc.cluster.local:8443","publish_mode":"advisory_only","role":"macro-intelligence"}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: timesfm-service-config, namespace: aegis-models}
+immutable: true
+data:
+  runtime.json: |
+    {"configuration_version":1,"device":"cpu","fallback":"seasonal_naive","publish_mode":"forecast_only","role":"timesfm-service"}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: options-analytics-config, namespace: aegis-models}
+immutable: true
+data:
+  runtime.json: |
+    {"configuration_version":1,"dealer_positioning":"inferred_with_uncertainty","publish_mode":"forecast_only","role":"options-analytics"}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: model-registry-config, namespace: aegis-control}
+immutable: true
+data:
+  runtime.json: |
+    {"approval_required":true,"automatic_production_promotion":false,"configuration_version":1,"role":"model-registry"}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: configuration-control-plane-config, namespace: aegis-control}
+immutable: true
+data:
+  runtime.json: |
+    {"configuration_version":1,"critical_change_approvals":2,"live_mode_available":false,"role":"configuration-control-plane"}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: dashboards-config, namespace: aegis-observability}
+immutable: true
+data:
+  runtime.json: |
+    {"anonymous_access":false,"configuration_version":1,"role":"dashboards","write_administration":false}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: research-api-config, namespace: aegis-research}
+immutable: true
+data:
+  runtime.json: |
+    {"configuration_version":1,"point_in_time_required":true,"role":"research-api","trading_authority":false}

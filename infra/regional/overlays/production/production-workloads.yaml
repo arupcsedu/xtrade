@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: news-intelligence, namespace: aegis-intelligence}
+spec:
+  replicas: 3
+  template: {spec: {containers: [{name: service, imagePullPolicy: Always}]}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: filings-intelligence, namespace: aegis-intelligence}
+spec:
+  replicas: 3
+  template: {spec: {containers: [{name: service, imagePullPolicy: Always}]}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: macro-intelligence, namespace: aegis-intelligence}
+spec:
+  replicas: 2
+  template: {spec: {containers: [{name: service, imagePullPolicy: Always}]}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: timesfm-service, namespace: aegis-models}
+spec:
+  replicas: 2
+  template:
+    spec:
+      runtimeClassName: nvidia
+      nodeSelector: {aegis-mx.io/gpu-inference: "true"}
+      tolerations:
+        - {key: nvidia.com/gpu, operator: Exists, effect: NoSchedule}
+      containers:
+        - name: service
+          imagePullPolicy: Always
+          env:
+            - {name: AEGIS_DEVICE, value: gpu}
+          resources:
+            requests: {cpu: "2", memory: 8Gi, ephemeral-storage: 1Gi, nvidia.com/gpu: "1"}
+            limits: {cpu: "8", memory: 24Gi, ephemeral-storage: 4Gi, nvidia.com/gpu: "1"}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: options-analytics, namespace: aegis-models}
+spec:
+  replicas: 3
+  template: {spec: {containers: [{name: service, imagePullPolicy: Always}]}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: model-registry, namespace: aegis-control}
+spec:
+  replicas: 3
+  template: {spec: {containers: [{name: service, imagePullPolicy: Always}]}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: configuration-control-plane, namespace: aegis-control}
+spec:
+  replicas: 3
+  template: {spec: {containers: [{name: service, imagePullPolicy: Always}]}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: dashboards, namespace: aegis-observability}
+spec:
+  replicas: 2
+  template: {spec: {containers: [{name: service, imagePullPolicy: Always}]}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: research-api, namespace: aegis-research}
+spec:
+  replicas: 2
+  template: {spec: {containers: [{name: service, imagePullPolicy: Always}]}}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata: {name: regional-metadata-backup, namespace: aegis-control}
+spec:
+  suspend: false
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers: [{name: backup, imagePullPolicy: Always}]

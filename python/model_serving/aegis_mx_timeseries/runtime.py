@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import base64
+import ipaddress
 import json
 import signal
+import ssl
 import sys
 import threading
 import time
@@ -12,7 +14,7 @@ from dataclasses import asdict, dataclass
 from enum import StrEnum
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, cast
 
 from aegis_mx_intelligence import (
     ConfigurationVersion,
@@ -37,14 +39,25 @@ from aegis_mx_timeseries.service import (
     ServiceStatus,
     TimeseriesForecastService,
 )
+from aegis_mx_timeseries.transport_security import (
+    IdentityPolicy,
+    IdentityRateLimiter,
+    RotatingTLSContext,
+    TransportSecurityError,
+)
 
 if TYPE_CHECKING:
+    import socket
     from collections.abc import Callable
 
 MAX_HTTP_BODY_BYTES: Final = 1 << 20
+MAX_HTTP_PATH_BYTES: Final = 4_096
 DEFAULT_REQUEST_DEADLINE_NS: Final = 5_000_000_000
 DEFAULT_SHUTDOWN_GRACE_NS: Final = 10_000_000_000
 MAX_TCP_PORT: Final = 65_535
+DEFAULT_MAXIMUM_CONCURRENT_REQUESTS: Final = 64
+MAXIMUM_CONCURRENT_REQUESTS: Final = 1_024
+NETWORK_IO_TIMEOUT_SECONDS: Final = 5.0
 
 
 class ServiceRole(StrEnum):
@@ -62,6 +75,22 @@ class HttpResponse:
     status: HTTPStatus
     content_type: str
     body: bytes
+
+
+@dataclass(frozen=True, slots=True)
+class RequestSecurity:
+    """mTLS identity authorization and bounded request admission policy."""
+
+    tls_context: RotatingTLSContext
+    identity_policy: IdentityPolicy
+    rate_limiter: IdentityRateLimiter
+    maximum_concurrent_requests: int = DEFAULT_MAXIMUM_CONCURRENT_REQUESTS
+
+    def __post_init__(self) -> None:
+        """Keep per-process request concurrency positive and bounded."""
+        if not 0 < self.maximum_concurrent_requests <= MAXIMUM_CONCURRENT_REQUESTS:
+            msg = "maximum concurrent requests is invalid"
+            raise ValueError(msg)
 
 
 def _json_response(status: HTTPStatus, payload: object) -> HttpResponse:
@@ -110,6 +139,10 @@ class RoleApplication:
 
     def handle(self, method: str, path: str, body: bytes = b"") -> HttpResponse:
         """Handle one already-framed request without blocking on external services."""
+        if len(path.encode("utf-8")) > MAX_HTTP_PATH_BYTES:
+            return _json_response(
+                HTTPStatus.REQUEST_URI_TOO_LONG, {"error": "path_too_long"}
+            )
         if len(body) > MAX_HTTP_BODY_BYTES:
             return _json_response(
                 HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": "body_too_large"}
@@ -275,7 +308,34 @@ def build_reference_application(
     )
 
 
-def make_handler(application: RoleApplication) -> type[BaseHTTPRequestHandler]:
+def _admit_request(
+    connection: object,
+    request_security: RequestSecurity | None,
+    method: str,
+    path: str,
+) -> tuple[str, HttpResponse | None]:
+    if request_security is None:
+        return "insecure-test-only", None
+    try:
+        certificate = cast("ssl.SSLSocket", connection).getpeercert()
+        identity = request_security.identity_policy.authorize(
+            cast("dict[str, object]", certificate), method, path
+        )
+    except (AttributeError, TransportSecurityError):
+        return "identity-rejected", _json_response(
+            HTTPStatus.FORBIDDEN, {"error": "identity_forbidden"}
+        )
+    if not request_security.rate_limiter.allow(identity):
+        return identity.uri, _json_response(
+            HTTPStatus.TOO_MANY_REQUESTS, {"error": "rate_limited"}
+        )
+    return identity.uri, None
+
+
+def make_handler(
+    application: RoleApplication,
+    request_security: RequestSecurity | None = None,
+) -> type[BaseHTTPRequestHandler]:
     """Adapt the pure application to the Python standard-library HTTP server."""
 
     class Handler(BaseHTTPRequestHandler):
@@ -306,6 +366,12 @@ def make_handler(application: RoleApplication) -> type[BaseHTTPRequestHandler]:
 
         def _dispatch(self, method: str, body: bytes) -> None:
             path = self.path.partition("?")[0]
+            self._client_identity, denial = _admit_request(
+                self.connection, request_security, method, path
+            )
+            if denial is not None:
+                self._write(denial)
+                return
             response = application.handle(method, path, body)
             self._write(response)
 
@@ -314,6 +380,8 @@ def make_handler(application: RoleApplication) -> type[BaseHTTPRequestHandler]:
             self.send_header("Content-Type", response.content_type)
             self.send_header("Content-Length", str(len(response.body)))
             self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Frame-Options", "DENY")
             self.end_headers()
             self.wfile.write(response.body)
 
@@ -324,6 +392,9 @@ def make_handler(application: RoleApplication) -> type[BaseHTTPRequestHandler]:
                 "method": self.command,
                 "path": self.path.partition("?")[0],
                 "role": application.role.value,
+                "service_identity": getattr(
+                    self, "_client_identity", "insecure-test-only"
+                ),
             }
             sys.stderr.write(
                 json.dumps(event, sort_keys=True, separators=(",", ":")) + "\n"
@@ -332,12 +403,106 @@ def make_handler(application: RoleApplication) -> type[BaseHTTPRequestHandler]:
     return Handler
 
 
-def serve(application: RoleApplication, host: str, port: int) -> None:
+class SecureThreadingHTTPServer(ThreadingHTTPServer):
+    """Thread-bounded HTTP server that loads current mTLS material per connection."""
+
+    daemon_threads = True
+    block_on_close = True
+    request_queue_size = 128
+
+    def __init__(
+        self,
+        server_address: tuple[str, int],
+        handler: type[BaseHTTPRequestHandler],
+        request_security: RequestSecurity,
+    ) -> None:
+        """Bind one secure listener and a fixed concurrent-request semaphore."""
+        self._request_security = request_security
+        self._request_slots = threading.BoundedSemaphore(
+            request_security.maximum_concurrent_requests
+        )
+        super().__init__(server_address, handler)
+
+    def get_request(self) -> tuple[ssl.SSLSocket, object]:
+        """Wrap a connection for bounded worker-side mutual authentication."""
+        raw_socket, address = super().get_request()
+        try:
+            secure_socket = self._request_security.tls_context.current().wrap_socket(
+                raw_socket,
+                server_side=True,
+                do_handshake_on_connect=False,
+            )
+        except (OSError, ssl.SSLError, TransportSecurityError):
+            raw_socket.close()
+            raise
+        return secure_socket, address
+
+    def process_request(
+        self,
+        request: socket.socket | tuple[bytes, socket.socket],
+        client_address: object,
+    ) -> None:
+        """Reject excess concurrency without allocating another request thread."""
+        if not self._request_slots.acquire(blocking=False):
+            cast("socket.socket", request).close()
+            return
+        try:
+            super().process_request(request, client_address)
+        except BaseException:
+            self._request_slots.release()
+            raise
+
+    def process_request_thread(
+        self,
+        request: socket.socket | tuple[bytes, socket.socket],
+        client_address: object,
+    ) -> None:
+        """Bound the mTLS handshake and request I/O within one admitted worker."""
+        try:
+            secure_request = cast("ssl.SSLSocket", request)
+            secure_request.settimeout(NETWORK_IO_TIMEOUT_SECONDS)
+            try:
+                secure_request.do_handshake()
+            except (OSError, TransportSecurityError):
+                secure_request.close()
+                return
+            super().process_request_thread(request, client_address)
+        finally:
+            self._request_slots.release()
+
+
+def _is_loopback(host: str) -> bool:
+    if host.casefold() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def serve(
+    application: RoleApplication,
+    host: str,
+    port: int,
+    *,
+    request_security: RequestSecurity | None = None,
+    allow_insecure_loopback: bool = False,
+) -> None:
     """Serve until SIGINT/SIGTERM, then fail closed and stop admission."""
     if not host or not 0 < port <= MAX_TCP_PORT:
         msg = "host or port is invalid"
         raise ValueError(msg)
-    server = ThreadingHTTPServer((host, port), make_handler(application))
+    if request_security is None and not (
+        allow_insecure_loopback and _is_loopback(host)
+    ):
+        msg = "mTLS is required unless insecure loopback is explicitly authorized"
+        raise TransportSecurityError(msg)
+    if request_security is None:
+        server = ThreadingHTTPServer((host, port), make_handler(application))
+    else:
+        server = SecureThreadingHTTPServer(
+            (host, port), make_handler(application, request_security), request_security
+        )
 
     def request_shutdown(_signum: int, _frame: object) -> None:
         threading.Thread(target=server.shutdown, daemon=True).start()

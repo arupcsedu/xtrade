@@ -1,0 +1,75 @@
+name: Signed Container Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: container-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  timeseries-container:
+    name: Build, attest, sign, and verify time-series image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install verified Cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Authenticate to GHCR
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
+
+      - name: Build and push digest-addressed image with provenance and SBOM
+        run: |
+          set -euo pipefail
+          image="ghcr.io/${GITHUB_REPOSITORY,,}/timeseries"
+          source_date_epoch=$(git show -s --format=%ct "$GITHUB_SHA")
+          mkdir -p build/reports/security
+          docker buildx build \
+            --build-arg "SOURCE_DATE_EPOCH=${source_date_epoch}" \
+            --file infra/timeseries_forecast/Dockerfile \
+            --metadata-file build/reports/security/container-metadata.json \
+            --provenance=mode=max \
+            --sbom=true \
+            --push \
+            --tag "${image}:${GITHUB_SHA}" \
+            .
+
+      - name: Sign and verify immutable image digest
+        run: |
+          set -euo pipefail
+          image="ghcr.io/${GITHUB_REPOSITORY,,}/timeseries"
+          digest=$(jq -er '."containerimage.digest"' build/reports/security/container-metadata.json)
+          reference="${image}@${digest}"
+          identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/container-release.yml@${GITHUB_REF}"
+          cosign sign --yes "$reference"
+          cosign verify \
+            --certificate-identity "$identity" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "$reference" > build/reports/security/cosign-verification.json
+
+      - name: Upload provenance evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: signed-timeseries-container-evidence
+          path: build/reports/security
+          if-no-files-found: error
+          retention-days: 90

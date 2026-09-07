@@ -621,8 +621,14 @@ activation, compatible rollback, hierarchical engage-only emergency kills,
 signed hash-chained audit, and a lock-free-read local edge cache that expires
 closed without RPC. Simulation and paper are the only accepted venue modes.
 Production identity/HSM adapters, authenticated network transport, multi-host
-consensus/fencing, fleet status, and signed online rollback distribution remain
-open, so Phase 11 is not complete. See the
+consensus/witness transport, fleet status, and signed online rollback
+distribution remain open. The edge now has a fail-closed witness-grant
+validator, process/session fencing, bounded hash-chained recovery stream,
+duplicate-emission ledger, atomic failover state, and recovery tests; see
+[Edge High Availability](high-availability.md) and
+[ADR 0036](../adr/0036-witness-fenced-edge-failover.md). Because the production
+witness and physical gateway fencing are external integrations, Phase 11 is not
+complete. See the
 [configuration control-plane design](configuration-control-plane.md) and
 [ADR 0033](../adr/0033-signed-two-person-configuration-control.md).
 
@@ -787,6 +793,35 @@ remain open, so Phase 12 is not complete.
   shutdown/drain, rollout/recovery, and resource utilization under representative
   simulation load.
 
+**Implemented observability slice (2026-09-02):** Fixed-layout nonblocking
+producer queues, single-writer metric aggregation, Prometheus exposition,
+fixed-stage latency histograms and tail summaries, strict structured logs,
+off-path OTLP span encoding, complete correlated decision explanations,
+component snapshot adapters, a Grafana edge dashboard, Prometheus alerts, and an
+incident runbook are implemented and tested. Production exporters, durable log
+storage, automatic dashboard provisioning, environment-specific signed alert
+thresholds, and deployment completion remain dependencies.
+
+**Implemented colocated deployment slice (2026-09-04):** Bare-metal systemd
+units, explicit startup/reverse-shutdown order, six non-live immutable profiles,
+rendered CPU/NUMA/memory/descriptor policies, host and NIC/PTP qualification,
+local health probes, journal layout, log rotation, and reproducible verified
+rollback archives are implemented. All profiles forbid live transmission and
+automatic activation. The composed service binaries, production exporter,
+site-specific signed configuration, licensed network parameters, and measured
+capacity thresholds remain dependencies, so Phase 13 is not complete.
+
+**Implemented regional deployment slice (2026-09-05):** Kustomize base, local,
+and production overlays now cover the nine approved non-hot-path services in
+five restricted namespaces. The slice includes resource requests/limits,
+default-deny policies, CSI secret identity, readiness/liveness/drain contracts,
+rolling updates, anti-affinity, PDBs, conservative HPAs, GPU placement, backup
+policy, immutable-image admission, release-lock validation, and operations
+documentation. It deliberately contains non-routable zero-digest placeholders;
+signed service images, provider-specific CSI objects, cluster signature
+verification, managed data services, and representative capacity/restore
+evidence remain deployment prerequisites.
+
 ## Phase 14 — Licensed paper and provider integrations (externally blocked)
 
 **Inputs**
@@ -883,6 +918,56 @@ remain open, so Phase 12 is not complete.
   kill propagation, failover/recovery, and sustained soak on production-equivalent
   hardware. Performance never overrides a failed safety gate.
 
+## Implemented security hardening slice
+
+The cross-cutting security slice now provides TLS 1.3 mutual service identity,
+certificate rotation from mounted secret-manager material, service-level route
+RBAC, bounded request concurrency/rates/sizes, default isolated news parsing,
+signed configuration and model verification, immutable administrative audit,
+dependency/secret scans, deterministic CycloneDX SBOM generation, two-build
+artifact comparison, and a keyless signed OCI release workflow. Threats,
+boundaries, containment, and recovery are maintained in the
+[security threat model](../security/threat-model.md),
+[trust-boundary contract](../security/trust-boundaries.md), and
+[incident-response guide](../security/incident-response.md).
+
+Production remains dependent on organization-specific CA/HSM/KMS and secret-
+manager integrations, admission enforcement for signed image identities,
+kernel-enforced intelligence sandbox manifests, licensed provider/venue
+authentication, and independent penetration/incident exercises. These external
+dependencies cannot be fabricated by the repository.
+
+## Implemented deterministic chaos slice
+
+The offline [chaos framework](chaos-and-fault-injection.md) now defines all 23
+required faults with detection, component-local state transition, automated
+response, logical detection deadline, recovery criteria, and audit evidence.
+The fast profile exercises every individual fault; the nightly profile repeats
+them and co-injects five cross-domain combinations. Content-hashed JSON reports
+are validated against a versioned machine contract.
+
+This slice does not replace physical staging tests for NIC/kernel behavior,
+resource exhaustion, GPU reset, disk power loss, witness partitions, drop copy,
+or licensed gateways. Those remain dependencies for any production-readiness
+claim.
+
+## Implemented comprehensive performance-evidence slice
+
+The full-platform sampler now exercises 14 latency/throughput stages across
+ordinary, 2x peak, 3x peak, burst, multi-symbol, news, macro, halt, and degraded-
+feed scenarios. It verifies single-CPU affinity, warms caches, records raw
+operation samples, captures allocation/CPU/queue/drop observations, and labels
+all packet timing as in-process synthetic. The versioned summarizer and gate
+enforce complete matrices, 10,000-sample qualification, comparable environments,
+tail/throughput tolerances, zero steady-state hot-path allocations, and zero
+ordinary-load drops. Halt and degraded-feed intents and paper sends must be
+safety-blocked.
+
+Production-equivalent target hardware, real NIC capture, permitted hardware
+performance counters, signed site-specific objectives, and an operator-approved
+baseline remain external acceptance dependencies. No result authorizes live
+trading or claims economic performance.
+
 ## Critical blocking decisions
 
 The following decisions are dependencies, not implementation details to guess:
@@ -896,9 +981,13 @@ The following decisions are dependencies, not implementation details to guess:
 6. Risk snapshot, approval lifetime, reconciliation, and concrete limit ownership.
 7. OMS idempotency and venue-specific ambiguous-state policy.
 8. Configuration trust roots, signing, anti-replay, authorization, and expiry.
-9. Single-writer leadership and fencing.
+9. Production quorum/witness integration and physical gateway-session fencing;
+   the local fail-closed leadership/recovery contract is implemented in the
+   simulation/paper edge.
 10. Artifact promotion, retention, access, and rollback.
-11. Performance workloads, target hardware, objectives, and regression policy.
+11. Production target hardware, real-NIC workload evidence, signed objectives,
+    and approval of a site-specific baseline; the synthetic workload and default
+    regression policy are implemented.
 12. Licensed provider/venue semantics and organizational compliance requirements.
 
 Until these dependencies are resolved at their named phase, downstream work may

@@ -1,0 +1,41 @@
+[Unit]
+Description=Aegis-MX append-only edge journal
+Requires=aegis-ptp-ready.service
+After=aegis-ptp-ready.service
+Before=aegis-edge-core.service
+PartOf=aegis-edge.target
+OnFailure=aegis-edge-inhibit@%n
+RequiresMountsFor=/var/lib/aegis-mx/journal
+
+[Service]
+Type=notify
+Slice=aegis-edge.slice
+User=aegis-edge
+Group=aegis-edge
+EnvironmentFile=/etc/aegis-mx/environment/aegis-edge.conf
+ExecStartPre=/usr/bin/test -s ${AEGIS_CONFIGURATION_PATH}
+ExecStartPre=/opt/aegis-mx/current/bin/edge-deployment validate-profile --profile-path ${AEGIS_DEPLOYMENT_PROFILE_PATH}
+ExecStartPre=/opt/aegis-mx/current/bin/edge-deployment validate-host --profile-path ${AEGIS_DEPLOYMENT_PROFILE_PATH} --facts /etc/aegis-mx/deployment/host-facts.json
+ExecStartPre=/opt/aegis-mx/current/bin/aegis-edge-config-verify --profile ${AEGIS_DEPLOYMENT_PROFILE_PATH} --manifest ${AEGIS_DEPLOYMENT_MANIFEST_PATH} --configuration ${AEGIS_CONFIGURATION_PATH}
+ExecStart=/opt/aegis-mx/current/bin/aegis-edge-journal --configuration ${AEGIS_CONFIGURATION_PATH}
+Restart=on-failure
+RestartSec=1s
+TimeoutStartSec=30s
+TimeoutStopSec=60s
+WatchdogSec=2s
+LimitCORE=0
+CapabilityBoundingSet=
+AmbientCapabilities=
+NoNewPrivileges=yes
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectControlGroups=yes
+ProtectHome=yes
+ProtectKernelLogs=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectSystem=strict
+ReadWritePaths=/run/aegis-mx /var/lib/aegis-mx/journal /var/log/aegis-mx
+RestrictAddressFamilies=AF_UNIX
+RestrictSUIDSGID=yes
+UMask=0027

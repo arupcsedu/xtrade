@@ -20,10 +20,13 @@ from aegis_mx_intelligence.contracts import (
 from aegis_mx_intelligence.news_analysis import EntityRegistry, NoveltyIndex, RuleEngine
 from aegis_mx_intelligence.news_contract import build_event_intelligence_contract
 from aegis_mx_intelligence.news_providers import DocumentProvider, ProviderError
+from aegis_mx_intelligence.news_sandbox import (
+    DocumentSanitizer,
+    ProcessDocumentSanitizer,
+)
 from aegis_mx_intelligence.news_security import (
     UnsafeDocumentError,
     detect_document_type,
-    sanitize_document,
 )
 from aegis_mx_intelligence.news_types import (
     Adjudication,
@@ -193,6 +196,7 @@ class IntelligencePipeline:
         deep_adjudicator: DeepAdjudicator,
         clock: MonotonicClock,
         rule_engine: RuleEngine | None = None,
+        sanitizer: DocumentSanitizer | None = None,
     ) -> None:
         """Bind immutable configuration and least-privilege dependencies."""
         self._config = config
@@ -202,6 +206,7 @@ class IntelligencePipeline:
         self._deep = deep_adjudicator
         self._clock = clock
         self._rules = rule_engine or RuleEngine()
+        self._sanitizer = sanitizer or ProcessDocumentSanitizer()
         self._novelty = NoveltyIndex(config.deduplication_capacity)
         self._seen_hashes: OrderedDict[bytes, None] = OrderedDict()
         self._document_revisions: OrderedDict[tuple[str, str], IntelligenceAlert] = (
@@ -324,7 +329,7 @@ class IntelligencePipeline:
             self._audit("authentication_rejected", source, None)
             return IngestStatus.REJECTED
         try:
-            document = sanitize_document(source)
+            document = self._sanitizer.sanitize(source)
         except UnsafeDocumentError:
             self._metrics.rejected_total += 1
             self._audit("document_rejected", source, None)

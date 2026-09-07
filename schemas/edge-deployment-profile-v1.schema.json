@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/edge-deployment-profile-v1.schema.json",
+  "title": "Aegis-MX colocated edge deployment profile v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile_schema_version",
+    "name",
+    "trading_mode",
+    "live_transmission_enabled",
+    "automatic_activation",
+    "signed_runtime_configuration_required",
+    "paths",
+    "resources",
+    "nic",
+    "ptp",
+    "health",
+    "journal"
+  ],
+  "properties": {
+    "profile_schema_version": {"const": 1},
+    "name": {"enum": ["development", "ci", "replay", "paper", "staging", "production-disabled"]},
+    "trading_mode": {"enum": ["SIMULATION", "PAPER"]},
+    "live_transmission_enabled": {"const": false},
+    "automatic_activation": {"const": false},
+    "signed_runtime_configuration_required": {"type": "boolean"},
+    "paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["release_root", "current_symlink", "configuration_path", "state_root", "journal_root", "log_root", "runtime_root"],
+      "properties": {
+        "release_root": {"type": "string", "pattern": "^/opt/"},
+        "current_symlink": {"type": "string", "pattern": "^/opt/"},
+        "configuration_path": {"type": "string", "pattern": "^/etc/"},
+        "state_root": {"type": "string", "pattern": "^/var/"},
+        "journal_root": {"type": "string", "pattern": "^/var/"},
+        "log_root": {"type": "string", "pattern": "^/var/"},
+        "runtime_root": {"type": "string", "pattern": "^/run/"}
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["numa_node", "dedicated_cpu_sets", "hugepage_size_kb", "hugepage_count", "memory_lock_bytes", "file_descriptor_limit", "cpu_affinity"],
+      "properties": {
+        "numa_node": {"type": "integer", "minimum": 0},
+        "dedicated_cpu_sets": {"type": "boolean"},
+        "hugepage_size_kb": {"type": "integer", "minimum": 2048},
+        "hugepage_count": {"type": "integer", "minimum": 0},
+        "memory_lock_bytes": {"type": "integer", "minimum": 0},
+        "file_descriptor_limit": {"type": "integer", "minimum": 1024},
+        "cpu_affinity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ptp", "journal", "edge-core", "paper-gateway", "observability"],
+          "properties": {
+            "ptp": {"type": "string"},
+            "journal": {"type": "string"},
+            "edge-core": {"type": "string"},
+            "paper-gateway": {"type": "string"},
+            "observability": {"type": "string"}
+          }
+        }
+      }
+    },
+    "nic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interface", "hardware_timestamping_required", "rx_queue_count_required", "queue_assignments"],
+      "properties": {
+        "interface": {"type": ["string", "null"]},
+        "hardware_timestamping_required": {"type": "boolean"},
+        "rx_queue_count_required": {"type": "integer", "minimum": 0},
+        "queue_assignments": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "integer", "minimum": 0}, "uniqueItems": true}}
+      }
+    },
+    "ptp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "ptp4l_unit", "phc2sys_unit", "maximum_clock_quality_age_ns", "maximum_absolute_offset_ns"],
+      "properties": {
+        "required": {"type": "boolean"},
+        "ptp4l_unit": {"type": "string"},
+        "phc2sys_unit": {"type": "string"},
+        "maximum_clock_quality_age_ns": {"type": "integer", "minimum": 1},
+        "maximum_absolute_offset_ns": {"type": "integer", "minimum": 1}
+      }
+    },
+    "health": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status_root", "maximum_status_age_ns"],
+      "properties": {
+        "status_root": {"type": "string", "pattern": "^/run/"},
+        "maximum_status_age_ns": {"type": "integer", "minimum": 1}
+      }
+    },
+    "journal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["filesystem", "dedicated_device_required", "direct_io_preferred", "segment_bytes", "sync_policy", "retention_days"],
+      "properties": {
+        "filesystem": {"enum": ["tmpfs", "xfs", "ext4"]},
+        "dedicated_device_required": {"type": "boolean"},
+        "direct_io_preferred": {"type": "boolean"},
+        "segment_bytes": {"type": "integer", "minimum": 1048576},
+        "sync_policy": {"enum": ["EVERY_RECORD", "PERIODIC", "ON_ROTATION"]},
+        "retention_days": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

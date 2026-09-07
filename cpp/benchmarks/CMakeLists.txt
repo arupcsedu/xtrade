@@ -10,10 +10,12 @@ add_executable(
   execution_router_benchmark.cpp
   feed_handler_benchmark.cpp
   feature_engine_benchmark.cpp
+  high_availability_benchmark.cpp
   journal_benchmark.cpp
   market_state_benchmark.cpp
   model_framework_benchmark.cpp
   oms_benchmark.cpp
+  observability_benchmark.cpp
   order_book_benchmark.cpp
   portfolio_risk_benchmark.cpp
   risk_benchmark.cpp
@@ -32,10 +34,12 @@ target_link_libraries(
     aegis::execution
     aegis::feed_handler
     aegis::features
+    aegis::high_availability
     aegis::journal
     aegis::models
     aegis::order_book
     aegis::oms
+    aegis::observability
     aegis::risk
     aegis::replay
     aegis::synthetic_exchange
@@ -43,3 +47,28 @@ target_link_libraries(
     benchmark::benchmark_main
 )
 aegis_apply_project_options(aegis_benchmark_smoke)
+
+add_executable(
+  aegis_platform_benchmark
+  allocation_probe.cpp
+  platform_sampler.cpp
+)
+set_source_files_properties(allocation_probe.cpp PROPERTIES SKIP_LINTING ON)
+target_link_libraries(
+  aegis_platform_benchmark
+  PRIVATE
+    aegis::common
+    aegis::ensemble
+    aegis::event_bus
+    aegis::execution
+    aegis::feed_handler
+    aegis::features
+    aegis::journal
+    aegis::models
+    aegis::order_book
+    aegis::oms
+    aegis::risk
+    aegis::replay
+    aegis::synthetic_exchange
+)
+aegis_apply_project_options(aegis_platform_benchmark)

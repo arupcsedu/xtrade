@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/edge-health-v1.schema.json",
+  "title": "Aegis-MX local edge health publication v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "service", "build_version", "healthy", "ready", "configuration_sha256", "mode", "observed_process_monotonic_time_ns"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "service": {"enum": ["ptp", "journal", "edge-core", "paper-gateway", "observability", "clock-quality"]},
+    "build_version": {"type": "string", "minLength": 1, "maxLength": 512},
+    "healthy": {"type": "boolean"},
+    "ready": {"type": "boolean"},
+    "configuration_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "mode": {"enum": ["SIMULATION", "PAPER"]},
+    "observed_process_monotonic_time_ns": {"type": "integer", "minimum": 1},
+    "clock_state": {"enum": ["UNKNOWN", "SYNCING", "HEALTHY", "DEGRADED", "UNSAFE"]},
+    "hardware_timestamp_available": {"type": "boolean"},
+    "ptp_offset_ns": {"type": "integer"}
+  }
+}

@@ -169,6 +169,12 @@ from aegis_mx_intelligence.news_providers import (
     PublicSourceClient,
     PublicSourceResponse,
 )
+from aegis_mx_intelligence.news_sandbox import (
+    DocumentSandboxPolicy,
+    DocumentSanitizer,
+    InlineDocumentSanitizer,
+    ProcessDocumentSanitizer,
+)
 from aegis_mx_intelligence.news_security import (
     UnsafeDocumentError,
     detect_document_type,
@@ -302,6 +308,8 @@ __all__ = [
     "DisplayedDepthObservation",
     "DistributionPpm",
     "DocumentProvider",
+    "DocumentSandboxPolicy",
+    "DocumentSanitizer",
     "DocumentType",
     "EarningsEvaluationError",
     "EarningsEventLifecycle",
@@ -357,6 +365,7 @@ __all__ = [
     "IndexRebalanceSpecialist",
     "IndexRebalanceSpecialistConfig",
     "IngestStatus",
+    "InlineDocumentSanitizer",
     "InstrumentId",
     "IntelligenceAlert",
     "IntelligencePipeline",
@@ -428,6 +437,7 @@ __all__ = [
     "PipelineMetrics",
     "PipelineServiceStatus",
     "PriceImpactObservation",
+    "ProcessDocumentSanitizer",
     "ProvenanceKind",
     "ProvenanceRecord",
     "ProviderError",

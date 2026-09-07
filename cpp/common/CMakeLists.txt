@@ -1,5 +1,6 @@
 add_library(
   aegis_common STATIC
+  src/authentication.cpp
   src/audit_envelope.cpp
   src/build_info.cpp
   src/market_state.cpp
@@ -31,6 +32,7 @@ target_include_directories(
     $<BUILD_INTERFACE:${flatbuffers_SOURCE_DIR}/include>
 )
 target_compile_features(aegis_common PUBLIC cxx_std_20)
+target_link_libraries(aegis_common PUBLIC OpenSSL::Crypto)
 aegis_apply_project_options(aegis_common)
 
 target_include_directories(
@@ -78,6 +80,7 @@ install(
 if(AEGIS_BUILD_TESTS)
   add_executable(
     aegis_common_tests
+    tests/authentication_test.cpp
     tests/audit_envelope_test.cpp
     tests/build_info_test.cpp
     tests/compatibility_test.cpp

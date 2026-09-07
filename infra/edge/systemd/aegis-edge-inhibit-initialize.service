@@ -1,0 +1,19 @@
+[Unit]
+Description=Initialize Aegis-MX edge in fail-closed state
+Before=aegis-ptp-ready.service
+PartOf=aegis-edge.target
+
+[Service]
+Type=oneshot
+User=aegis-edge
+Group=aegis-edge
+ExecStart=/opt/aegis-mx/current/bin/edge-deployment inhibit --reason startup-default --output /run/aegis-mx/trading.inhibit
+ExecStop=/opt/aegis-mx/current/bin/edge-deployment inhibit --reason shutdown --output /run/aegis-mx/trading.inhibit
+RemainAfterExit=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/run/aegis-mx
+UMask=0027

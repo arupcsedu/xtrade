@@ -1,0 +1,30 @@
+{
+  "profile_schema_version": 1,
+  "name": "production-disabled",
+  "trading_mode": "SIMULATION",
+  "live_transmission_enabled": false,
+  "automatic_activation": false,
+  "signed_runtime_configuration_required": true,
+  "paths": {
+    "release_root": "/opt/aegis-mx/releases",
+    "current_symlink": "/opt/aegis-mx/current",
+    "configuration_path": "/etc/aegis-mx/config/production-disabled.signed.json",
+    "state_root": "/var/lib/aegis-mx",
+    "journal_root": "/var/lib/aegis-mx/journal",
+    "log_root": "/var/log/aegis-mx",
+    "runtime_root": "/run/aegis-mx"
+  },
+  "resources": {
+    "numa_node": 0,
+    "dedicated_cpu_sets": true,
+    "hugepage_size_kb": 2048,
+    "hugepage_count": 4096,
+    "memory_lock_bytes": 8589934592,
+    "file_descriptor_limit": 1048576,
+    "cpu_affinity": {"ptp": "2", "journal": "3", "edge-core": "4-11", "paper-gateway": "12", "observability": "13"}
+  },
+  "nic": {"interface": "OPERATOR_REQUIRED", "hardware_timestamping_required": true, "rx_queue_count_required": 4, "queue_assignments": {"market-data-a": [0], "market-data-b": [1], "gateway": [2], "drop-copy": [3]}},
+  "ptp": {"required": true, "ptp4l_unit": "ptp4l.service", "phc2sys_unit": "phc2sys.service", "maximum_clock_quality_age_ns": 500000000, "maximum_absolute_offset_ns": 100},
+  "health": {"status_root": "/run/aegis-mx/health", "maximum_status_age_ns": 500000000},
+  "journal": {"filesystem": "xfs", "dedicated_device_required": true, "direct_io_preferred": true, "segment_bytes": 134217728, "sync_policy": "EVERY_RECORD", "retention_days": 180}
+}

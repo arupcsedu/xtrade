@@ -70,6 +70,28 @@ func newRegistryFixture(t testing.TB) *registryFixture {
 	return &registryFixture{t: t, registry: registry, root: root, privateKey: privateKey, publicKey: publicKey, schema: schema, clock: clock}
 }
 
+func TestPrivateKeyLoaderRequiresOwnerOnlyFile(t *testing.T) {
+	t.Parallel()
+	seed := sha256.Sum256([]byte("aegis-mx-private-key-permission-test"))
+	path := filepath.Join(t.TempDir(), "registry-private.key")
+	encoded := base64.StdEncoding.EncodeToString(ed25519.NewKeyFromSeed(seed[:]))
+	if err := os.WriteFile(path, []byte(encoded), 0o644); err != nil {
+		t.Fatalf("write private key: %v", err)
+	}
+	if err := os.Chmod(path, 0o644); err != nil {
+		t.Fatalf("make private key insecure for negative test: %v", err)
+	}
+	if _, err := loadPrivateKey(path); err == nil || !strings.Contains(err.Error(), "owner-only") {
+		t.Fatalf("expected owner-only rejection, got %v", err)
+	}
+	if err := os.Chmod(path, 0o600); err != nil {
+		t.Fatalf("secure private key: %v", err)
+	}
+	if _, err := loadPrivateKey(path); err != nil {
+		t.Fatalf("load owner-only private key: %v", err)
+	}
+}
+
 func (fixture *registryFixture) signedManifest(version string, parent string, artifact []byte) SignedManifest {
 	fixture.t.Helper()
 	artifactDigest := sha256.Sum256(artifact)

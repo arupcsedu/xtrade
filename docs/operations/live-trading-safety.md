@@ -19,6 +19,12 @@ The [engineering contract](../architecture/engineering-contract.md) takes
 precedence. Unknown, missing, stale, malformed, inconsistent, or unverifiable
 state is unsafe and fails closed.
 
+The checked-in [colocated edge deployment](../architecture/colocated-edge-deployment.md)
+contains only simulation and paper profiles. Its production-shaped profile is
+explicitly named `production-disabled`, remains in simulation mode, and creates
+a local inhibit before any edge service starts. It is not a live-capable
+configuration or an activation path.
+
 The boundary and mode-state decisions behind this policy are recorded in
 [`../adr/0001-safety-boundaries-and-live-activation.md`](../adr/0001-safety-boundaries-and-live-activation.md).
 
@@ -76,6 +82,12 @@ boundary:
 Every predicate is evaluated as `true` or `not true`; there is no permissive
 `unknown`. An implementation SHALL evaluate them again at transmission time,
 not only at activation time.
+
+The dormant adapter boundary enforces this shape with a single-use
+`VerifiedLiveTransmissionCapability`. Its authenticated evidence binds the exact
+encoded frame and all authority digests above. Only the verifier can construct
+the type accepted by a future licensed transmitter. This is a structural guard,
+not a live implementation or venue certification.
 
 ## Activation sequence
 

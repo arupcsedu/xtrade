@@ -1,0 +1,223 @@
+{
+  "$id": "https://aegis-mx.invalid/schemas/paper-trading-acceptance-report-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "acceptance": {"$ref": "#/$defs/acceptance"},
+    "execution_order": {
+      "const": [
+        "synthetic-feed",
+        "feed-handler",
+        "order-book",
+        "features",
+        "specialist-forecast-contracts",
+        "market-state",
+        "ensemble-abstention",
+        "execution-objective",
+        "router",
+        "fresh-exact-risk",
+        "oms",
+        "paper-gateway",
+        "fills",
+        "positions-pnl",
+        "audit-observability"
+      ],
+      "type": "array"
+    },
+    "live_trading_compiled": {"const": false},
+    "mode": {"const": "PAPER"},
+    "passed": {"type": "boolean"},
+    "report_hash": {"$ref": "#/$defs/hash64"},
+    "scenarios": {
+      "items": {"$ref": "#/$defs/scenario"},
+      "maxItems": 16,
+      "minItems": 16,
+      "type": "array"
+    },
+    "schema_version": {"const": "1.0"},
+    "seed": {"minimum": 1, "type": "integer"}
+  },
+  "required": [
+    "acceptance",
+    "execution_order",
+    "live_trading_compiled",
+    "mode",
+    "passed",
+    "report_hash",
+    "scenarios",
+    "schema_version",
+    "seed"
+  ],
+  "title": "Aegis-MX full-system PAPER acceptance report v1",
+  "type": "object",
+  "$defs": {
+    "acceptance": {
+      "additionalProperties": false,
+      "properties": {
+        "all_invalid_models_abstain": {"type": "boolean"},
+        "audit_trace_explains_every_order": {"type": "boolean"},
+        "deterministic_replay_matches_hashes": {"type": "boolean"},
+        "halt_blocks_new_orders": {"type": "boolean"},
+        "high_disagreement_reduces_exposure": {"type": "boolean"},
+        "invalid_data_causes_restriction": {"type": "boolean"},
+        "late_forecasts_are_discarded": {"type": "boolean"},
+        "no_order_bypasses_risk": {"type": "boolean"},
+        "paper_mode_only": {"type": "boolean"},
+        "restart_reconstructs_orders_and_positions": {"type": "boolean"}
+      },
+      "required": [
+        "all_invalid_models_abstain",
+        "audit_trace_explains_every_order",
+        "deterministic_replay_matches_hashes",
+        "halt_blocks_new_orders",
+        "high_disagreement_reduces_exposure",
+        "invalid_data_causes_restriction",
+        "late_forecasts_are_discarded",
+        "no_order_bypasses_risk",
+        "paper_mode_only",
+        "restart_reconstructs_orders_and_positions"
+      ],
+      "type": "object"
+    },
+    "checks": {
+      "additionalProperties": false,
+      "properties": {
+        "audit_complete": {"type": "boolean"},
+        "correction_retained": {"type": "boolean"},
+        "expected_restriction_observed": {"type": "boolean"},
+        "no_risk_bypass": {"type": "boolean"},
+        "paper_mode_only": {"type": "boolean"},
+        "pipeline_complete": {"type": "boolean"},
+        "replay_hash_match": {"type": "boolean"},
+        "restart_reconstructed": {"type": "boolean"}
+      },
+      "required": [
+        "audit_complete",
+        "correction_retained",
+        "expected_restriction_observed",
+        "no_risk_bypass",
+        "paper_mode_only",
+        "pipeline_complete",
+        "replay_hash_match",
+        "restart_reconstructed"
+      ],
+      "type": "object"
+    },
+    "componentHashes": {
+      "additionalProperties": false,
+      "properties": {
+        "audit": {"$ref": "#/$defs/hash64"},
+        "ensemble": {"$ref": "#/$defs/hash64"},
+        "feature_snapshot": {"$ref": "#/$defs/hash64"},
+        "gateway": {"$ref": "#/$defs/hash64"},
+        "market_state": {"$ref": "#/$defs/hash64"},
+        "oms": {"$ref": "#/$defs/hash64"},
+        "portfolio": {"$ref": "#/$defs/hash64"},
+        "risk": {"$ref": "#/$defs/hash64"},
+        "source_events": {"$ref": "#/$defs/hash64"},
+        "specialist_forecasts": {"$ref": "#/$defs/hash64"}
+      },
+      "required": [
+        "audit",
+        "ensemble",
+        "feature_snapshot",
+        "gateway",
+        "market_state",
+        "oms",
+        "portfolio",
+        "risk",
+        "source_events",
+        "specialist_forecasts"
+      ],
+      "type": "object"
+    },
+    "counters": {
+      "additionalProperties": false,
+      "properties": {
+        "eligible_experts": {"minimum": 0, "type": "integer"},
+        "ensemble_abstentions": {"minimum": 0, "type": "integer"},
+        "explained_orders": {"minimum": 0, "type": "integer"},
+        "fills": {"minimum": 0, "type": "integer"},
+        "final_absolute_position_units": {"minimum": 0, "type": "integer"},
+        "final_pnl_currency_nanos": {"type": "integer"},
+        "gateway_accepted": {"minimum": 0, "type": "integer"},
+        "gateway_commands": {"minimum": 0, "type": "integer"},
+        "late_forecasts_discarded": {"minimum": 0, "type": "integer"},
+        "normalized_events": {"minimum": 0, "type": "integer"},
+        "oms_orders": {"minimum": 0, "type": "integer"},
+        "risk_approvals": {"minimum": 0, "type": "integer"},
+        "risk_evaluations": {"minimum": 0, "type": "integer"},
+        "risk_rejections": {"minimum": 0, "type": "integer"},
+        "route_decisions": {"minimum": 0, "type": "integer"},
+        "source_events": {"minimum": 0, "type": "integer"},
+        "specialist_forecasts": {"minimum": 0, "type": "integer"},
+        "telemetry_drops": {"minimum": 0, "type": "integer"}
+      },
+      "required": [
+        "eligible_experts",
+        "ensemble_abstentions",
+        "explained_orders",
+        "fills",
+        "final_absolute_position_units",
+        "final_pnl_currency_nanos",
+        "gateway_accepted",
+        "gateway_commands",
+        "late_forecasts_discarded",
+        "normalized_events",
+        "oms_orders",
+        "risk_approvals",
+        "risk_evaluations",
+        "risk_rejections",
+        "route_decisions",
+        "source_events",
+        "specialist_forecasts",
+        "telemetry_drops"
+      ],
+      "type": "object"
+    },
+    "hash64": {"pattern": "^0x[0-9a-f]{16}$", "type": "string"},
+    "scenario": {
+      "additionalProperties": false,
+      "properties": {
+        "checks": {"$ref": "#/$defs/checks"},
+        "component_hashes": {"$ref": "#/$defs/componentHashes"},
+        "counters": {"$ref": "#/$defs/counters"},
+        "name": {
+          "enum": [
+            "ordinary-midday",
+            "market-open",
+            "market-close",
+            "earnings-release",
+            "cpi-release",
+            "breaking-negative-news",
+            "false-rumor-correction",
+            "index-rebalance",
+            "hidden-liquidity-replenishment",
+            "trading-halt-reopening",
+            "feed-gap",
+            "clock-degradation",
+            "model-timeout",
+            "risk-service-restart",
+            "gateway-disconnect",
+            "split-brain-attempt"
+          ]
+        },
+        "ordinal": {"maximum": 16, "minimum": 1, "type": "integer"},
+        "outcome_hash": {"$ref": "#/$defs/hash64"},
+        "passed": {"type": "boolean"},
+        "replay_outcome_hash": {"$ref": "#/$defs/hash64"}
+      },
+      "required": [
+        "checks",
+        "component_hashes",
+        "counters",
+        "name",
+        "ordinal",
+        "outcome_hash",
+        "passed",
+        "replay_outcome_hash"
+      ],
+      "type": "object"
+    }
+  }
+}

@@ -404,6 +404,33 @@ func TestCLIDryRunAndStrictInput(t *testing.T) {
 	}
 }
 
+func TestDecodeSignedConfigurationRejectsUnknownTrailingAndOversizedInput(t *testing.T) {
+	t.Parallel()
+	fixture := newFixture(t)
+	configuration, err := FinalizeConfiguration(testConfiguration(*fixture.now, 1, ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	signed, err := SignConfiguration(configuration, "control-key", fixture.privateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload, err := json.Marshal(signed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := DecodeSignedConfiguration(bytes.NewReader(payload))
+	if err != nil || decoded.Configuration.SHA256 != configuration.SHA256 {
+		t.Fatalf("valid signed configuration was not decoded: %v", err)
+	}
+	if _, err := DecodeSignedConfiguration(bytes.NewReader(append(payload, []byte("{}")...))); err == nil {
+		t.Fatal("trailing JSON object was accepted")
+	}
+	if _, err := DecodeSignedConfiguration(bytes.NewReader(bytes.Repeat([]byte{'x'}, int(maximumConfigurationBytes+1)))); err == nil {
+		t.Fatal("oversized configuration was accepted")
+	}
+}
+
 func BenchmarkEdgeEvaluate(b *testing.B) {
 	seed := sha256.Sum256([]byte(controlTestSeed))
 	privateKey := ed25519.NewKeyFromSeed(seed[:])

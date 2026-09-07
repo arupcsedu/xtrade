@@ -1,0 +1,70 @@
+{
+  "policy_schema_version": 1,
+  "policy_id": "aegis-mx-colocated-performance-v1",
+  "minimum_qualified_samples_per_latency_case": 10000,
+  "required_scenarios": [
+    "ordinary",
+    "peak-2x",
+    "peak-3x",
+    "burst",
+    "multi-symbol",
+    "news-event",
+    "macro-event",
+    "halt",
+    "degraded-feed"
+  ],
+  "required_stages": [
+    "packet-to-normalized",
+    "normalized-to-book",
+    "book-to-features",
+    "features-to-micro-forecast",
+    "forecasts-to-ensemble",
+    "ensemble-to-risk",
+    "risk-to-gateway-enqueue",
+    "tick-to-intent",
+    "tick-to-paper-send",
+    "oms-response-handling",
+    "journal-publication",
+    "shared-memory-read",
+    "forecast-cache-read",
+    "replay-throughput"
+  ],
+  "latency_regression_limit_ppm": {
+    "p50": 150000,
+    "p95": 150000,
+    "p99": 150000,
+    "p99_9": 250000,
+    "maximum": 300000
+  },
+  "minimum_throughput_ratio_ppm": 880000,
+  "maximum_cpu_utilization_increase_ppm": 150000,
+  "maximum_queue_occupancy_increase_ppm": 250000,
+  "hot_path_allocation_limit": 0,
+  "ordinary_packet_drop_limit": 0,
+  "allocation_free_stages": [
+    "packet-to-normalized",
+    "normalized-to-book",
+    "book-to-features",
+    "features-to-micro-forecast",
+    "forecasts-to-ensemble",
+    "ensemble-to-risk",
+    "risk-to-gateway-enqueue",
+    "tick-to-intent",
+    "tick-to-paper-send",
+    "oms-response-handling",
+    "journal-publication",
+    "shared-memory-read",
+    "forecast-cache-read"
+  ],
+  "required_safety_blocks": [
+    {"scenario": "halt", "stage": "tick-to-intent"},
+    {"scenario": "halt", "stage": "tick-to-paper-send"},
+    {"scenario": "degraded-feed", "stage": "tick-to-intent"},
+    {"scenario": "degraded-feed", "stage": "tick-to-paper-send"}
+  ],
+  "require_same_cpu_model": true,
+  "require_same_build_type": true,
+  "require_verified_thread_pinning": true,
+  "require_same_measurement_source": true,
+  "require_real_nic_parity": true
+}

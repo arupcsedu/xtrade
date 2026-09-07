@@ -9,6 +9,10 @@
 /_CPack_Packages/
 __pycache__/
 *.egg-info/
+*.key
+*.p12
+*.pem
+*.pfx
 *.py[cod]
 *.so
 compile_commands.json

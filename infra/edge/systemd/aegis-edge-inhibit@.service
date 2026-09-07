@@ -1,0 +1,16 @@
+[Unit]
+Description=Fail-closed Aegis-MX edge inhibit after %i
+
+[Service]
+Type=oneshot
+User=aegis-edge
+Group=aegis-edge
+EnvironmentFile=/etc/aegis-mx/environment/aegis-edge.conf
+ExecStart=/opt/aegis-mx/current/bin/edge-deployment inhibit --reason %i --output /run/aegis-mx/trading.inhibit
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/run/aegis-mx
+UMask=0027

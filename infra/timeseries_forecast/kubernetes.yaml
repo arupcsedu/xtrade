@@ -9,6 +9,7 @@ immutable: true
 data:
   AEGIS_TIMESERIES_HOST: "0.0.0.0"
   AEGIS_TIMESERIES_PORT: "8080"
+  AEGIS_TLS_SECRET_ROOT: "/var/run/aegis-mx/tls"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -27,8 +28,19 @@ spec:
       labels:
         app.kubernetes.io/name: timeseries-forecast-api
         app.kubernetes.io/part-of: aegis-mx
+        aegis-mx.io/mtls-server: "true"
     spec:
       automountServiceAccountToken: false
+      enableServiceLinks: false
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: service
           image: aegis-mx-timeseries@sha256:0000000000000000000000000000000000000000000000000000000000000000
@@ -39,20 +51,24 @@ spec:
           env:
             - name: AEGIS_TIMESERIES_ROLE
               value: timeseries-forecast-api
+            - name: AEGIS_SERVICE_IDENTITY
+              value: spiffe://aegis-mx/production/timeseries-forecast-api
+            - name: AEGIS_TLS_CLIENT_BINDINGS
+              value: >-
+                spiffe://aegis-mx/production/edge-forecast-cache=read_status,forecast;
+                spiffe://aegis-mx/production/prometheus=read_status,read_metrics
           ports:
-            - name: http
+            - name: https
               containerPort: 8080
           livenessProbe:
-            httpGet:
-              path: /healthz
-              port: http
+            tcpSocket:
+              port: https
             periodSeconds: 10
             timeoutSeconds: 2
             failureThreshold: 3
           readinessProbe:
-            httpGet:
-              path: /readyz
-              port: http
+            tcpSocket:
+              port: https
             periodSeconds: 5
             timeoutSeconds: 2
             failureThreshold: 2
@@ -72,6 +88,16 @@ spec:
             runAsUser: 65532
             seccompProfile:
               type: RuntimeDefault
+          volumeMounts:
+            - name: mtls
+              mountPath: /var/run/aegis-mx/tls
+              readOnly: true
+      volumes:
+        - name: mtls
+          secret:
+            defaultMode: 0440
+            optional: false
+            secretName: aegis-timeseries-api-mtls # pragma: allowlist secret
 ---
 apiVersion: v1
 kind: Service
@@ -85,9 +111,9 @@ spec:
   selector:
     app.kubernetes.io/name: timeseries-forecast-api
   ports:
-    - name: http
+    - name: https
       port: 8080
-      targetPort: http
+      targetPort: https
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -106,8 +132,19 @@ spec:
       labels:
         app.kubernetes.io/name: timeseries-forecast-worker
         app.kubernetes.io/part-of: aegis-mx
+        aegis-mx.io/mtls-server: "true"
     spec:
       automountServiceAccountToken: false
+      enableServiceLinks: false
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: service
           image: aegis-mx-timeseries@sha256:0000000000000000000000000000000000000000000000000000000000000000
@@ -118,20 +155,24 @@ spec:
           env:
             - name: AEGIS_TIMESERIES_ROLE
               value: timeseries-forecast-worker
+            - name: AEGIS_SERVICE_IDENTITY
+              value: spiffe://aegis-mx/production/timeseries-forecast-worker
+            - name: AEGIS_TLS_CLIENT_BINDINGS
+              value: >-
+                spiffe://aegis-mx/production/timeseries-forecast-api=read_status,forecast;
+                spiffe://aegis-mx/production/prometheus=read_status,read_metrics
           ports:
-            - name: http
+            - name: https
               containerPort: 8080
           livenessProbe:
-            httpGet:
-              path: /healthz
-              port: http
+            tcpSocket:
+              port: https
             periodSeconds: 10
             timeoutSeconds: 2
             failureThreshold: 3
           readinessProbe:
-            httpGet:
-              path: /readyz
-              port: http
+            tcpSocket:
+              port: https
             periodSeconds: 5
             timeoutSeconds: 2
             failureThreshold: 2
@@ -151,6 +192,16 @@ spec:
             runAsUser: 65532
             seccompProfile:
               type: RuntimeDefault
+          volumeMounts:
+            - name: mtls
+              mountPath: /var/run/aegis-mx/tls
+              readOnly: true
+      volumes:
+        - name: mtls
+          secret:
+            defaultMode: 0440
+            optional: false
+            secretName: aegis-timeseries-worker-mtls # pragma: allowlist secret
 ---
 apiVersion: v1
 kind: Service
@@ -164,9 +215,9 @@ spec:
   selector:
     app.kubernetes.io/name: timeseries-forecast-worker
   ports:
-    - name: http
+    - name: https
       port: 8080
-      targetPort: http
+      targetPort: https
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -185,8 +236,19 @@ spec:
       labels:
         app.kubernetes.io/name: timeseries-context-builder
         app.kubernetes.io/part-of: aegis-mx
+        aegis-mx.io/mtls-server: "true"
     spec:
       automountServiceAccountToken: false
+      enableServiceLinks: false
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: service
           image: aegis-mx-timeseries@sha256:0000000000000000000000000000000000000000000000000000000000000000
@@ -197,20 +259,24 @@ spec:
           env:
             - name: AEGIS_TIMESERIES_ROLE
               value: timeseries-context-builder
+            - name: AEGIS_SERVICE_IDENTITY
+              value: spiffe://aegis-mx/production/timeseries-context-builder
+            - name: AEGIS_TLS_CLIENT_BINDINGS
+              value: >-
+                spiffe://aegis-mx/production/intelligence=read_status,build_context;
+                spiffe://aegis-mx/production/prometheus=read_status,read_metrics
           ports:
-            - name: http
+            - name: https
               containerPort: 8080
           livenessProbe:
-            httpGet:
-              path: /healthz
-              port: http
+            tcpSocket:
+              port: https
             periodSeconds: 10
             timeoutSeconds: 2
             failureThreshold: 3
           readinessProbe:
-            httpGet:
-              path: /readyz
-              port: http
+            tcpSocket:
+              port: https
             periodSeconds: 5
             timeoutSeconds: 2
             failureThreshold: 2
@@ -230,6 +296,16 @@ spec:
             runAsUser: 65532
             seccompProfile:
               type: RuntimeDefault
+          volumeMounts:
+            - name: mtls
+              mountPath: /var/run/aegis-mx/tls
+              readOnly: true
+      volumes:
+        - name: mtls
+          secret:
+            defaultMode: 0440
+            optional: false
+            secretName: aegis-timeseries-context-mtls # pragma: allowlist secret
 ---
 apiVersion: v1
 kind: Service
@@ -243,9 +319,9 @@ spec:
   selector:
     app.kubernetes.io/name: timeseries-context-builder
   ports:
-    - name: http
+    - name: https
       port: 8080
-      targetPort: http
+      targetPort: https
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -261,10 +337,12 @@ spec:
   policyTypes: ["Ingress", "Egress"]
   ingress:
     - from:
-        - namespaceSelector: {}
+        - namespaceSelector:
+            matchLabels:
+              aegis-mx.io/trust-domain: production
+          podSelector:
+            matchLabels:
+              aegis-mx.io/mtls-client: "true"
       ports:
         - protocol: TCP
           port: 8080
-  egress:
-    - to:
-        - namespaceSelector: {}

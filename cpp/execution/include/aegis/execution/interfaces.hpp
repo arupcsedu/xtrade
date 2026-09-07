@@ -2,6 +2,7 @@
 #define AEGIS_EXECUTION_INTERFACES_HPP
 
 #include "aegis/common/build_info.hpp"
+#include "aegis/execution/live_capability.hpp"
 #include "aegis/execution/types.hpp"
 
 namespace aegis::execution {
@@ -65,7 +66,8 @@ class ILiveTransmissionAdapter {
 public:
   virtual ~ILiveTransmissionAdapter() = default;
   [[nodiscard]] virtual AdapterStatus
-  transmit(const OpaqueProtocolFrame& frame) noexcept = 0;
+  transmit(const OpaqueProtocolFrame& frame,
+           const VerifiedLiveTransmissionCapability& capability) noexcept = 0;
 };
 #endif
 

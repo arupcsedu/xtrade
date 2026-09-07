@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.aegis-mx.invalid/regional-release-lock-v1.schema.json",
+  "title": "Aegis-MX regional release lock v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "environment",
+    "source_commit",
+    "generated_at_utc",
+    "configuration_sha256",
+    "verifier",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "environment": {"const": "production"},
+    "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "generated_at_utc": {"type": "string", "format": "date-time"},
+    "configuration_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "verifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["certificate_identity", "oidc_issuer"],
+      "properties": {
+        "certificate_identity": {"type": "string", "minLength": 1, "maxLength": 512},
+        "oidc_issuer": {"const": "https://token.actions.githubusercontent.com"}
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "image", "signature_bundle_sha256", "sbom_sha256", "provenance_sha256", "verified"],
+        "properties": {
+          "name": {"enum": ["intelligence", "timeseries", "control-plane", "dashboards", "research", "backup"]},
+          "image": {"type": "string", "pattern": "^[^\\s]+@sha256:[0-9a-f]{64}$"},
+          "signature_bundle_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "sbom_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "provenance_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "verified": {"const": true}
+        }
+      }
+    }
+  }
+}

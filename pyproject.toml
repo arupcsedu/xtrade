@@ -11,6 +11,10 @@ requires-python = ">=3.12,<3.13"
 dependencies = ["flatbuffers==25.12.19"]
 
 [project.scripts]
+aegis-chaos-run = "tools.chaos_runner:main"
+aegis-performance-benchmark = "tools.performance_benchmark:main"
+edge-deployment = "tools.edge_deployment:main"
+regional-deployment = "tools.regional_deployment:main"
 timeseries-forecast-api = "aegis_mx_timeseries.cli:api_main"
 timeseries-forecast-worker = "aegis_mx_timeseries.cli:worker_main"
 timeseries-context-builder = "aegis_mx_timeseries.cli:context_builder_main"
@@ -22,7 +26,23 @@ packages = [
   "python/training/aegis_mx_training",
   "python/model_serving/aegis_mx_timeseries",
   "python/research/aegis_mx_research",
+  "tools",
 ]
+
+[tool.hatch.build.targets.wheel.force-include]
+"infra/chaos/scenario-catalog-v1.json" = "infra/chaos/scenario-catalog-v1.json"
+"infra/benchmarks/performance-policy-v1.json" = "infra/benchmarks/performance-policy-v1.json"
+"infra/edge" = "infra/edge"
+"infra/regional" = "infra/regional"
+"docs/operations/colocated-edge-rollback.md" = "docs/operations/colocated-edge-rollback.md"
+"schemas/chaos-result-report-v1.schema.json" = "schemas/chaos-result-report-v1.schema.json"
+"schemas/performance-benchmark-report-v1.schema.json" = "schemas/performance-benchmark-report-v1.schema.json"
+"schemas/paper-trading-acceptance-report-v1.schema.json" = "schemas/paper-trading-acceptance-report-v1.schema.json"
+"schemas/edge-deployment-profile-v1.schema.json" = "schemas/edge-deployment-profile-v1.schema.json"
+"schemas/edge-health-v1.schema.json" = "schemas/edge-health-v1.schema.json"
+"schemas/edge-host-facts-v1.schema.json" = "schemas/edge-host-facts-v1.schema.json"
+"schemas/edge-rollback-manifest-v1.schema.json" = "schemas/edge-rollback-manifest-v1.schema.json"
+"schemas/regional-release-lock-v1.schema.json" = "schemas/regional-release-lock-v1.schema.json"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -33,6 +53,20 @@ include = [
   "/python/training/aegis_mx_training",
   "/python/model_serving/aegis_mx_timeseries",
   "/python/research/aegis_mx_research",
+  "/tools",
+  "/infra/chaos/scenario-catalog-v1.json",
+  "/infra/benchmarks/performance-policy-v1.json",
+  "/infra/edge",
+  "/infra/regional",
+  "/docs/operations/colocated-edge-rollback.md",
+  "/schemas/chaos-result-report-v1.schema.json",
+  "/schemas/performance-benchmark-report-v1.schema.json",
+  "/schemas/paper-trading-acceptance-report-v1.schema.json",
+  "/schemas/edge-deployment-profile-v1.schema.json",
+  "/schemas/edge-health-v1.schema.json",
+  "/schemas/edge-host-facts-v1.schema.json",
+  "/schemas/edge-rollback-manifest-v1.schema.json",
+  "/schemas/regional-release-lock-v1.schema.json",
 ]
 
 [tool.ruff]
@@ -128,6 +162,46 @@ ignore = [
   "PT011",
 ]
 "tools/**/*.py" = ["INP001", "S603", "S607", "T201"]
+"tools/chaos_runner.py" = [
+  "EM101",
+  "EM102",
+  "FBT003",
+  "PLR0913",
+  "PLR0917",
+  "TRY003",
+  "TRY004",
+]
+"tools/edge_deployment.py" = [
+  "C901",
+  "EM101",
+  "EM102",
+  "PLR0912",
+  "PLR0915",
+  "PLR2004",
+  "TRY003",
+  "TRY004",
+  "TRY301",
+]
+"tools/regional_deployment.py" = [
+  "EM101",
+  "EM102",
+  "PLR0915",
+  "PLR2004",
+  "TRY003",
+]
+"tools/performance_benchmark.py" = [
+  "C901",
+  "EM101",
+  "EM102",
+  "FBT003",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
+  "PLR0917",
+  "PTH105",
+  "TRY003",
+  "TRY004",
+]
 
 [tool.mypy]
 python_version = "3.12"

@@ -69,6 +69,16 @@ jobs:
           make fast
           make dependency-scan
           make package
+          mkdir -p build/reproducibility/first
+          cp -a dist/. build/reproducibility/first/
+          make package
+          python tools/verify_reproducible_artifacts.py build/reproducibility/first dist
+
+      - name: Run nightly chaos soak and simultaneous fault combinations
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        env:
+          AEGIS_CHAOS_NIGHTLY_ITERATIONS: "1000"
+        run: make chaos-nightly
 
       - name: Upload reports, packages, and SBOM
         if: always()

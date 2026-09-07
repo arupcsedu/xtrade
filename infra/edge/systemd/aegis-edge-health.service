@@ -1,0 +1,16 @@
+[Unit]
+Description=Validate Aegis-MX edge health records
+After=aegis-edge.target
+OnFailure=aegis-edge-inhibit@%n
+
+[Service]
+Type=oneshot
+User=aegis-edge
+Group=aegis-edge
+EnvironmentFile=/etc/aegis-mx/environment/aegis-edge.conf
+ExecStart=/opt/aegis-mx/current/bin/edge-deployment check-all-health --profile-path ${AEGIS_DEPLOYMENT_PROFILE_PATH}
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict

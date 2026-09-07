@@ -21,11 +21,22 @@ print_help() {
     '  make test-sanitizers  Run ASan/UBSan, TSan, and the Go race detector.' \
     '  make test-fuzz        Run deterministic deserialization fuzz smoke tests.' \
     '  make benchmark        Run the C++ benchmark smoke workload.' \
+    '  make benchmark-platform Run the qualified full-platform benchmark suite.' \
+    '  make benchmark-platform-smoke Run the bounded full-platform smoke suite.' \
+    '  make benchmark-regression Compare a platform report with an approved baseline.' \
+    '  make paper-integration Run all deterministic full-system PAPER scenarios.' \
     '  make package          Build C++, Python, control, and SBOM artifacts.' \
     '  make docs-check       Validate local documentation.' \
     '  make schemas-check    Verify generated bindings and golden schema files.' \
     '  make schemas-generate Regenerate bindings and golden schema files.' \
     '  make dependency-scan  Audit Python and Go dependencies and visible secrets.' \
+    '  make security-test    Validate security policy and adversarial boundaries.' \
+    '  make chaos-fast       Run every bounded single-fault chaos scenario.' \
+    '  make chaos-nightly    Run the deterministic chaos soak and fault combinations.' \
+    '  make edge-validate    Validate non-live edge profiles and deployment contracts.' \
+    '  make edge-package     Build and verify deterministic rollback packages.' \
+    '  make regional-validate Validate non-hot-path Kubernetes deployment contracts.' \
+    '  make reproducibility-check Build twice and compare packaged artifacts.' \
     '  make fast             Run the pull-request validation set.' \
     '  make full             Run the exhaustive validation and packaging set.'
 }
@@ -147,7 +158,7 @@ lint_sources() {
   cmake --build --preset ci --parallel
 
   if command -v shellcheck >/dev/null 2>&1; then
-    shellcheck tools/run.sh tools/toolchain.sh
+    shellcheck tools/run.sh tools/toolchain.sh tools/slurm/paper-integration.sbatch
   else
     printf 'NOTE: shellcheck unavailable; CI installs and enforces it.\n'
   fi
@@ -287,6 +298,58 @@ run_benchmark() {
       -benchmem -count=1 ./config_service |
       tee ../build/reports/benchmarks/config-service.txt
   )
+  run_platform_benchmark \
+    "${AEGIS_PLATFORM_BENCHMARK_SMOKE_SAMPLES:-32}" \
+    "${AEGIS_PLATFORM_BENCHMARK_SMOKE_WARMUP:-8}"
+}
+
+run_platform_benchmark() {
+  require_environment
+  local samples=${1:-${AEGIS_PLATFORM_BENCHMARK_SAMPLES:-10000}}
+  local warmup=${2:-${AEGIS_PLATFORM_BENCHMARK_WARMUP:-4096}}
+  mkdir -p build/reports/benchmarks
+  cmake --preset release
+  cmake --build --preset release --target aegis_platform_benchmark --parallel
+  build/release/cpp/benchmarks/aegis_platform_benchmark \
+    --metadata build/reports/benchmarks/platform-sampler.json \
+    --samples-output build/reports/benchmarks/platform-samples.ndjson \
+    --samples "$samples" \
+    --warmup "$warmup" \
+    --seed "${AEGIS_PLATFORM_BENCHMARK_SEED:-20260906}"
+  "$python_bin" tools/performance_benchmark.py summarize \
+    --metadata build/reports/benchmarks/platform-sampler.json \
+    --samples build/reports/benchmarks/platform-samples.ndjson \
+    --output build/reports/benchmarks/platform-report.json
+}
+
+run_benchmark_regression() {
+  require_environment
+  local baseline=${AEGIS_BENCHMARK_BASELINE:-}
+  local candidate=${AEGIS_BENCHMARK_CANDIDATE:-build/reports/benchmarks/platform-report.json}
+  if [ -z "$baseline" ]; then
+    printf '%s\n' 'AEGIS_BENCHMARK_BASELINE must name an approved report.' >&2
+    return 2
+  fi
+  if [ ! -f "$candidate" ]; then
+    run_platform_benchmark
+  fi
+  "$python_bin" tools/performance_benchmark.py compare \
+    --baseline "$baseline" \
+    --candidate "$candidate" \
+    --output build/reports/benchmarks/regression.json
+}
+
+run_paper_integration() {
+  require_environment
+  mkdir -p build/reports/paper-trading
+  cmake --preset release
+  cmake --build --preset release --target aegis_paper_acceptance --parallel
+  build/release/cpp/integration/aegis-paper-acceptance \
+    --seed "${AEGIS_TEST_SEED:-20260906}" \
+    --machine build/reports/paper-trading/acceptance-report.json \
+    --human build/reports/paper-trading/system-report.md
+  "$python_bin" -m json.tool \
+    build/reports/paper-trading/acceptance-report.json >/dev/null
 }
 
 check_docs() {
@@ -340,46 +403,179 @@ scan_dependencies() {
     "${scan_files[@]}"
 }
 
+run_security_tests() {
+  require_environment
+  mkdir -p build/reports/security
+  "$python_bin" tools/generate_sbom.py \
+    --output build/reports/security/aegis-mx.cdx.json
+  "$python_bin" tools/security_policy.py \
+    --sbom build/reports/security/aegis-mx.cdx.json
+  "$python_bin" tools/regional_deployment.py validate-assets |
+    tee build/reports/security/regional-deployment.json
+  "$python_bin" -m pytest -q python/tests/test_security_hardening.py --no-cov
+}
+
+run_chaos_fast() {
+  require_environment
+  mkdir -p build/reports/chaos
+  "$python_bin" tools/chaos_runner.py \
+    --profile fast \
+    --iterations "${AEGIS_CHAOS_FAST_ITERATIONS:-1}" \
+    --seed "${AEGIS_TEST_SEED:-20260828}" \
+    --output build/reports/chaos/fast.json
+}
+
+run_chaos_nightly() {
+  require_environment
+  mkdir -p build/reports/chaos
+  "$python_bin" tools/chaos_runner.py \
+    --profile nightly \
+    --iterations "${AEGIS_CHAOS_NIGHTLY_ITERATIONS:-1000}" \
+    --seed "${AEGIS_TEST_SEED:-20260828}" \
+    --output build/reports/chaos/nightly.json
+}
+
+validate_edge_deployment() {
+  require_environment
+  mkdir -p build/reports/edge-deployment
+  "$python_bin" tools/edge_deployment.py validate-assets |
+    tee build/reports/edge-deployment/assets.json
+  local profile
+  for profile in development ci replay paper staging production-disabled; do
+    "$python_bin" tools/edge_deployment.py validate-profile \
+      --profile "$profile" |
+      tee "build/reports/edge-deployment/profile-${profile}.json"
+  done
+}
+
+validate_regional_deployment() {
+  require_environment
+  mkdir -p build/reports/regional-deployment
+  "$python_bin" tools/regional_deployment.py validate-assets |
+    tee build/reports/regional-deployment/assets.json
+}
+
+package_edge_rollback() {
+  require_environment
+  validate_edge_deployment
+  mkdir -p dist/edge build/reports/edge-deployment
+  local profile
+  local artifact
+  for profile in development ci replay paper staging production-disabled; do
+    artifact="dist/edge/aegis-edge-rollback-${profile}.tar.gz"
+    "$python_bin" tools/edge_deployment.py package-rollback \
+      --profile "$profile" \
+      --source-date-epoch "${SOURCE_DATE_EPOCH}" \
+      --output "$artifact"
+    "$python_bin" tools/edge_deployment.py verify-rollback \
+      --package "$artifact" |
+      tee "build/reports/edge-deployment/rollback-${profile}.json"
+  done
+}
+
 package_artifacts() {
   require_environment
+  require_command gzip
+  require_command tar
   mkdir -p dist/cpp dist/python dist/control
   cmake --preset release
   cmake --build --preset release --parallel
-  cpack --config build/release/CPackConfig.cmake -B dist/cpp
+  local cpack_root="$repository_root/build/package/cpack"
+  rm -rf -- "$cpack_root" "$repository_root/dist/cpp/_CPack_Packages"
+  mkdir -p "$cpack_root"
+  cpack --config build/release/CPackConfig.cmake -B "$cpack_root"
+  mapfile -t cpack_archives < <(
+    find "$cpack_root" -maxdepth 1 -type f -name '*.tar.gz' -print
+  )
+  mapfile -t cpack_stages < <(
+    find "$cpack_root/_CPack_Packages/Linux/TGZ" \
+      -mindepth 1 -maxdepth 1 -type d -print
+  )
+  if [ "${#cpack_archives[@]}" -ne 1 ] || [ "${#cpack_stages[@]}" -ne 1 ]; then
+    printf '%s\n' 'CPack did not produce exactly one archive and staging tree.' >&2
+    return 1
+  fi
+  local cpp_archive="$repository_root/dist/cpp/$(basename "${cpack_archives[0]}")"
+  local cpp_archive_temp="${cpp_archive}.tmp"
+  local cpack_stage_parent
+  local cpack_stage_name
+  cpack_stage_parent=$(dirname "${cpack_stages[0]}")
+  cpack_stage_name=$(basename "${cpack_stages[0]}")
+  tar \
+    --sort=name \
+    --mtime="@${SOURCE_DATE_EPOCH}" \
+    --owner=0 \
+    --group=0 \
+    --numeric-owner \
+    --format=gnu \
+    -C "$cpack_stage_parent" \
+    -cf - \
+    "$cpack_stage_name" |
+    gzip -n >"$cpp_archive_temp"
+  mv -f -- "$cpp_archive_temp" "$cpp_archive"
   "$python_bin" -m build --no-isolation --outdir dist/python
   (
     cd control
     go test ./...
-    go build \
+    CGO_ENABLED=0 go build \
       -buildmode=archive \
       -buildvcs=false \
+      -ldflags=-buildid= \
       -trimpath \
       -o ../dist/control/config_service.a \
       ./config_service
-    go build \
+    CGO_ENABLED=0 go build \
       -buildvcs=false \
+      -ldflags=-buildid= \
       -trimpath \
       -o ../dist/control/config-service \
       ./cmd/config-service
-    go build \
+    CGO_ENABLED=0 go build \
       -buildvcs=false \
+      -ldflags=-buildid= \
       -trimpath \
       -o ../dist/control/model-registry \
       ./cmd/model-registry
+    CGO_ENABLED=0 go build \
+      -buildvcs=false \
+      -ldflags=-buildid= \
+      -trimpath \
+      -o ../dist/control/aegis-edge-config-verify \
+      ./cmd/edge-config-verify
   )
   "$python_bin" tools/generate_sbom.py --output dist/aegis-mx.cdx.json
+  package_edge_rollback
+}
+
+check_reproducibility() {
+  require_environment
+  local comparison_root
+  comparison_root=$(mktemp -d "$repository_root/build/reproducibility.XXXXXX")
+  trap 'rm -rf -- "$comparison_root"' RETURN
+  package_artifacts
+  mkdir -p "$comparison_root/first"
+  cp -a dist/. "$comparison_root/first/"
+  package_artifacts
+  "$python_bin" tools/verify_reproducible_artifacts.py \
+    "$comparison_root/first" dist
 }
 
 run_fast() {
   "$0" docs-check
   "$0" schemas-check
+  "$0" security-test
+  "$0" chaos-fast
+  "$0" edge-validate
+  "$0" regional-validate
   "$0" lint
   "$0" test
+  "$0" paper-integration
   "$0" benchmark
 }
 
 run_full() {
   "$0" fast
+  "$0" chaos-nightly
   "$0" test-sanitizers
   "$0" test-fuzz
   "$0" dependency-scan
@@ -397,11 +593,26 @@ case "$command_name" in
   test-sanitizers) run_sanitizers ;;
   test-fuzz) run_fuzz ;;
   benchmark) run_benchmark ;;
+  benchmark-platform) run_platform_benchmark ;;
+  benchmark-platform-smoke)
+    run_platform_benchmark \
+      "${AEGIS_PLATFORM_BENCHMARK_SMOKE_SAMPLES:-32}" \
+      "${AEGIS_PLATFORM_BENCHMARK_SMOKE_WARMUP:-8}"
+    ;;
+  benchmark-regression) run_benchmark_regression ;;
+  paper-integration) run_paper_integration ;;
   package) package_artifacts ;;
   docs-check) check_docs ;;
   schemas-check) check_schemas ;;
   schemas-generate) generate_schemas ;;
   dependency-scan) scan_dependencies ;;
+  security-test) run_security_tests ;;
+  chaos-fast) run_chaos_fast ;;
+  chaos-nightly) run_chaos_nightly ;;
+  edge-validate) validate_edge_deployment ;;
+  edge-package) package_edge_rollback ;;
+  regional-validate) validate_regional_deployment ;;
+  reproducibility-check) check_reproducibility ;;
   fast) run_fast ;;
   full) run_full ;;
   *)

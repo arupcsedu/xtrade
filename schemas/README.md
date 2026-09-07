@@ -4,6 +4,17 @@ This directory owns the immutable, cross-component wire contracts for Aegis-MX.
 It does not contain venue protocols, order routing, credentials, or live-trading
 capability.
 
+Operational evidence schemas also live here. The
+[`performance-benchmark-report-v1.schema.json`](performance-benchmark-report-v1.schema.json)
+contract identifies hardware, pinning, methodology, simulated versus real-NIC
+sources, stage/scenario distributions, resource counters, and the hash of the
+separately retained raw sample stream.
+
+The
+[`paper-trading-acceptance-report-v1.schema.json`](paper-trading-acceptance-report-v1.schema.json)
+contract fixes the 16 full-system PAPER scenarios, safety acceptance fields,
+per-stage hashes, counters, and deterministic replay comparison.
+
 ## Canonical format
 
 Version 1 uses FlatBuffers 25.12.19, pinned by release archive SHA-256 in the
@@ -136,6 +147,32 @@ Timestamp types are not interchangeable:
 Persisted monotonic timestamps are always accompanied by `SessionId`. Code must
 not compare timestamps from different domains without clock-quality and
 uncertainty context.
+
+## Operational report schemas
+
+The [chaos result report v1](chaos-result-report-v1.schema.json) is a strict
+JSON Schema for offline CI and operational evidence. It is not an execution
+contract and never enters the hot path. Its version, catalog hash, deterministic
+seed, per-fault expectations/observations, attempt-chain hashes, and final
+content hash make a result self-describing. Breaking report changes require a
+new schema file and side-by-side reader support; existing result files are
+immutable.
+
+The [edge deployment profile v1](edge-deployment-profile-v1.schema.json) and
+[local edge health v1](edge-health-v1.schema.json) schemas govern offline
+systemd rendering and bounded local readiness files. They permit only
+simulation/paper modes; live transmission and automatic activation are fixed
+to false. These JSON contracts do not enter the execution hot path and carry no
+credentials, endpoints, or provider protocol data.
+The [reviewed host facts v1](edge-host-facts-v1.schema.json) contract binds CPU
+and NIC topology plus NUMA-local huge-page capacity for offline qualification.
+The [rollback manifest v1](edge-rollback-manifest-v1.schema.json) binds every
+archive member to SHA-256 and records the profile and reproducible source epoch.
+The [regional release lock v1](regional-release-lock-v1.schema.json) binds a
+production configuration digest to the exact six regional OCI image digests,
+SBOMs, provenance records, signature bundles, trusted CI identity, and
+verification result. It is an administrative deployment contract and conveys
+no order-entry authority.
 
 ## Identifiers
 

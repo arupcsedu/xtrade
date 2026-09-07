@@ -74,6 +74,24 @@ func VerifySignedConfiguration(signed SignedConfiguration, trustedKeys map[strin
 	return verifySignature(signed.Configuration, signed.SignerKeyID, signed.SignatureBase64, trustedKeys)
 }
 
+// DecodeSignedConfiguration accepts exactly one bounded JSON object and rejects
+// unknown fields before any signature decision is made.
+func DecodeSignedConfiguration(reader io.Reader) (SignedConfiguration, error) {
+	var signed SignedConfiguration
+	limited := io.LimitReader(reader, maximumConfigurationBytes+1)
+	payload, err := io.ReadAll(limited)
+	if err != nil {
+		return SignedConfiguration{}, err
+	}
+	if len(payload) == 0 || int64(len(payload)) > maximumConfigurationBytes {
+		return SignedConfiguration{}, ErrConfigurationInvalid
+	}
+	if err := decodeStrict(payload, &signed); err != nil {
+		return SignedConfiguration{}, fmt.Errorf("%w: %v", ErrConfigurationInvalid, err)
+	}
+	return signed, nil
+}
+
 func signKillCommand(command KillCommand, keyID string, privateKey ed25519.PrivateKey) (SignedKillCommand, error) {
 	if err := validateKillCommand(command); err != nil {
 		return SignedKillCommand{}, err

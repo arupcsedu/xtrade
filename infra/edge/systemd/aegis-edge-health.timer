@@ -1,0 +1,12 @@
+[Unit]
+Description=Periodically validate Aegis-MX edge health
+PartOf=aegis-edge.target
+
+[Timer]
+OnBootSec=5s
+OnUnitActiveSec=1s
+AccuracySec=100ms
+Unit=aegis-edge-health.service
+
+[Install]
+WantedBy=aegis-edge.target

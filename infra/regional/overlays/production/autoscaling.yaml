@@ -1,0 +1,109 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: {name: news-intelligence, namespace: aegis-intelligence}
+spec: &hpa-spec
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: news-intelligence}
+  minReplicas: 3
+  maxReplicas: 10
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      selectPolicy: Min
+      policies: [{type: Pods, value: 2, periodSeconds: 60}, {type: Percent, value: 50, periodSeconds: 60}]
+    scaleDown:
+      stabilizationWindowSeconds: 600
+      selectPolicy: Min
+      policies: [{type: Pods, value: 1, periodSeconds: 120}, {type: Percent, value: 20, periodSeconds: 120}]
+  metrics:
+    - type: Resource
+      resource: {name: cpu, target: {type: Utilization, averageUtilization: 65}}
+    - type: Resource
+      resource: {name: memory, target: {type: Utilization, averageUtilization: 75}}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: {name: filings-intelligence, namespace: aegis-intelligence}
+spec:
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      selectPolicy: Min
+      policies: [{type: Pods, value: 2, periodSeconds: 60}, {type: Percent, value: 50, periodSeconds: 60}]
+    scaleDown:
+      stabilizationWindowSeconds: 600
+      selectPolicy: Min
+      policies: [{type: Pods, value: 1, periodSeconds: 120}, {type: Percent, value: 20, periodSeconds: 120}]
+  metrics:
+    - type: Resource
+      resource: {name: cpu, target: {type: Utilization, averageUtilization: 65}}
+    - type: Resource
+      resource: {name: memory, target: {type: Utilization, averageUtilization: 75}}
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: filings-intelligence}
+  minReplicas: 3
+  maxReplicas: 8
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: {name: macro-intelligence, namespace: aegis-intelligence}
+spec:
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      selectPolicy: Min
+      policies: [{type: Pods, value: 2, periodSeconds: 60}, {type: Percent, value: 50, periodSeconds: 60}]
+    scaleDown:
+      stabilizationWindowSeconds: 600
+      selectPolicy: Min
+      policies: [{type: Pods, value: 1, periodSeconds: 120}, {type: Percent, value: 20, periodSeconds: 120}]
+  metrics:
+    - type: Resource
+      resource: {name: cpu, target: {type: Utilization, averageUtilization: 65}}
+    - type: Resource
+      resource: {name: memory, target: {type: Utilization, averageUtilization: 75}}
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: macro-intelligence}
+  minReplicas: 2
+  maxReplicas: 6
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: {name: options-analytics, namespace: aegis-models}
+spec:
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      selectPolicy: Min
+      policies: [{type: Pods, value: 2, periodSeconds: 60}, {type: Percent, value: 50, periodSeconds: 60}]
+    scaleDown:
+      stabilizationWindowSeconds: 600
+      selectPolicy: Min
+      policies: [{type: Pods, value: 1, periodSeconds: 120}, {type: Percent, value: 20, periodSeconds: 120}]
+  metrics:
+    - type: Resource
+      resource: {name: cpu, target: {type: Utilization, averageUtilization: 65}}
+    - type: Resource
+      resource: {name: memory, target: {type: Utilization, averageUtilization: 75}}
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: options-analytics}
+  minReplicas: 3
+  maxReplicas: 8
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: {name: research-api, namespace: aegis-research}
+spec:
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      selectPolicy: Min
+      policies: [{type: Pods, value: 2, periodSeconds: 60}, {type: Percent, value: 50, periodSeconds: 60}]
+    scaleDown:
+      stabilizationWindowSeconds: 600
+      selectPolicy: Min
+      policies: [{type: Pods, value: 1, periodSeconds: 120}, {type: Percent, value: 20, periodSeconds: 120}]
+  metrics:
+    - type: Resource
+      resource: {name: cpu, target: {type: Utilization, averageUtilization: 65}}
+    - type: Resource
+      resource: {name: memory, target: {type: Utilization, averageUtilization: 75}}
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: research-api}
+  minReplicas: 2
+  maxReplicas: 6

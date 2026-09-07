@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/edge-host-facts-v1.schema.json",
+  "title": "Aegis-MX reviewed edge host facts v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["host_facts_schema_version", "online_cpus", "online_numa_nodes", "cpu_numa_nodes", "hugepage_size_kb", "hugepage_total", "hugepages_by_numa_node", "interfaces", "interface_numa_nodes", "hardware_timestamp_interfaces", "receive_queue_counts"],
+  "properties": {
+    "host_facts_schema_version": {"const": 1},
+    "online_cpus": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "integer", "minimum": 0, "maximum": 4095}},
+    "online_numa_nodes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "integer", "minimum": 0}},
+    "cpu_numa_nodes": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "hugepage_size_kb": {"type": "integer", "minimum": 2048},
+    "hugepage_total": {"type": "integer", "minimum": 0},
+    "hugepages_by_numa_node": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "interfaces": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "interface_numa_nodes": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "hardware_timestamp_interfaces": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "receive_queue_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}}
+  }
+}

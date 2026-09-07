@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: news-intelligence
+  namespace: aegis-intelligence
+  labels: {app.kubernetes.io/name: news-intelligence, app.kubernetes.io/part-of: aegis-mx}
+spec:
+  type: ClusterIP
+  selector: {app.kubernetes.io/name: news-intelligence}
+  ports: [{name: https, port: 8443, targetPort: https, protocol: TCP}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: filings-intelligence
+  namespace: aegis-intelligence
+  labels: {app.kubernetes.io/name: filings-intelligence, app.kubernetes.io/part-of: aegis-mx}
+spec:
+  type: ClusterIP
+  selector: {app.kubernetes.io/name: filings-intelligence}
+  ports: [{name: https, port: 8443, targetPort: https, protocol: TCP}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: macro-intelligence
+  namespace: aegis-intelligence
+  labels: {app.kubernetes.io/name: macro-intelligence, app.kubernetes.io/part-of: aegis-mx}
+spec:
+  type: ClusterIP
+  selector: {app.kubernetes.io/name: macro-intelligence}
+  ports: [{name: https, port: 8443, targetPort: https, protocol: TCP}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: timesfm-service
+  namespace: aegis-models
+  labels: {app.kubernetes.io/name: timesfm-service, app.kubernetes.io/part-of: aegis-mx}
+spec:
+  type: ClusterIP
+  selector: {app.kubernetes.io/name: timesfm-service}
+  ports: [{name: https, port: 8443, targetPort: https, protocol: TCP}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: options-analytics
+  namespace: aegis-models
+  labels: {app.kubernetes.io/name: options-analytics, app.kubernetes.io/part-of: aegis-mx}
+spec:
+  type: ClusterIP
+  selector: {app.kubernetes.io/name: options-analytics}
+  ports: [{name: https, port: 8443, targetPort: https, protocol: TCP}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: model-registry
+  namespace: aegis-control
+  labels: {app.kubernetes.io/name: model-registry, app.kubernetes.io/part-of: aegis-mx}
+spec:
+  type: ClusterIP
+  selector: {app.kubernetes.io/name: model-registry}
+  ports: [{name: https, port: 8443, targetPort: https, protocol: TCP}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: configuration-control-plane
+  namespace: aegis-control
+  labels: {app.kubernetes.io/name: configuration-control-plane, app.kubernetes.io/part-of: aegis-mx}
+spec:
+  type: ClusterIP
+  selector: {app.kubernetes.io/name: configuration-control-plane}
+  ports: [{name: https, port: 8443, targetPort: https, protocol: TCP}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboards
+  namespace: aegis-observability
+  labels: {app.kubernetes.io/name: dashboards, app.kubernetes.io/part-of: aegis-mx}
+spec:
+  type: ClusterIP
+  selector: {app.kubernetes.io/name: dashboards}
+  ports: [{name: https, port: 8443, targetPort: https, protocol: TCP}]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: research-api
+  namespace: aegis-research
+  labels: {app.kubernetes.io/name: research-api, app.kubernetes.io/part-of: aegis-mx}
+spec:
+  type: ClusterIP
+  selector: {app.kubernetes.io/name: research-api}
+  ports: [{name: https, port: 8443, targetPort: https, protocol: TCP}]

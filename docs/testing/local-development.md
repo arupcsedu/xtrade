@@ -80,6 +80,8 @@ It is equivalent to:
 ```bash
 make docs-check
 make schemas-check
+make security-test
+make chaos-fast
 make lint
 make test
 make benchmark
@@ -100,6 +102,7 @@ make full
 It adds:
 
 ```bash
+make chaos-nightly
 make test-sanitizers
 make test-fuzz
 make dependency-scan
@@ -127,6 +130,18 @@ ctest --preset tsan
 Combining ASan and TSan is rejected at CMake configuration because their
 runtimes are incompatible. A missing sanitizer runtime is a reported limitation,
 not a pass.
+
+The deterministic chaos profiles can also be run directly:
+
+```bash
+make chaos-fast
+AEGIS_CHAOS_NIGHTLY_ITERATIONS=1000 make chaos-nightly
+```
+
+The fast profile executes every single fault. The nightly profile repeats those
+faults and adds simultaneous combinations without consuming unbounded host
+resources. Contracts, result hashes, and report locations are documented in
+[Chaos Testing](chaos-testing.md).
 
 ASan and TSan also require very large virtual-address shadow mappings. A host
 with a restrictive hard `ulimit -v` can compile the instrumented binaries but
@@ -162,6 +177,24 @@ feed benchmark additionally reports receive-to-normalized p50/p95/p99/p99.9,
 throughput, and fail-closed receiver-overload counters. The synthetic generator
 reports events per second; results remain host-specific and are not a trading-
 performance acceptance threshold.
+
+The comprehensive platform suite adds the 14-stage/9-scenario matrix, verified
+CPU pinning, warmed caches, raw NDJSON samples, allocation and queue evidence,
+and a baseline regression gate. Run `make benchmark-platform-smoke` for bounded
+CI evidence or `make benchmark-platform` for the 10,000-sample qualification
+profile. See [Full-platform Performance Benchmarks](full-platform-performance.md).
+
+Full-system PAPER acceptance runs the 16 isolated deterministic scenarios and
+their same-seed replay pass:
+
+```bash
+AEGIS_TEST_SEED=20260906 make paper-integration
+```
+
+This target emits no network traffic and cannot activate live trading. Its
+scenario definitions, safety order, report contract, and optional
+`parallel`-partition Slurm launcher are documented in
+[Full-system PAPER Trading Validation](full-system-paper-trading.md).
 
 Focused journal tests and the read-only/copy-only tools can be run with:
 
@@ -213,6 +246,20 @@ does not provide bar-close fills, live transmission, or a licensed historical
 data decoder. Model assumptions and metric interpretation are documented in
 [Event Backtester Testing](event-backtester-testing.md) and the
 [event backtester architecture](../architecture/event-backtester.md).
+
+Focused observability and decision-explanation tests can be run with:
+
+```bash
+export AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts
+source tools/toolchain.sh
+cmake --preset dev
+cmake --build --preset dev --target aegis_observability_tests
+ctest --test-dir build/dev -R '^aegis_observability_tests$' --output-on-failure
+```
+
+The producer enqueue benchmark, metric vocabulary, off-path exporter boundary,
+and dashboard/alert checks are documented in
+[Observability Testing](observability-testing.md).
 
 ### Synthetic exchange
 
@@ -368,6 +415,38 @@ Configuration-focused commands and limitations are in
 [control-plane architecture](../architecture/configuration-control-plane.md),
 and the [configuration runbook](../operations/configuration-control-runbook.md).
 
+### Colocated edge deployment
+
+Validate every checked-in profile and deployment asset without changing the
+host:
+
+```bash
+AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts make edge-validate
+AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts make edge-package
+```
+
+`edge-package` produces six deterministic, checksummed rollback archives under
+`dist/edge`; it never installs, enables, starts, or switches a release. Host
+qualification and performance evidence are described in
+[colocated edge deployment testing](colocated-edge-deployment-testing.md), with
+the operational sequence in the
+[deployment checklist](../operations/colocated-edge-deployment-checklist.md).
+
+### Regional Kubernetes deployment
+
+Validate the Kubernetes source assets without needing a cluster:
+
+```bash
+AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts make regional-validate
+```
+
+The checked-in local and production overlays retain non-routable image and
+evidence placeholders. Rendering or applying requires pinned Kubernetes tools,
+locally built digest-addressed images or a verified production release lock,
+and externally provisioned Secrets Store CSI classes. See
+[regional deployment testing](regional-kubernetes-deployment-testing.md) and
+the [regional operations runbook](../operations/regional-kubernetes-runbook.md).
+
 ## Dependency and secret validation
 
 ```bash
@@ -415,8 +494,30 @@ make package
 
 The command builds release-mode C++, creates CPack and Go package archives,
 creates the Python wheel/sdist without an isolated dependency download, and
-emits a CycloneDX 1.5 SBOM. The SBOM omits wall-clock time and uses a
-deterministic UUID derived from project name/version.
+emits six verified non-activating edge rollback bundles and a CycloneDX 1.5
+SBOM. The SBOM omits wall-clock time and uses a deterministic UUID derived from
+project name/version.
+
+## Security and reproducibility
+
+```bash
+export AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts
+make security-test
+make dependency-scan
+make reproducibility-check
+```
+
+`security-test` generates and validates a deterministic SBOM, checks immutable
+CI action references, verifies the hardened time-series container/Kubernetes
+policy, and runs adversarial mTLS, identity/RBAC, secret-mount, rate-limit, and
+news-sandbox tests. It uses only ephemeral test certificates generated under a
+temporary directory; no repository or production secret is required.
+
+`reproducibility-check` packages twice under the repository's
+`SOURCE_DATE_EPOCH` and compares every relative artifact path and SHA-256.
+Differences fail with exact missing or changed artifact names. The release
+workflow signs only the immutable OCI digest and verifies its OIDC workflow
+identity after signing.
 
 ## Container workflow
 
@@ -448,6 +549,8 @@ Bit-for-bit container reproduction remains a known Phase 1 limitation.
 | Go test events | `build/reports/control/*.json` |
 | Go coverage | `build/reports/control/coverage.out` |
 | Benchmark JSON | `build/reports/benchmarks/*.json` |
+| Chaos JSON | `build/reports/chaos/*.json` |
+| Full-system PAPER JSON/Markdown | `build/reports/paper-trading/*` |
 | Packages and SBOM | `dist/` |
 
 CI uploads reports even when a gate fails and retains exhaustive artifacts for

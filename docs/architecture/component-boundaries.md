@@ -15,7 +15,7 @@ logical boundaries without changing their ownership or dependency direction.
 
 | Logical boundary | Physical foundation path |
 | --- | --- |
-| `edge-core` | `cpp/common`, `cpp/event_bus`, `cpp/journal` |
+| `edge-core` | `cpp/common`, `cpp/event_bus`, `cpp/journal`, `cpp/high_availability` |
 | `market-data` | `cpp/market_data` |
 | `order-book` | `cpp/order_book` |
 | `feature-engine` | `cpp/features` |
@@ -106,6 +106,12 @@ interfaces.
 `edge-core` also owns the neutral authoritative market-state controller and its
 immutable publication contract. This prevents ensemble, risk, OMS, or gateways
 from defining competing halt/clock/data/kill/event precedence.
+
+The edge HA slice owns process epochs, witness-grant validation, bounded
+recovery replication, leadership fencing, and atomic operator state. It does
+not elect a leader or implement a network consensus protocol; those remain an
+authenticated control-plane integration boundary. See
+[Edge High Availability](high-availability.md).
 
 **Inputs:** Versioned schema/ordering/serialization ADRs and platform clock/build
 information.
@@ -401,11 +407,24 @@ and evidence retention integration.
 **Outputs:** Metrics, logs, traces, alerts, and operational views without secrets
 or licensed payloads.
 
-**Allowed dependencies:** Stable telemetry/health contracts from `edge-core`.
-Components emit through narrow injected interfaces and do not import exporters.
+**Allowed dependencies:** Stable telemetry/health contracts from `edge-core`
+and public immutable snapshot contracts from observed components. Components
+emit through narrow injected interfaces and do not import exporters.
 
 **Execution class:** Asynchronous. An exporter outage cannot block the hot path
 or create trading readiness.
+
+**Implemented observability slice (2026-09-02):** A C++ fixed-record producer
+boundary publishes metrics, structured logs, and decision explanations through
+bounded preallocated queues. A single consumer owns deterministic aggregation,
+Prometheus exposition, structured JSON, and OTLP JSON encoding. Adapters cover
+feed/data quality, staged latency, model/ensemble, risk/gateway, portfolio/cost,
+clock, journal, and supplied OS/NUMA/cache/NIC state. Metrics allow only bounded
+slots, while exact identities live in stable-hashed correlated decision records.
+Reference dashboards, alerts, collector configuration, and linked runbooks are
+checked in. Network exporters, production log storage, slot-inventory
+distribution, and environment threshold tuning remain deployment boundaries.
+See [Observability and Decision Explainability](observability-and-explainability.md).
 
 ### `deployment/`
 
@@ -426,11 +445,27 @@ components; no component source depends on deployment.
 
 **Execution class:** Offline generation and asynchronous orchestration.
 
+**Implemented edge slice (2026-09-04):** Six immutable non-live profiles,
+systemd lifecycle/security contracts, generated CPU/NUMA/memlock/descriptor
+drop-ins, NIC queue plans, PTP gating, tmpfiles/log rotation, host tuning
+examples, strict local health validation, and deterministic checksummed rollback
+packages are implemented. The units remain fail-closed contracts until the
+composed daemon binaries, signed site configuration, and reviewed host/NIC
+mapping exist. See [Colocated Edge Deployment](colocated-edge-deployment.md).
+
+**Implemented regional slice (2026-09-05):** Five restricted namespaces isolate
+nine non-hot-path services with quotas, default-deny networking, CSI identities,
+resource bounds, rolling deployment, anti-affinity, disruption budgets, bounded
+autoscaling, TimesFM GPU placement, backup policy, and fail-closed image
+admission. Checked-in images and evidence are unresolved placeholders. Edge
+routing, deterministic pre-trade risk, OMS, gateways, and journals are excluded.
+See [Regional Kubernetes Deployment](regional-kubernetes-deployment.md).
+
 ## Execution-path classification
 
 | Component | Hard real-time-like hot path | Near-real-time | Asynchronous | Offline |
 | --- | --- | --- | --- | --- |
-| `edge-core` | Types, clocks, queues, status, audit enqueue | Service shell | Journal writer | Build/schema generation |
+| `edge-core` | Types, clocks, queues, fencing, status, audit enqueue | HA reconciliation/service shell | Journal and recovery transport writers | Build/schema generation |
 | `market-data` | Decode, validate, normalize, sequence | Gap/snapshot recovery | Feed/session diagnostics | Fixture generation |
 | `order-book` | Apply event, validate, publish view | Shadow rebuild/recovery | Diagnostics | Golden-state generation |
 | `feature-engine` | Online update and snapshot | Optional bounded off-path feature | Artifact distribution | Backfill/parity |
@@ -444,6 +479,7 @@ components; no component source depends on deployment.
 | `research` | Never | Never | Artifact promotion workflow | Experiments/training |
 | `control-plane` | Never in decision path | Kill/config/auth delivery | Fleet management/audit | Policy packaging |
 | `observability` | Nonblocking emit hook only | Local aggregation | Export/alert | Capacity/report analysis |
+| `chaos` | Never | Never | Isolated staging orchestration only | Deterministic scenarios/reports |
 | `deployment` | Never | Supervisor health actions | Rollout/rollback | Build/render/attest |
 
 ## Contract ownership and cycle prevention
@@ -463,6 +499,8 @@ Producer-owned contracts separate data flow from import direction:
 - `edge-core` owns narrow health/telemetry/configuration identities;
   observability and control-plane consume them without becoming production
   hot-path dependencies.
+- Chaos tooling names published fault boundaries but cannot import an order
+  transmitter or become a runtime dependency of an edge service.
 
 Composition roots may depend on multiple siblings to wire them together, but
 composition code contains no business logic and is placed with the deployable

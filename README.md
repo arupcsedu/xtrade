@@ -11,6 +11,32 @@ coordinator, and a repository-owned synthetic/paper gateway. It contains no real
 feed adapter, strategy, proprietary order-entry protocol, network transmitter,
 broker connection, credential, or live-trading behavior.
 
+The [edge high-availability layer](docs/architecture/high-availability.md)
+provides process/session fencing, bounded recovery replication, explicit
+leader reconciliation, duplicate-emission suppression, and operator-visible
+failover state. It consumes an externally validated witness grant; the
+production witness, cross-host transport, and physical gateway fencing remain
+integration boundaries.
+
+The [colocated edge deployment bundle](docs/architecture/colocated-edge-deployment.md)
+provides six non-live systemd profiles, reviewed CPU/NUMA/NIC/PTP and storage
+contracts, local health validation, and deterministic rollback packages. The
+composed daemon binaries and site hardware mappings remain prerequisites, so
+the bundle fails closed instead of presenting the current libraries as a
+runnable production edge.
+
+The [regional Kubernetes deployment](docs/architecture/regional-kubernetes-deployment.md)
+isolates nine non-hot-path services across intelligence, model, control,
+observability, and research namespaces. Its production admission contract
+requires immutable signed image evidence and explicitly excludes edge routing,
+OMS, gateways, and deterministic pre-trade risk. Checked-in image digests are
+non-routable fail-closed placeholders.
+
+The [chaos framework](docs/architecture/chaos-and-fault-injection.md) executes
+all required single faults and deterministic nightly combinations in an
+isolated simulation harness. It emits content-hashed JSON evidence and cannot
+address an OMS or gateway.
+
 The [smart order router](docs/architecture/smart-order-router.md) implements
 fixed-point paper/synthetic venue selection and bounded execution policies. It
 emits only a proposed child; every child still requires fresh pre-trade risk,
@@ -70,17 +96,30 @@ SHA-256. Go foundation code uses the standard library only.
 | `make test-sanitizers` | Run separate ASan, UBSan, TSan C++ builds and the Go race detector |
 | `make test-fuzz` | Run deterministic Clang libFuzzer + UBSan deserialization smoke tests; ASan remains a separate sanitizer gate |
 | `make benchmark` | Run the release-mode Google Benchmark smoke workload and retain JSON output |
+| `make benchmark-platform` | Run the pinned, warmed 14-stage/9-scenario suite with qualification sample counts |
+| `make benchmark-platform-smoke` | Run the complete matrix with bounded non-qualifying sample counts |
+| `make benchmark-regression` | Compare a platform report against an explicitly supplied approved baseline |
+| `make paper-integration` | Run all 16 deterministic full-system PAPER scenarios and write machine/human acceptance reports |
 | `make dependency-scan` | Run pip-audit, pinned govulncheck, and the repository secret baseline check |
-| `make package` | Produce the CPack archive, Python sdist/wheel, control-plane package archive, and CycloneDX SBOM |
+| `make chaos-fast` | Run all 23 bounded single-fault scenarios and emit a deterministic JSON report |
+| `make chaos-nightly` | Run the repeated fault soak plus simultaneous fault combinations |
+| `make edge-validate` | Validate all non-live edge profiles, systemd contracts, and host assets |
+| `make edge-package` | Build and verify deterministic, non-activating rollback packages for all profiles |
+| `make regional-validate` | Validate regional Kubernetes namespaces, workloads, security, scaling, disruption, GPU, backup, and release-integrity contracts |
+| `make package` | Produce CPack, Python, control-plane, deterministic edge rollback, and CycloneDX SBOM artifacts |
 | `make docs-check` | Validate UTF-8, whitespace, fences, local links, and Mermaid structure without network access |
 | `make schemas-check` | Reproduce generated bindings and verify golden schema bytes |
 | `make schemas-generate` | Regenerate canonical bindings and golden files after reviewed IDL changes |
-| `make fast` | Run the pull-request validation set: docs, lint, tests, and benchmark smoke |
-| `make full` | Run fast checks, sanitizers/race detector, dependency and secret scans, packaging, and SBOM generation |
+| `make fast` | Run the pull-request validation set, including all single-fault chaos scenarios |
+| `make full` | Run fast checks, the chaos soak/combinations, sanitizers, scans, packaging, and SBOM generation |
 
 All commands run from the repository root. Detailed outputs and direct commands
 are documented in
 [Local Development](docs/testing/local-development.md).
+
+Full-system PAPER acceptance, report paths, and the optional `parallel`-partition
+Slurm launcher are documented in
+[Full-system PAPER trading validation](docs/testing/full-system-paper-trading.md).
 
 Canonical event contracts are documented in [schemas/README.md](schemas/README.md)
 and [event contracts](docs/architecture/event-contracts.md). This phase requires
@@ -343,6 +382,60 @@ focused commands in
 the checked-in
 [Grafana dashboard](infra/observability/grafana/dashboards/model-deployment.json).
 
+## Edge observability and decision explanations
+
+The C++ observability boundary converts existing feed, model, ensemble, risk,
+gateway, portfolio, cost, clock, journal, and supplied infrastructure snapshots
+into a bounded Prometheus vocabulary. Critical producers only copy fixed-size
+records into preallocated queues; they never render text, allocate, perform
+network/disk I/O, or wait for exporter capacity. Structured logs use fixed event
+codes and correlation IDs. OpenTelemetry encoding is explicitly off-path.
+
+Every decision explanation binds market/event state, model identities and
+outputs, feature provenance, eligibility/weights, uncertainty/cost/abstention,
+risk outcome, and route/venue selection in one stable-hashed record. Exact IDs
+remain in audit records rather than high-cardinality metric labels.
+
+```bash
+export AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts
+source tools/toolchain.sh
+cmake --preset dev
+cmake --build --preset dev --target aegis_observability_tests
+ctest --test-dir build/dev -R '^aegis_observability_tests$' --output-on-failure
+```
+
+See the [architecture](docs/architecture/observability-and-explainability.md),
+[focused test commands](docs/testing/observability-testing.md),
+[alert runbook](docs/operations/observability-alert-runbook.md), and
+[edge dashboard](infra/observability/grafana/dashboards/aegis-edge-overview.json).
+
+## Security hardening
+
+Network services now fail closed unless TLS 1.3 mutual authentication is
+configured from a read-only secret-manager mount. Certificate URI SANs provide
+bounded Aegis-MX service identities; route permissions, per-identity integer
+rate limits, request-body/path bounds, and a concurrent-handler ceiling apply
+before forecasting work. Mounted certificate generations rotate without
+putting network or certificate work into the colocated C++ hot path.
+
+News documents default to a fresh resource-limited parser process with no
+ambient environment or Python socket access. Model artifacts and configurations
+retain their existing signed, content-addressed, hash-chained controls. Release
+images are built with SBOM/provenance and signed by the scoped CI workload
+identity against the immutable OCI digest.
+
+```bash
+export AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts
+make security-test
+make dependency-scan
+make reproducibility-check
+```
+
+See the [threat model](docs/security/threat-model.md),
+[trust boundaries](docs/security/trust-boundaries.md),
+[incident response](docs/security/incident-response.md), and
+[ADR 0035](docs/adr/0035-zero-trust-service-boundaries-and-sandboxed-content.md).
+
 ## Containerized development
 
 The development image uses a digest-pinned Ubuntu 24.04 base and a checksummed
@@ -377,7 +470,8 @@ Generated outputs are ignored by Git:
 - `dist/python/` — Python wheel and source distribution;
 - `dist/control/` — control-plane Go package archive plus `config-service` and
   `model-registry` CLIs;
-  and
+- `dist/edge/` — deterministic, non-activating rollback bundles for the six
+  checked-in non-live deployment profiles; and
 - `dist/aegis-mx.cdx.json` — deterministic CycloneDX SBOM.
 
 ## CI
@@ -388,6 +482,9 @@ Generated outputs are ignored by Git:
 - [Exhaustive Validation](.github/workflows/exhaustive.yml) runs dependency and
   secret scans, packaging/SBOM, separate ASan/UBSan/TSan matrix jobs, and the Go
   race detector on `main`, schedule, and manual dispatch.
+- [Signed Container Release](.github/workflows/container-release.yml) builds a
+  provenance/SBOM-attested time-series image, signs its immutable digest with
+  keyless CI identity, verifies that identity, and retains the evidence.
 
 GitHub actions are pinned to immutable commit SHAs. Workflows use only the
 scoped built-in GitHub token and do not require repository secrets to test.

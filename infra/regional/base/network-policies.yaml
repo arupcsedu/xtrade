@@ -1,0 +1,189 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: default-deny, namespace: aegis-intelligence}
+spec: {podSelector: {}, policyTypes: [Ingress, Egress]}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: default-deny, namespace: aegis-models}
+spec: {podSelector: {}, policyTypes: [Ingress, Egress]}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: default-deny, namespace: aegis-control}
+spec: {podSelector: {}, policyTypes: [Ingress, Egress]}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: default-deny, namespace: aegis-observability}
+spec: {podSelector: {}, policyTypes: [Ingress, Egress]}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: default-deny, namespace: aegis-research}
+spec: {podSelector: {}, policyTypes: [Ingress, Egress]}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: approved-regional-traffic, namespace: aegis-intelligence}
+spec:
+  podSelector: {matchLabels: {aegis-mx.io/plane: regional}}
+  policyTypes: [Ingress, Egress]
+  ingress: &regional-ingress
+    - from:
+        - podSelector: {matchLabels: {aegis-mx.io/mtls-client: "true"}}
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: observability}}
+          podSelector: {matchLabels: {aegis-mx.io/metrics-reader: "true"}}
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: platform}}
+          podSelector: {matchLabels: {aegis-mx.io/regional-client: "true"}}
+      ports: [{protocol: TCP, port: 8443}]
+  egress: &regional-egress
+    - to:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}
+          podSelector: {matchLabels: {k8s-app: kube-dns}}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    - to:
+        - podSelector: {matchLabels: {aegis-mx.io/mtls-server: "true"}}
+      ports: [{protocol: TCP, port: 8443}]
+    - to:
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: observability}}
+          podSelector: {matchLabels: {app.kubernetes.io/name: otel-collector}}
+      ports: [{protocol: TCP, port: 4317}]
+    - to:
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: platform}}
+          podSelector: {matchLabels: {app.kubernetes.io/name: regional-egress-proxy}}
+      ports: [{protocol: TCP, port: 8443}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: approved-regional-traffic, namespace: aegis-models}
+spec:
+  podSelector: {matchLabels: {aegis-mx.io/plane: regional}}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: {matchLabels: {aegis-mx.io/mtls-client: "true"}}
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: observability}}
+          podSelector: {matchLabels: {aegis-mx.io/metrics-reader: "true"}}
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: platform}}
+          podSelector: {matchLabels: {aegis-mx.io/regional-client: "true"}}
+      ports: [{protocol: TCP, port: 8443}]
+  egress:
+    - to:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}
+          podSelector: {matchLabels: {k8s-app: kube-dns}}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    - to:
+        - podSelector: {matchLabels: {aegis-mx.io/mtls-server: "true"}}
+      ports: [{protocol: TCP, port: 8443}]
+    - to:
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: observability}}
+          podSelector: {matchLabels: {app.kubernetes.io/name: otel-collector}}
+      ports: [{protocol: TCP, port: 4317}]
+    - to:
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: platform}}
+          podSelector: {matchLabels: {app.kubernetes.io/name: regional-egress-proxy}}
+      ports: [{protocol: TCP, port: 8443}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: approved-regional-traffic, namespace: aegis-control}
+spec:
+  podSelector: {matchLabels: {aegis-mx.io/plane: regional}}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: {matchLabels: {aegis-mx.io/mtls-client: "true"}}
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: observability}}
+          podSelector: {matchLabels: {aegis-mx.io/metrics-reader: "true"}}
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: platform}}
+          podSelector: {matchLabels: {aegis-mx.io/regional-client: "true"}}
+      ports: [{protocol: TCP, port: 8443}]
+  egress:
+    - to:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}
+          podSelector: {matchLabels: {k8s-app: kube-dns}}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    - to:
+        - podSelector: {matchLabels: {aegis-mx.io/mtls-server: "true"}}
+      ports: [{protocol: TCP, port: 8443}]
+    - to:
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: observability}}
+          podSelector: {matchLabels: {app.kubernetes.io/name: otel-collector}}
+      ports: [{protocol: TCP, port: 4317}]
+    - to:
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: platform}}
+          podSelector: {matchLabels: {app.kubernetes.io/name: regional-egress-proxy}}
+      ports: [{protocol: TCP, port: 8443}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: approved-regional-traffic, namespace: aegis-observability}
+spec:
+  podSelector: {matchLabels: {aegis-mx.io/plane: regional}}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: {matchLabels: {aegis-mx.io/mtls-client: "true"}}
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: observability}}
+          podSelector: {matchLabels: {aegis-mx.io/metrics-reader: "true"}}
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: platform}}
+          podSelector: {matchLabels: {aegis-mx.io/regional-client: "true"}}
+      ports: [{protocol: TCP, port: 8443}]
+  egress:
+    - to:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}
+          podSelector: {matchLabels: {k8s-app: kube-dns}}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    - to:
+        - podSelector: {matchLabels: {aegis-mx.io/mtls-server: "true"}}
+      ports: [{protocol: TCP, port: 8443}]
+    - to:
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: observability}}
+          podSelector: {matchLabels: {app.kubernetes.io/name: otel-collector}}
+      ports: [{protocol: TCP, port: 4317}]
+    - to:
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: platform}}
+          podSelector: {matchLabels: {app.kubernetes.io/name: regional-egress-proxy}}
+      ports: [{protocol: TCP, port: 8443}]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: approved-regional-traffic, namespace: aegis-research}
+spec:
+  podSelector: {matchLabels: {aegis-mx.io/plane: regional}}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: {matchLabels: {aegis-mx.io/mtls-client: "true"}}
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: observability}}
+          podSelector: {matchLabels: {aegis-mx.io/metrics-reader: "true"}}
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: platform}}
+          podSelector: {matchLabels: {aegis-mx.io/regional-client: "true"}}
+      ports: [{protocol: TCP, port: 8443}]
+  egress:
+    - to:
+        - namespaceSelector: {matchLabels: {kubernetes.io/metadata.name: kube-system}}
+          podSelector: {matchLabels: {k8s-app: kube-dns}}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    - to:
+        - podSelector: {matchLabels: {aegis-mx.io/mtls-server: "true"}}
+      ports: [{protocol: TCP, port: 8443}]
+    - to:
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: observability}}
+          podSelector: {matchLabels: {app.kubernetes.io/name: otel-collector}}
+      ports: [{protocol: TCP, port: 4317}]
+    - to:
+        - namespaceSelector: {matchLabels: {aegis-mx.io/trust-domain: platform}}
+          podSelector: {matchLabels: {app.kubernetes.io/name: regional-egress-proxy}}
+      ports: [{protocol: TCP, port: 8443}]

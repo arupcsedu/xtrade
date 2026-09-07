@@ -1,0 +1,11 @@
+/var/log/aegis-mx/*.log {
+    daily
+    rotate 14
+    size 256M
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+    create 0640 aegis-edge aegis-edge
+}

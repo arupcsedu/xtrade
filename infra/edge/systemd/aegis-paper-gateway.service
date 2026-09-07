@@ -1,0 +1,43 @@
+[Unit]
+Description=Aegis-MX simulation/paper gateway
+Requires=aegis-edge-core.service
+After=aegis-edge-core.service aegis-edge-observability.service
+PartOf=aegis-edge.target
+OnFailure=aegis-edge-inhibit@%n
+
+[Service]
+Type=notify
+Slice=aegis-edge.slice
+User=aegis-edge
+Group=aegis-edge
+EnvironmentFile=/etc/aegis-mx/environment/aegis-edge.conf
+ExecStartPre=/usr/bin/test -s ${AEGIS_CONFIGURATION_PATH}
+ExecStartPre=/usr/bin/test "${AEGIS_LIVE_TRANSMISSION}" = "DISABLED"
+ExecStartPre=/opt/aegis-mx/current/bin/edge-deployment validate-profile --profile-path ${AEGIS_DEPLOYMENT_PROFILE_PATH}
+ExecStartPre=/opt/aegis-mx/current/bin/edge-deployment validate-host --profile-path ${AEGIS_DEPLOYMENT_PROFILE_PATH} --facts /etc/aegis-mx/deployment/host-facts.json
+ExecStartPre=/opt/aegis-mx/current/bin/aegis-edge-config-verify --profile ${AEGIS_DEPLOYMENT_PROFILE_PATH} --manifest ${AEGIS_DEPLOYMENT_MANIFEST_PATH} --configuration ${AEGIS_CONFIGURATION_PATH}
+ExecStart=/opt/aegis-mx/current/bin/aegis-paper-gateway --configuration ${AEGIS_CONFIGURATION_PATH}
+ExecStop=/opt/aegis-mx/current/bin/edge-deployment inhibit --reason gateway-stop --output /run/aegis-mx/trading.inhibit
+Restart=on-failure
+RestartSec=1s
+TimeoutStartSec=30s
+TimeoutStopSec=30s
+WatchdogSec=2s
+LimitCORE=0
+CapabilityBoundingSet=
+AmbientCapabilities=
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+NoNewPrivileges=yes
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectControlGroups=yes
+ProtectHome=yes
+ProtectKernelLogs=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectSystem=strict
+ReadWritePaths=/run/aegis-mx /var/lib/aegis-mx /var/log/aegis-mx
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictSUIDSGID=yes
+UMask=0027

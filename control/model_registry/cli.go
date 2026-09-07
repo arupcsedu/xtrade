@@ -337,6 +337,13 @@ func openCLIRegistry(common commonCLIFlags, requirePrivate bool) (*Registry, err
 }
 
 func loadPrivateKey(path string) (ed25519.PrivateKey, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, fmt.Errorf("stat private key: %w", err)
+	}
+	if !info.Mode().IsRegular() || info.Mode().Perm()&0o077 != 0 {
+		return nil, errors.New("private-key file must be regular and owner-only")
+	}
 	payload, err := readBoundedFile(path, 8*1024)
 	if err != nil {
 		return nil, fmt.Errorf("read private key: %w", err)

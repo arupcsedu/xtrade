@@ -1,0 +1,30 @@
+{
+  "profile_schema_version": 1,
+  "name": "ci",
+  "trading_mode": "SIMULATION",
+  "live_transmission_enabled": false,
+  "automatic_activation": false,
+  "signed_runtime_configuration_required": false,
+  "paths": {
+    "release_root": "/opt/aegis-mx/releases",
+    "current_symlink": "/opt/aegis-mx/current",
+    "configuration_path": "/etc/aegis-mx/config/ci.json",
+    "state_root": "/var/lib/aegis-mx",
+    "journal_root": "/var/lib/aegis-mx/journal",
+    "log_root": "/var/log/aegis-mx",
+    "runtime_root": "/run/aegis-mx"
+  },
+  "resources": {
+    "numa_node": 0,
+    "dedicated_cpu_sets": false,
+    "hugepage_size_kb": 2048,
+    "hugepage_count": 0,
+    "memory_lock_bytes": 0,
+    "file_descriptor_limit": 16384,
+    "cpu_affinity": {"ptp": "0", "journal": "0", "edge-core": "0", "paper-gateway": "0", "observability": "0"}
+  },
+  "nic": {"interface": null, "hardware_timestamping_required": false, "rx_queue_count_required": 0, "queue_assignments": {}},
+  "ptp": {"required": false, "ptp4l_unit": "ptp4l.service", "phc2sys_unit": "phc2sys.service", "maximum_clock_quality_age_ns": 5000000000, "maximum_absolute_offset_ns": 1000000},
+  "health": {"status_root": "/run/aegis-mx/health", "maximum_status_age_ns": 5000000000},
+  "journal": {"filesystem": "tmpfs", "dedicated_device_required": false, "direct_io_preferred": false, "segment_bytes": 8388608, "sync_policy": "ON_ROTATION", "retention_days": 1}
+}

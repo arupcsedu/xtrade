@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/edge-rollback-manifest-v1.schema.json",
+  "title": "Aegis-MX edge rollback package manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile", "profile_sha256", "trading_mode", "live_transmission_enabled", "automatic_activation", "source_date_epoch", "files", "manifest_sha256"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "profile": {"enum": ["development", "ci", "replay", "paper", "staging", "production-disabled"]},
+    "profile_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "trading_mode": {"enum": ["SIMULATION", "PAPER"]},
+    "live_transmission_enabled": {"const": false},
+    "automatic_activation": {"const": false},
+    "source_date_epoch": {"type": "integer", "minimum": 1},
+    "files": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"pattern": "^[A-Za-z0-9_.@/-]+$"},
+      "additionalProperties": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+    },
+    "manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

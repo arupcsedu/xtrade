@@ -694,7 +694,7 @@ def test_http_handler_frames_requests_and_structured_logs(
     thread.start()
     try:
         connection = http.client.HTTPConnection("127.0.0.1", server.server_port)
-        connection.request("GET", "/version?ignored=true")
+        connection.request("GET", "/version?credential=credential-canary")
         get_response = connection.getresponse()
         assert get_response.status == HTTPStatus.OK
         assert get_response.getheader("X-Content-Type-Options") == "nosniff"
@@ -726,6 +726,7 @@ def test_http_handler_frames_requests_and_structured_logs(
     logged = capsys.readouterr().err
     assert '"event":"http_request"' in logged
     assert "canonical_context" not in logged
+    assert "credential-canary" not in logged
 
 
 def test_serve_validates_address_and_cli_dispatch(
@@ -739,11 +740,32 @@ def test_serve_validates_address_and_cli_dispatch(
 
     dispatch: list[tuple[ServiceRole, str, int]] = []
 
-    def fake_serve(app: RoleApplication, host: str, port: int) -> None:
+    def fake_serve(
+        app: RoleApplication,
+        host: str,
+        port: int,
+        *,
+        request_security: object,
+        allow_insecure_loopback: bool,
+    ) -> None:
+        assert request_security is None
+        assert allow_insecure_loopback is True
         dispatch.append((app.role, host, port))
 
     monkeypatch.setattr(cli, "serve", fake_serve)
-    assert cli.main(ServiceRole.WORKER, ["--host", "localhost", "--port", "9090"]) == 0
+    assert (
+        cli.main(
+            ServiceRole.WORKER,
+            [
+                "--host",
+                "localhost",
+                "--port",
+                "9090",
+                "--allow-insecure-loopback",
+            ],
+        )
+        == 0
+    )
     assert dispatch == [(ServiceRole.WORKER, "localhost", 9090)]
 
     called: list[ServiceRole] = []
@@ -1381,7 +1403,7 @@ def test_runtime_returns_model_failure_and_serve_restores_signals(
     monkeypatch.setattr(signal, "signal", fake_signal)
     monkeypatch.setattr(threading, "Thread", InlineThread)
     monkeypatch.setattr(time, "monotonic_ns", lambda: 1_500)
-    runtime_module.serve(application, "127.0.0.1", 8080)
+    runtime_module.serve(application, "127.0.0.1", 8080, allow_insecure_loopback=True)
     assert created[0].address == ("127.0.0.1", 8080)
     assert created[0].shutdown_called is True
     assert created[0].closed is True

@@ -34,6 +34,7 @@ from aegis_mx_intelligence import (
     GlobalEventId,
     Identifier128,
     IngestStatus,
+    InlineDocumentSanitizer,
     InstrumentId,
     IntelligencePipeline,
     IntelligencePipelineConfig,
@@ -180,6 +181,7 @@ def _pipeline(
         if adjudicator is not None
         else DeterministicDeepAdjudicator(),
         selected_clock,
+        sanitizer=InlineDocumentSanitizer(),
     )
     return pipeline, selected_publisher, selected_clock
 
@@ -598,6 +600,7 @@ def test_official_public_source_adapter_and_delayed_confirmation() -> None:
         BoundedInMemoryPublisher(8),
         DeterministicDeepAdjudicator(),
         StepClock(),
+        sanitizer=InlineDocumentSanitizer(),
     )
     earlier = _source(
         "ACME Corp said the company reported earnings revenue $5 million "
@@ -706,6 +709,7 @@ def test_provider_errors_and_stopped_mock_are_bounded() -> None:
         BoundedInMemoryPublisher(2),
         DeterministicDeepAdjudicator(),
         StepClock(),
+        sanitizer=InlineDocumentSanitizer(),
     )
     assert pipeline.poll_provider_once() == (IngestStatus.REJECTED,)
     assert not pipeline.status().healthy

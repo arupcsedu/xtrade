@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: Namespace
+metadata: {name: aegis-intelligence, labels: {aegis-mx.io/environment: local}}
+---
+apiVersion: v1
+kind: Namespace
+metadata: {name: aegis-models, labels: {aegis-mx.io/environment: local}}
+---
+apiVersion: v1
+kind: Namespace
+metadata: {name: aegis-control, labels: {aegis-mx.io/environment: local}}
+---
+apiVersion: v1
+kind: Namespace
+metadata: {name: aegis-observability, labels: {aegis-mx.io/environment: local}}
+---
+apiVersion: v1
+kind: Namespace
+metadata: {name: aegis-research, labels: {aegis-mx.io/environment: local}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: aegis-regional-runtime, namespace: aegis-intelligence}
+data: {AEGIS_ENVIRONMENT: local}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: aegis-regional-runtime, namespace: aegis-models}
+data: {AEGIS_ENVIRONMENT: local}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: aegis-regional-runtime, namespace: aegis-control}
+data: {AEGIS_ENVIRONMENT: local}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: aegis-regional-runtime, namespace: aegis-observability}
+data: {AEGIS_ENVIRONMENT: local}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: aegis-regional-runtime, namespace: aegis-research}
+data: {AEGIS_ENVIRONMENT: local}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: news-intelligence, namespace: aegis-intelligence}
+spec: {template: {spec: {containers: [{name: service, env: [{name: AEGIS_SERVICE_IDENTITY, value: "spiffe://aegis-mx/local/news-intelligence"}]}]}}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: filings-intelligence, namespace: aegis-intelligence}
+spec: {template: {spec: {containers: [{name: service, env: [{name: AEGIS_SERVICE_IDENTITY, value: "spiffe://aegis-mx/local/filings-intelligence"}]}]}}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: macro-intelligence, namespace: aegis-intelligence}
+spec: {template: {spec: {containers: [{name: service, env: [{name: AEGIS_SERVICE_IDENTITY, value: "spiffe://aegis-mx/local/macro-intelligence"}]}]}}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: timesfm-service, namespace: aegis-models}
+spec: {template: {spec: {containers: [{name: service, env: [{name: AEGIS_SERVICE_IDENTITY, value: "spiffe://aegis-mx/local/timesfm-service"}]}]}}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: options-analytics, namespace: aegis-models}
+spec: {template: {spec: {containers: [{name: service, env: [{name: AEGIS_SERVICE_IDENTITY, value: "spiffe://aegis-mx/local/options-analytics"}]}]}}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: model-registry, namespace: aegis-control}
+spec: {template: {spec: {containers: [{name: service, env: [{name: AEGIS_SERVICE_IDENTITY, value: "spiffe://aegis-mx/local/model-registry"}]}]}}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: configuration-control-plane, namespace: aegis-control}
+spec: {template: {spec: {containers: [{name: service, env: [{name: AEGIS_SERVICE_IDENTITY, value: "spiffe://aegis-mx/local/configuration-control-plane"}]}]}}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: dashboards, namespace: aegis-observability}
+spec: {template: {spec: {containers: [{name: service, env: [{name: AEGIS_SERVICE_IDENTITY, value: "spiffe://aegis-mx/local/dashboards"}]}]}}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: research-api, namespace: aegis-research}
+spec: {template: {spec: {containers: [{name: service, env: [{name: AEGIS_SERVICE_IDENTITY, value: "spiffe://aegis-mx/local/research-api"}]}]}}}

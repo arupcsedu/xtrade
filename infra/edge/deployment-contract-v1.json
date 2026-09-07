@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "services": [
+    {
+      "role": "ptp",
+      "unit": "aegis-ptp-ready.service",
+      "binary": "/opt/aegis-mx/current/bin/aegis-edge-clock-guard",
+      "startup_order": 10,
+      "shutdown_order": 50,
+      "required_directives": ["Before=aegis-edge-journal.service", "User=aegis-edge", "ExecStart=/opt/aegis-mx/current/bin/aegis-edge-clock-guard", "OnFailure=aegis-edge-inhibit@%n"]
+    },
+    {
+      "role": "journal",
+      "unit": "aegis-edge-journal.service",
+      "binary": "/opt/aegis-mx/current/bin/aegis-edge-journal",
+      "startup_order": 20,
+      "shutdown_order": 40,
+      "required_directives": ["After=aegis-ptp-ready.service", "Before=aegis-edge-core.service", "RequiresMountsFor=/var/lib/aegis-mx/journal", "User=aegis-edge", "ExecStart=/opt/aegis-mx/current/bin/aegis-edge-journal", "OnFailure=aegis-edge-inhibit@%n"]
+    },
+    {
+      "role": "edge-core",
+      "unit": "aegis-edge-core.service",
+      "binary": "/opt/aegis-mx/current/bin/aegis-edge-core",
+      "startup_order": 30,
+      "shutdown_order": 30,
+      "required_directives": ["After=aegis-edge-journal.service", "Before=aegis-edge-observability.service aegis-paper-gateway.service", "User=aegis-edge", "ExecStart=/opt/aegis-mx/current/bin/aegis-edge-core", "OnFailure=aegis-edge-inhibit@%n"]
+    },
+    {
+      "role": "paper-gateway",
+      "unit": "aegis-paper-gateway.service",
+      "binary": "/opt/aegis-mx/current/bin/aegis-paper-gateway",
+      "startup_order": 50,
+      "shutdown_order": 10,
+      "required_directives": ["After=aegis-edge-core.service aegis-edge-observability.service", "User=aegis-edge", "ExecStart=/opt/aegis-mx/current/bin/aegis-paper-gateway", "OnFailure=aegis-edge-inhibit@%n"]
+    },
+    {
+      "role": "observability",
+      "unit": "aegis-edge-observability.service",
+      "binary": "/opt/aegis-mx/current/bin/aegis-edge-observability",
+      "startup_order": 40,
+      "shutdown_order": 20,
+      "required_directives": ["After=aegis-edge-core.service", "Before=aegis-paper-gateway.service", "User=aegis-edge", "ExecStart=/opt/aegis-mx/current/bin/aegis-edge-observability", "OnFailure=aegis-edge-inhibit@%n"]
+    }
+  ]
+}

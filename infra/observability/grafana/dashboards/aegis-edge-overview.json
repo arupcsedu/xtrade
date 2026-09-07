@@ -1,0 +1,165 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "title": "Observability alert runbook",
+      "type": "link",
+      "url": "../../../../docs/operations/observability-alert-runbook.md"
+    }
+  ],
+  "panels": [
+    {
+      "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"expr": "aegis_market_data_book_valid", "legendFormat": "valid", "refId": "A"}],
+      "title": "Book validity",
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
+      "id": 2,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"expr": "aegis_market_data_feed_age_ns", "legendFormat": "feed age ns", "refId": "A"}],
+      "title": "Feed age",
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
+      "id": 3,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"expr": "increase(aegis_market_data_gaps_total[5m])", "legendFormat": "gaps", "refId": "A"}],
+      "title": "Feed gaps (5m)",
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
+      "id": 4,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"expr": "aegis_infrastructure_clock_offset_ns", "legendFormat": "offset ns", "refId": "A"}],
+      "title": "Clock offset",
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 16, "y": 0},
+      "id": 5,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"expr": "aegis_infrastructure_journal_lag_events", "legendFormat": "records", "refId": "A"}],
+      "title": "Journal lag",
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 20, "y": 0},
+      "id": 6,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"expr": "increase(aegis_observability_metric_drops_total[5m])", "legendFormat": "drops", "refId": "A"}],
+      "title": "Telemetry drops (5m)",
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "id": 7,
+      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "right", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"expr": "aegis_latency_quantile_ns{quantile=\"500\"}", "legendFormat": "p50 {{stage}}", "refId": "A"},
+        {"expr": "aegis_latency_quantile_ns{quantile=\"950\"}", "legendFormat": "p95 {{stage}}", "refId": "B"},
+        {"expr": "aegis_latency_quantile_ns{quantile=\"990\"}", "legendFormat": "p99 {{stage}}", "refId": "C"},
+        {"expr": "aegis_latency_quantile_ns{quantile=\"999\"}", "legendFormat": "p99.9 {{stage}}", "refId": "D"},
+        {"expr": "aegis_latency_max_ns", "legendFormat": "max {{stage}}", "refId": "E"}
+      ],
+      "title": "Latency by fixed stage (ns)",
+      "type": "timeseries"
+    },
+    {
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "id": 8,
+      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "right", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"expr": "aegis_model_ood_ppm", "legendFormat": "OOD slot {{slot}}", "refId": "A"},
+        {"expr": "aegis_model_calibration_ppm", "legendFormat": "calibration slot {{slot}}", "refId": "B"},
+        {"expr": "aegis_ensemble_weight_ppm", "legendFormat": "weight slot {{slot}}", "refId": "C"},
+        {"expr": "aegis_ensemble_disagreement_ppm", "legendFormat": "disagreement", "refId": "D"}
+      ],
+      "title": "Model health and ensemble",
+      "type": "timeseries"
+    },
+    {
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "id": 9,
+      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "right", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"expr": "rate(aegis_trading_intents_total[1m])", "legendFormat": "intents/s", "refId": "A"},
+        {"expr": "rate(aegis_trading_orders_total[1m])", "legendFormat": "orders/s", "refId": "B"},
+        {"expr": "rate(aegis_trading_cancels_total[1m])", "legendFormat": "cancels/s", "refId": "C"},
+        {"expr": "rate(aegis_trading_fills_total[1m])", "legendFormat": "fills/s", "refId": "D"},
+        {"expr": "rate(aegis_trading_risk_rejects_total[1m])", "legendFormat": "risk rejects/s", "refId": "E"},
+        {"expr": "rate(aegis_trading_venue_rejects_total[1m])", "legendFormat": "venue rejects/s", "refId": "F"}
+      ],
+      "title": "Trading flow",
+      "type": "timeseries"
+    },
+    {
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "id": 10,
+      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "right", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"expr": "aegis_trading_gross_exposure_currency_nanos", "legendFormat": "gross exposure", "refId": "A"},
+        {"expr": "aegis_trading_net_exposure_currency_nanos", "legendFormat": "net exposure", "refId": "B"},
+        {"expr": "aegis_trading_realized_pnl_currency_nanos", "legendFormat": "realized P&L", "refId": "C"},
+        {"expr": "aegis_trading_unrealized_pnl_currency_nanos", "legendFormat": "unrealized P&L", "refId": "D"},
+        {"expr": "aegis_trading_drawdown_currency_nanos", "legendFormat": "drawdown", "refId": "E"}
+      ],
+      "title": "Portfolio risk (currency nanos)",
+      "type": "timeseries"
+    },
+    {
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+      "id": 11,
+      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "right", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"expr": "aegis_trading_slippage_currency_nanos", "legendFormat": "slippage", "refId": "A"},
+        {"expr": "aegis_trading_adverse_selection_currency_nanos", "legendFormat": "adverse selection", "refId": "B"}
+      ],
+      "title": "Execution cost attribution",
+      "type": "timeseries"
+    },
+    {
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+      "id": 12,
+      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "right", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"expr": "aegis_infrastructure_cpu_utilization_ppm", "legendFormat": "CPU ppm", "refId": "A"},
+        {"expr": "rate(aegis_infrastructure_cache_misses_total[1m])", "legendFormat": "cache misses/s", "refId": "B"},
+        {"expr": "rate(aegis_infrastructure_numa_remote_accesses_total[1m])", "legendFormat": "remote NUMA/s", "refId": "C"},
+        {"expr": "aegis_infrastructure_ring_occupancy", "legendFormat": "ring occupancy", "refId": "D"},
+        {"expr": "rate(aegis_infrastructure_nic_errors_total[1m])", "legendFormat": "NIC errors/s", "refId": "E"}
+      ],
+      "title": "Infrastructure",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": ["aegis-mx", "edge", "simulation", "paper", "safety"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timezone": "utc",
+  "title": "Aegis-MX Edge Safety and Decisions",
+  "uid": "aegis-edge-overview",
+  "version": 1
+}

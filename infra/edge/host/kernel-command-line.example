@@ -1,0 +1,2 @@
+# Example only. Verify topology, housekeeping CPUs, and bootloader syntax first.
+isolcpus=domain,managed_irq,2-15 nohz_full=2-15 rcu_nocbs=2-15 irqaffinity=0-1 transparent_hugepage=never

@@ -1,0 +1,129 @@
+{
+  "$id": "https://aegis-mx.invalid/schemas/chaos-result-report-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "catalog_id": {"minLength": 1, "type": "string"},
+    "catalog_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "combinations": {
+      "items": {"$ref": "#/$defs/combinationResult"},
+      "type": "array"
+    },
+    "iterations_per_scenario": {"minimum": 1, "type": "integer"},
+    "mode": {"const": "SIMULATION"},
+    "profile": {"enum": ["fast", "nightly"]},
+    "report_schema_version": {"const": 1},
+    "result_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "scenarios": {
+      "items": {"$ref": "#/$defs/scenarioResult"},
+      "minItems": 1,
+      "type": "array"
+    },
+    "seed": {"minimum": 1, "type": "integer"},
+    "summary": {"$ref": "#/$defs/summary"}
+  },
+  "required": [
+    "catalog_id",
+    "catalog_sha256",
+    "combinations",
+    "iterations_per_scenario",
+    "mode",
+    "profile",
+    "report_schema_version",
+    "result_sha256",
+    "scenarios",
+    "seed",
+    "summary"
+  ],
+  "title": "Aegis-MX deterministic chaos result report v1",
+  "type": "object",
+  "$defs": {
+    "combinationResult": {
+      "additionalProperties": false,
+      "properties": {
+        "attempts": {"minimum": 1, "type": "integer"},
+        "combination_id": {"minLength": 1, "type": "string"},
+        "evidence_chain_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+        "expected_safety_state": {"enum": ["ANALYTICS_DEGRADED", "ORDERS_BLOCKED"]},
+        "failures": {"minimum": 0, "type": "integer"},
+        "maximum_observed_detection_latency_ns": {"minimum": 0, "type": "integer"},
+        "passed": {"type": "boolean"},
+        "scenario_ids": {"items": {"minLength": 1, "type": "string"}, "minItems": 2, "type": "array"}
+      },
+      "required": ["attempts", "combination_id", "evidence_chain_sha256", "expected_safety_state", "failures", "maximum_observed_detection_latency_ns", "passed", "scenario_ids"],
+      "type": "object"
+    },
+    "expectation": {
+      "additionalProperties": false,
+      "properties": {
+        "audit_events": {"$ref": "#/$defs/stringArray"},
+        "automated_response": {"$ref": "#/$defs/stringArray"},
+        "detection": {"minLength": 1, "type": "string"},
+        "maximum_detection_latency_ns": {"minimum": 1, "type": "integer"},
+        "recovery_criteria": {"$ref": "#/$defs/stringArray"},
+        "state_transition": {"$ref": "#/$defs/transition"}
+      },
+      "required": ["audit_events", "automated_response", "detection", "maximum_detection_latency_ns", "recovery_criteria", "state_transition"],
+      "type": "object"
+    },
+    "observation": {
+      "additionalProperties": false,
+      "properties": {
+        "audit_events": {"$ref": "#/$defs/stringArray"},
+        "automated_response": {"$ref": "#/$defs/stringArray"},
+        "detection": {"minLength": 1, "type": "string"},
+        "recovery_criteria": {"$ref": "#/$defs/stringArray"},
+        "state_transition": {"$ref": "#/$defs/transition"}
+      },
+      "required": ["audit_events", "automated_response", "detection", "recovery_criteria", "state_transition"],
+      "type": "object"
+    },
+    "scenarioResult": {
+      "additionalProperties": false,
+      "properties": {
+        "attempts": {"minimum": 1, "type": "integer"},
+        "blocks_new_orders": {"type": "boolean"},
+        "component": {"minLength": 1, "type": "string"},
+        "evidence_chain_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+        "expected": {"$ref": "#/$defs/expectation"},
+        "failures": {"minimum": 0, "type": "integer"},
+        "fault": {"minLength": 1, "type": "string"},
+        "maximum_observed_detection_latency_ns": {"minimum": 0, "type": "integer"},
+        "observed": {"$ref": "#/$defs/observation"},
+        "passed": {"type": "boolean"},
+        "production_hook": {"minLength": 1, "type": "string"},
+        "scenario_id": {"minLength": 1, "type": "string"}
+      },
+      "required": ["attempts", "blocks_new_orders", "component", "evidence_chain_sha256", "expected", "failures", "fault", "maximum_observed_detection_latency_ns", "observed", "passed", "production_hook", "scenario_id"],
+      "type": "object"
+    },
+    "stringArray": {
+      "items": {"minLength": 1, "type": "string"},
+      "minItems": 1,
+      "type": "array"
+    },
+    "summary": {
+      "additionalProperties": false,
+      "properties": {
+        "failed": {"minimum": 0, "type": "integer"},
+        "passed": {"type": "boolean"},
+        "scenario_attempts": {"minimum": 1, "type": "integer"},
+        "scenario_count": {"minimum": 1, "type": "integer"},
+        "simultaneous_combination_attempts": {"minimum": 0, "type": "integer"},
+        "simultaneous_combination_count": {"minimum": 0, "type": "integer"}
+      },
+      "required": ["failed", "passed", "scenario_attempts", "scenario_count", "simultaneous_combination_attempts", "simultaneous_combination_count"],
+      "type": "object"
+    },
+    "transition": {
+      "additionalProperties": false,
+      "properties": {
+        "domain": {"minLength": 1, "type": "string"},
+        "from": {"minLength": 1, "type": "string"},
+        "to": {"minLength": 1, "type": "string"}
+      },
+      "required": ["domain", "from", "to"],
+      "type": "object"
+    }
+  }
+}

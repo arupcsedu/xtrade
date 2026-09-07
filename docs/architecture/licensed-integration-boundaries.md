@@ -252,6 +252,7 @@ still external blockers and must not be invented:
 | Retention, privacy, evidence, and data-destruction policy | Journal, `replay`, `research`, `observability` | Legal/compliance/data governance |
 | Signing roots, operator roles, authorization duration, and two-person policy | `control-plane`, `gateways`, `deployment` | Security, risk, compliance, operations |
 | Hardware, colocation, network, and capacity objectives | Hot-path components, `deployment` | Platform/venue/network owners and measured evidence |
+| Site NIC identity, VLAN/multicast/route data, IRQ/RSS rules, and PTP domain/source | `market-data`, `gateways`, `deployment` | Licensed provider/venue materials and site network/platform approval |
 
 Generic safe mechanisms may be built before these values exist, but production
 configuration and completion claims remain blocked.

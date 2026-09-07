@@ -1,0 +1,867 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: news-intelligence
+  namespace: aegis-intelligence
+  labels: &news-labels
+    app.kubernetes.io/name: news-intelligence
+    app.kubernetes.io/part-of: aegis-mx
+    aegis-mx.io/plane: regional
+    aegis-mx.io/execution-authority: "false"
+    aegis-mx.io/autoscaling: safe
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  minReadySeconds: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxUnavailable: 0, maxSurge: 1}
+  selector:
+    matchLabels: {app.kubernetes.io/name: news-intelligence}
+  template:
+    metadata:
+      labels: *news-labels
+      annotations:
+        aegis-mx.io/signature-bundle-sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+        aegis-mx.io/configuration-sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    spec:
+      serviceAccountName: news-intelligence
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false
+      runtimeClassName: aegis-untrusted-documents
+      terminationGracePeriodSeconds: 45
+      securityContext: &pod-security
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels: {app.kubernetes.io/name: news-intelligence}
+      topologySpreadConstraints:
+        - {maxSkew: 1, topologyKey: topology.kubernetes.io/zone, whenUnsatisfiable: DoNotSchedule, labelSelector: {matchLabels: {app.kubernetes.io/name: news-intelligence}}}
+      containers:
+        - name: service
+          image: registry.invalid/aegis-mx/intelligence@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          command: [/opt/aegis/bin/news-intelligence]
+          args: [serve, --configuration, /etc/aegis/config/runtime.json]
+          envFrom: [{configMapRef: {name: aegis-regional-runtime}}]
+          env:
+            - {name: AEGIS_SERVICE_ROLE, value: news-intelligence}
+            - {name: AEGIS_SERVICE_IDENTITY, value: "spiffe://aegis-mx/unresolved/news-intelligence"}
+          ports: [{name: https, containerPort: 8443, protocol: TCP}]
+          startupProbe: &startup-probe
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --live]}
+            periodSeconds: 2
+            timeoutSeconds: 2
+            failureThreshold: 30
+          livenessProbe: &liveness-probe
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --live]}
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe: &readiness-probe
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --ready]}
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 2
+          lifecycle: &lifecycle
+            preStop:
+              exec: {command: [/opt/aegis/bin/service-healthcheck, --drain, --timeout-seconds, "20"]}
+          resources:
+            requests: {cpu: 500m, memory: 1Gi, ephemeral-storage: 256Mi}
+            limits: {cpu: "4", memory: 4Gi, ephemeral-storage: 2Gi}
+          securityContext: &container-security
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile: {type: RuntimeDefault}
+          volumeMounts: &volume-mounts
+            - {name: workload-identity, mountPath: /var/run/aegis-mx/identity, readOnly: true}
+            - {name: runtime-config, mountPath: /etc/aegis/config, readOnly: true}
+            - {name: scratch, mountPath: /tmp}
+      volumes:
+        - name: workload-identity
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes: {secretProviderClass: news-intelligence-identity} # pragma: allowlist secret
+        - name: runtime-config
+          configMap: {name: news-intelligence-config}
+        - name: scratch
+          emptyDir: {sizeLimit: 512Mi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: filings-intelligence
+  namespace: aegis-intelligence
+  labels: &filings-labels
+    app.kubernetes.io/name: filings-intelligence
+    app.kubernetes.io/part-of: aegis-mx
+    aegis-mx.io/plane: regional
+    aegis-mx.io/execution-authority: "false"
+    aegis-mx.io/autoscaling: safe
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  minReadySeconds: 10
+  strategy: {type: RollingUpdate, rollingUpdate: {maxUnavailable: 0, maxSurge: 1}}
+  selector: {matchLabels: {app.kubernetes.io/name: filings-intelligence}}
+  template:
+    metadata:
+      labels: *filings-labels
+      annotations:
+        aegis-mx.io/signature-bundle-sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+        aegis-mx.io/configuration-sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    spec:
+      serviceAccountName: filings-intelligence
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false
+      runtimeClassName: aegis-untrusted-documents
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - {weight: 100, podAffinityTerm: {topologyKey: kubernetes.io/hostname, labelSelector: {matchLabels: {app.kubernetes.io/name: filings-intelligence}}}}
+      topologySpreadConstraints:
+        - {maxSkew: 1, topologyKey: topology.kubernetes.io/zone, whenUnsatisfiable: DoNotSchedule, labelSelector: {matchLabels: {app.kubernetes.io/name: filings-intelligence}}}
+      containers:
+        - name: service
+          image: registry.invalid/aegis-mx/intelligence@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          command: [/opt/aegis/bin/filings-intelligence]
+          args: [serve, --configuration, /etc/aegis/config/runtime.json]
+          envFrom: [{configMapRef: {name: aegis-regional-runtime}}]
+          env:
+            - {name: AEGIS_SERVICE_ROLE, value: filings-intelligence}
+            - {name: AEGIS_SERVICE_IDENTITY, value: "spiffe://aegis-mx/unresolved/filings-intelligence"}
+          ports: [{name: https, containerPort: 8443, protocol: TCP}]
+          startupProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --live]}
+            periodSeconds: 2
+            timeoutSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --live]}
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --ready]}
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 2
+          lifecycle:
+            preStop:
+              exec: {command: [/opt/aegis/bin/service-healthcheck, --drain, --timeout-seconds, "20"]}
+          resources:
+            requests: {cpu: 500m, memory: 1Gi, ephemeral-storage: 256Mi}
+            limits: {cpu: "4", memory: 4Gi, ephemeral-storage: 2Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile: {type: RuntimeDefault}
+          volumeMounts:
+            - {name: workload-identity, mountPath: /var/run/aegis-mx/identity, readOnly: true}
+            - {name: runtime-config, mountPath: /etc/aegis/config, readOnly: true}
+            - {name: scratch, mountPath: /tmp}
+      volumes:
+        - name: workload-identity
+          csi: {driver: secrets-store.csi.k8s.io, readOnly: true, volumeAttributes: {secretProviderClass: filings-intelligence-identity}} # pragma: allowlist secret
+        - name: runtime-config
+          configMap: {name: filings-intelligence-config}
+        - name: scratch
+          emptyDir: {sizeLimit: 512Mi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: macro-intelligence
+  namespace: aegis-intelligence
+  labels: &macro-labels
+    app.kubernetes.io/name: macro-intelligence
+    app.kubernetes.io/part-of: aegis-mx
+    aegis-mx.io/plane: regional
+    aegis-mx.io/execution-authority: "false"
+    aegis-mx.io/autoscaling: safe
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  minReadySeconds: 10
+  strategy: {type: RollingUpdate, rollingUpdate: {maxUnavailable: 0, maxSurge: 1}}
+  selector: {matchLabels: {app.kubernetes.io/name: macro-intelligence}}
+  template:
+    metadata:
+      labels: *macro-labels
+      annotations:
+        aegis-mx.io/signature-bundle-sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+        aegis-mx.io/configuration-sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    spec:
+      serviceAccountName: macro-intelligence
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - {weight: 100, podAffinityTerm: {topologyKey: kubernetes.io/hostname, labelSelector: {matchLabels: {app.kubernetes.io/name: macro-intelligence}}}}
+      topologySpreadConstraints:
+        - {maxSkew: 1, topologyKey: topology.kubernetes.io/zone, whenUnsatisfiable: DoNotSchedule, labelSelector: {matchLabels: {app.kubernetes.io/name: macro-intelligence}}}
+      containers:
+        - name: service
+          image: registry.invalid/aegis-mx/intelligence@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          command: [/opt/aegis/bin/macro-intelligence]
+          args: [serve, --configuration, /etc/aegis/config/runtime.json]
+          envFrom: [{configMapRef: {name: aegis-regional-runtime}}]
+          env:
+            - {name: AEGIS_SERVICE_ROLE, value: macro-intelligence}
+            - {name: AEGIS_SERVICE_IDENTITY, value: "spiffe://aegis-mx/unresolved/macro-intelligence"}
+          ports: [{name: https, containerPort: 8443, protocol: TCP}]
+          startupProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --live]}
+            periodSeconds: 2
+            timeoutSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --live]}
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --ready]}
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 2
+          lifecycle:
+            preStop:
+              exec: {command: [/opt/aegis/bin/service-healthcheck, --drain, --timeout-seconds, "20"]}
+          resources:
+            requests: {cpu: 250m, memory: 512Mi, ephemeral-storage: 256Mi}
+            limits: {cpu: "2", memory: 2Gi, ephemeral-storage: 1Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile: {type: RuntimeDefault}
+          volumeMounts:
+            - {name: workload-identity, mountPath: /var/run/aegis-mx/identity, readOnly: true}
+            - {name: runtime-config, mountPath: /etc/aegis/config, readOnly: true}
+            - {name: scratch, mountPath: /tmp}
+      volumes:
+        - name: workload-identity
+          csi: {driver: secrets-store.csi.k8s.io, readOnly: true, volumeAttributes: {secretProviderClass: macro-intelligence-identity}} # pragma: allowlist secret
+        - name: runtime-config
+          configMap: {name: macro-intelligence-config}
+        - name: scratch
+          emptyDir: {sizeLimit: 512Mi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: timesfm-service
+  namespace: aegis-models
+  labels: &timesfm-labels
+    app.kubernetes.io/name: timesfm-service
+    app.kubernetes.io/part-of: aegis-mx
+    aegis-mx.io/plane: regional
+    aegis-mx.io/execution-authority: "false"
+    aegis-mx.io/autoscaling: disabled
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 900
+  minReadySeconds: 20
+  strategy: {type: RollingUpdate, rollingUpdate: {maxUnavailable: 0, maxSurge: 1}}
+  selector: {matchLabels: {app.kubernetes.io/name: timesfm-service}}
+  template:
+    metadata:
+      labels: *timesfm-labels
+      annotations:
+        aegis-mx.io/signature-bundle-sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+        aegis-mx.io/configuration-sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    spec:
+      serviceAccountName: timesfm-service
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false
+      terminationGracePeriodSeconds: 90
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - {weight: 100, podAffinityTerm: {topologyKey: kubernetes.io/hostname, labelSelector: {matchLabels: {app.kubernetes.io/name: timesfm-service}}}}
+      topologySpreadConstraints:
+        - {maxSkew: 1, topologyKey: topology.kubernetes.io/zone, whenUnsatisfiable: DoNotSchedule, labelSelector: {matchLabels: {app.kubernetes.io/name: timesfm-service}}}
+      containers:
+        - name: service
+          image: registry.invalid/aegis-mx/timeseries@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          command: [/opt/aegis/bin/timesfm-service]
+          args: [serve, --configuration, /etc/aegis/config/runtime.json]
+          envFrom: [{configMapRef: {name: aegis-regional-runtime}}]
+          env:
+            - {name: AEGIS_SERVICE_ROLE, value: timesfm-service}
+            - {name: AEGIS_SERVICE_IDENTITY, value: "spiffe://aegis-mx/unresolved/timesfm-service"}
+            - {name: AEGIS_DEVICE_FALLBACK, value: cpu}
+          ports: [{name: https, containerPort: 8443, protocol: TCP}]
+          startupProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --live]}
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 60
+          livenessProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --live]}
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --ready]}
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 2
+          lifecycle:
+            preStop:
+              exec: {command: [/opt/aegis/bin/service-healthcheck, --drain, --timeout-seconds, "60"]}
+          resources:
+            requests: {cpu: "1", memory: 4Gi, ephemeral-storage: 1Gi}
+            limits: {cpu: "8", memory: 16Gi, ephemeral-storage: 4Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile: {type: RuntimeDefault}
+          volumeMounts:
+            - {name: workload-identity, mountPath: /var/run/aegis-mx/identity, readOnly: true}
+            - {name: runtime-config, mountPath: /etc/aegis/config, readOnly: true}
+            - {name: scratch, mountPath: /tmp}
+      volumes:
+        - name: workload-identity
+          csi: {driver: secrets-store.csi.k8s.io, readOnly: true, volumeAttributes: {secretProviderClass: timesfm-service-identity}} # pragma: allowlist secret
+        - name: runtime-config
+          configMap: {name: timesfm-service-config}
+        - name: scratch
+          emptyDir: {sizeLimit: 2Gi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: options-analytics
+  namespace: aegis-models
+  labels: &options-labels
+    app.kubernetes.io/name: options-analytics
+    app.kubernetes.io/part-of: aegis-mx
+    aegis-mx.io/plane: regional
+    aegis-mx.io/execution-authority: "false"
+    aegis-mx.io/autoscaling: safe
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  minReadySeconds: 10
+  strategy: {type: RollingUpdate, rollingUpdate: {maxUnavailable: 0, maxSurge: 1}}
+  selector: {matchLabels: {app.kubernetes.io/name: options-analytics}}
+  template:
+    metadata:
+      labels: *options-labels
+      annotations:
+        aegis-mx.io/signature-bundle-sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+        aegis-mx.io/configuration-sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    spec:
+      serviceAccountName: options-analytics
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - {weight: 100, podAffinityTerm: {topologyKey: kubernetes.io/hostname, labelSelector: {matchLabels: {app.kubernetes.io/name: options-analytics}}}}
+      topologySpreadConstraints:
+        - {maxSkew: 1, topologyKey: topology.kubernetes.io/zone, whenUnsatisfiable: DoNotSchedule, labelSelector: {matchLabels: {app.kubernetes.io/name: options-analytics}}}
+      containers:
+        - name: service
+          image: registry.invalid/aegis-mx/intelligence@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          command: [/opt/aegis/bin/options-analytics]
+          args: [serve, --configuration, /etc/aegis/config/runtime.json]
+          envFrom: [{configMapRef: {name: aegis-regional-runtime}}]
+          env:
+            - {name: AEGIS_SERVICE_ROLE, value: options-analytics}
+            - {name: AEGIS_SERVICE_IDENTITY, value: "spiffe://aegis-mx/unresolved/options-analytics"}
+          ports: [{name: https, containerPort: 8443, protocol: TCP}]
+          startupProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --live]}
+            periodSeconds: 2
+            timeoutSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --live]}
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --ready]}
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 2
+          lifecycle:
+            preStop:
+              exec: {command: [/opt/aegis/bin/service-healthcheck, --drain, --timeout-seconds, "20"]}
+          resources:
+            requests: {cpu: 500m, memory: 1Gi, ephemeral-storage: 256Mi}
+            limits: {cpu: "4", memory: 4Gi, ephemeral-storage: 2Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile: {type: RuntimeDefault}
+          volumeMounts:
+            - {name: workload-identity, mountPath: /var/run/aegis-mx/identity, readOnly: true}
+            - {name: runtime-config, mountPath: /etc/aegis/config, readOnly: true}
+            - {name: scratch, mountPath: /tmp}
+      volumes:
+        - name: workload-identity
+          csi: {driver: secrets-store.csi.k8s.io, readOnly: true, volumeAttributes: {secretProviderClass: options-analytics-identity}} # pragma: allowlist secret
+        - name: runtime-config
+          configMap: {name: options-analytics-config}
+        - name: scratch
+          emptyDir: {sizeLimit: 512Mi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: model-registry
+  namespace: aegis-control
+  labels: &registry-labels
+    app.kubernetes.io/name: model-registry
+    app.kubernetes.io/part-of: aegis-mx
+    aegis-mx.io/plane: regional
+    aegis-mx.io/execution-authority: "false"
+    aegis-mx.io/autoscaling: disabled
+spec:
+  replicas: 2
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
+  minReadySeconds: 15
+  strategy: {type: RollingUpdate, rollingUpdate: {maxUnavailable: 0, maxSurge: 1}}
+  selector: {matchLabels: {app.kubernetes.io/name: model-registry}}
+  template:
+    metadata:
+      labels: *registry-labels
+      annotations:
+        aegis-mx.io/signature-bundle-sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+        aegis-mx.io/configuration-sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    spec:
+      serviceAccountName: model-registry
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - {weight: 100, podAffinityTerm: {topologyKey: kubernetes.io/hostname, labelSelector: {matchLabels: {app.kubernetes.io/name: model-registry}}}}
+      topologySpreadConstraints:
+        - {maxSkew: 1, topologyKey: topology.kubernetes.io/zone, whenUnsatisfiable: DoNotSchedule, labelSelector: {matchLabels: {app.kubernetes.io/name: model-registry}}}
+      containers:
+        - name: service
+          image: registry.invalid/aegis-mx/control-plane@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          command: [/opt/aegis/bin/model-registry]
+          args: [serve, --configuration, /etc/aegis/config/runtime.json]
+          envFrom: [{configMapRef: {name: aegis-regional-runtime}}]
+          env:
+            - {name: AEGIS_SERVICE_ROLE, value: model-registry}
+            - {name: AEGIS_SERVICE_IDENTITY, value: "spiffe://aegis-mx/unresolved/model-registry"}
+          ports: [{name: https, containerPort: 8443, protocol: TCP}]
+          startupProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --live]}
+            periodSeconds: 2
+            timeoutSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --live]}
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --ready]}
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 2
+          lifecycle:
+            preStop:
+              exec: {command: [/opt/aegis/bin/service-healthcheck, --drain, --timeout-seconds, "40"]}
+          resources:
+            requests: {cpu: 250m, memory: 512Mi, ephemeral-storage: 256Mi}
+            limits: {cpu: "2", memory: 2Gi, ephemeral-storage: 1Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile: {type: RuntimeDefault}
+          volumeMounts:
+            - {name: workload-identity, mountPath: /var/run/aegis-mx/identity, readOnly: true}
+            - {name: runtime-config, mountPath: /etc/aegis/config, readOnly: true}
+            - {name: scratch, mountPath: /tmp}
+      volumes:
+        - name: workload-identity
+          csi: {driver: secrets-store.csi.k8s.io, readOnly: true, volumeAttributes: {secretProviderClass: model-registry-identity}} # pragma: allowlist secret
+        - name: runtime-config
+          configMap: {name: model-registry-config}
+        - name: scratch
+          emptyDir: {sizeLimit: 512Mi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: configuration-control-plane
+  namespace: aegis-control
+  labels: &config-labels
+    app.kubernetes.io/name: configuration-control-plane
+    app.kubernetes.io/part-of: aegis-mx
+    aegis-mx.io/plane: regional
+    aegis-mx.io/execution-authority: "false"
+    aegis-mx.io/autoscaling: disabled
+spec:
+  replicas: 2
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
+  minReadySeconds: 15
+  strategy: {type: RollingUpdate, rollingUpdate: {maxUnavailable: 0, maxSurge: 1}}
+  selector: {matchLabels: {app.kubernetes.io/name: configuration-control-plane}}
+  template:
+    metadata:
+      labels: *config-labels
+      annotations:
+        aegis-mx.io/signature-bundle-sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+        aegis-mx.io/configuration-sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    spec:
+      serviceAccountName: configuration-control-plane
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - {weight: 100, podAffinityTerm: {topologyKey: kubernetes.io/hostname, labelSelector: {matchLabels: {app.kubernetes.io/name: configuration-control-plane}}}}
+      topologySpreadConstraints:
+        - {maxSkew: 1, topologyKey: topology.kubernetes.io/zone, whenUnsatisfiable: DoNotSchedule, labelSelector: {matchLabels: {app.kubernetes.io/name: configuration-control-plane}}}
+      containers:
+        - name: service
+          image: registry.invalid/aegis-mx/control-plane@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          command: [/opt/aegis/bin/configuration-control-plane]
+          args: [serve, --configuration, /etc/aegis/config/runtime.json]
+          envFrom: [{configMapRef: {name: aegis-regional-runtime}}]
+          env:
+            - {name: AEGIS_SERVICE_ROLE, value: configuration-control-plane}
+            - {name: AEGIS_SERVICE_IDENTITY, value: "spiffe://aegis-mx/unresolved/configuration-control-plane"}
+          ports: [{name: https, containerPort: 8443, protocol: TCP}]
+          startupProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --live]}
+            periodSeconds: 2
+            timeoutSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --live]}
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --ready]}
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 2
+          lifecycle:
+            preStop:
+              exec: {command: [/opt/aegis/bin/service-healthcheck, --drain, --timeout-seconds, "40"]}
+          resources:
+            requests: {cpu: 250m, memory: 512Mi, ephemeral-storage: 256Mi}
+            limits: {cpu: "2", memory: 2Gi, ephemeral-storage: 1Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile: {type: RuntimeDefault}
+          volumeMounts:
+            - {name: workload-identity, mountPath: /var/run/aegis-mx/identity, readOnly: true}
+            - {name: runtime-config, mountPath: /etc/aegis/config, readOnly: true}
+            - {name: scratch, mountPath: /tmp}
+      volumes:
+        - name: workload-identity
+          csi: {driver: secrets-store.csi.k8s.io, readOnly: true, volumeAttributes: {secretProviderClass: configuration-control-plane-identity}} # pragma: allowlist secret
+        - name: runtime-config
+          configMap: {name: configuration-control-plane-config}
+        - name: scratch
+          emptyDir: {sizeLimit: 512Mi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboards
+  namespace: aegis-observability
+  labels: &dashboard-labels
+    app.kubernetes.io/name: dashboards
+    app.kubernetes.io/part-of: aegis-mx
+    aegis-mx.io/plane: regional
+    aegis-mx.io/execution-authority: "false"
+    aegis-mx.io/autoscaling: disabled
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  minReadySeconds: 10
+  strategy: {type: RollingUpdate, rollingUpdate: {maxUnavailable: 0, maxSurge: 1}}
+  selector: {matchLabels: {app.kubernetes.io/name: dashboards}}
+  template:
+    metadata:
+      labels: *dashboard-labels
+      annotations:
+        aegis-mx.io/signature-bundle-sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+        aegis-mx.io/configuration-sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    spec:
+      serviceAccountName: dashboards
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - {weight: 100, podAffinityTerm: {topologyKey: kubernetes.io/hostname, labelSelector: {matchLabels: {app.kubernetes.io/name: dashboards}}}}
+      topologySpreadConstraints:
+        - {maxSkew: 1, topologyKey: topology.kubernetes.io/zone, whenUnsatisfiable: DoNotSchedule, labelSelector: {matchLabels: {app.kubernetes.io/name: dashboards}}}
+      containers:
+        - name: service
+          image: registry.invalid/aegis-mx/dashboards@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          command: [/opt/aegis/bin/dashboards]
+          args: [serve, --configuration, /etc/aegis/config/runtime.json]
+          envFrom: [{configMapRef: {name: aegis-regional-runtime}}]
+          env:
+            - {name: AEGIS_SERVICE_ROLE, value: dashboards}
+            - {name: AEGIS_SERVICE_IDENTITY, value: "spiffe://aegis-mx/unresolved/dashboards"}
+          ports: [{name: https, containerPort: 8443, protocol: TCP}]
+          startupProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --live]}
+            periodSeconds: 2
+            timeoutSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --live]}
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --ready]}
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 2
+          lifecycle:
+            preStop:
+              exec: {command: [/opt/aegis/bin/service-healthcheck, --drain, --timeout-seconds, "20"]}
+          resources:
+            requests: {cpu: 250m, memory: 512Mi, ephemeral-storage: 256Mi}
+            limits: {cpu: "2", memory: 2Gi, ephemeral-storage: 1Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile: {type: RuntimeDefault}
+          volumeMounts:
+            - {name: workload-identity, mountPath: /var/run/aegis-mx/identity, readOnly: true}
+            - {name: runtime-config, mountPath: /etc/aegis/config, readOnly: true}
+            - {name: scratch, mountPath: /tmp}
+      volumes:
+        - name: workload-identity
+          csi: {driver: secrets-store.csi.k8s.io, readOnly: true, volumeAttributes: {secretProviderClass: dashboards-identity}} # pragma: allowlist secret
+        - name: runtime-config
+          configMap: {name: dashboards-config}
+        - name: scratch
+          emptyDir: {sizeLimit: 512Mi}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: research-api
+  namespace: aegis-research
+  labels: &research-labels
+    app.kubernetes.io/name: research-api
+    app.kubernetes.io/part-of: aegis-mx
+    aegis-mx.io/plane: regional
+    aegis-mx.io/execution-authority: "false"
+    aegis-mx.io/autoscaling: safe
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  progressDeadlineSeconds: 600
+  minReadySeconds: 10
+  strategy: {type: RollingUpdate, rollingUpdate: {maxUnavailable: 0, maxSurge: 1}}
+  selector: {matchLabels: {app.kubernetes.io/name: research-api}}
+  template:
+    metadata:
+      labels: *research-labels
+      annotations:
+        aegis-mx.io/signature-bundle-sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+        aegis-mx.io/configuration-sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    spec:
+      serviceAccountName: research-api
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        fsGroup: 65532
+        fsGroupChangePolicy: OnRootMismatch
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - {weight: 100, podAffinityTerm: {topologyKey: kubernetes.io/hostname, labelSelector: {matchLabels: {app.kubernetes.io/name: research-api}}}}
+      topologySpreadConstraints:
+        - {maxSkew: 1, topologyKey: topology.kubernetes.io/zone, whenUnsatisfiable: DoNotSchedule, labelSelector: {matchLabels: {app.kubernetes.io/name: research-api}}}
+      containers:
+        - name: service
+          image: registry.invalid/aegis-mx/research@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          command: [/opt/aegis/bin/research-api]
+          args: [serve, --configuration, /etc/aegis/config/runtime.json]
+          envFrom: [{configMapRef: {name: aegis-regional-runtime}}]
+          env:
+            - {name: AEGIS_SERVICE_ROLE, value: research-api}
+            - {name: AEGIS_SERVICE_IDENTITY, value: "spiffe://aegis-mx/unresolved/research-api"}
+          ports: [{name: https, containerPort: 8443, protocol: TCP}]
+          startupProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --live]}
+            periodSeconds: 2
+            timeoutSeconds: 2
+            failureThreshold: 30
+          livenessProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --live]}
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            exec: {command: [/opt/aegis/bin/service-healthcheck, --ready]}
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 2
+          lifecycle:
+            preStop:
+              exec: {command: [/opt/aegis/bin/service-healthcheck, --drain, --timeout-seconds, "20"]}
+          resources:
+            requests: {cpu: 500m, memory: 1Gi, ephemeral-storage: 512Mi}
+            limits: {cpu: "4", memory: 4Gi, ephemeral-storage: 4Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            seccompProfile: {type: RuntimeDefault}
+          volumeMounts:
+            - {name: workload-identity, mountPath: /var/run/aegis-mx/identity, readOnly: true}
+            - {name: runtime-config, mountPath: /etc/aegis/config, readOnly: true}
+            - {name: scratch, mountPath: /tmp}
+      volumes:
+        - name: workload-identity
+          csi: {driver: secrets-store.csi.k8s.io, readOnly: true, volumeAttributes: {secretProviderClass: research-api-identity}} # pragma: allowlist secret
+        - name: runtime-config
+          configMap: {name: research-api-config}
+        - name: scratch
+          emptyDir: {sizeLimit: 2Gi}

@@ -2,6 +2,7 @@ add_library(
   aegis_execution STATIC
   src/decoders.cpp
   src/journal.cpp
+  src/live_capability.cpp
   src/router.cpp
   src/router_types.cpp
   src/session.cpp
@@ -43,6 +44,7 @@ if(AEGIS_BUILD_TESTS)
     tests/certification_test.cpp
     tests/decoder_recovery_test.cpp
     tests/journal_test.cpp
+    tests/live_capability_test.cpp
     tests/paper_gateway_test.cpp
     tests/router_test.cpp
     tests/safety_gate_test.cpp

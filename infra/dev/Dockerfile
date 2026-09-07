@@ -17,6 +17,7 @@ RUN apt-get update \
       git \
       make \
       ninja-build \
+      libssl-dev \
       python3.12 \
       python3.12-dev \
       python3.12-venv \

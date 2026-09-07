@@ -1,0 +1,2 @@
+# Example only; replace the placeholder with the approved dedicated NVMe UUID.
+UUID=OPERATOR_REQUIRED /var/lib/aegis-mx/journal xfs noatime,nodiratime,inode64,logbufs=8 0 2

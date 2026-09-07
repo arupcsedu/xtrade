@@ -1,0 +1,44 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: {name: news-intelligence, namespace: aegis-intelligence}
+spec: {minAvailable: 2, selector: {matchLabels: {app.kubernetes.io/name: news-intelligence}}}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: {name: filings-intelligence, namespace: aegis-intelligence}
+spec: {minAvailable: 2, selector: {matchLabels: {app.kubernetes.io/name: filings-intelligence}}}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: {name: macro-intelligence, namespace: aegis-intelligence}
+spec: {minAvailable: 1, selector: {matchLabels: {app.kubernetes.io/name: macro-intelligence}}}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: {name: timesfm-service, namespace: aegis-models}
+spec: {minAvailable: 1, selector: {matchLabels: {app.kubernetes.io/name: timesfm-service}}}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: {name: options-analytics, namespace: aegis-models}
+spec: {minAvailable: 2, selector: {matchLabels: {app.kubernetes.io/name: options-analytics}}}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: {name: model-registry, namespace: aegis-control}
+spec: {minAvailable: 2, selector: {matchLabels: {app.kubernetes.io/name: model-registry}}}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: {name: configuration-control-plane, namespace: aegis-control}
+spec: {minAvailable: 2, selector: {matchLabels: {app.kubernetes.io/name: configuration-control-plane}}}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: {name: dashboards, namespace: aegis-observability}
+spec: {minAvailable: 1, selector: {matchLabels: {app.kubernetes.io/name: dashboards}}}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: {name: research-api, namespace: aegis-research}
+spec: {minAvailable: 1, selector: {matchLabels: {app.kubernetes.io/name: research-api}}}

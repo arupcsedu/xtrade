@@ -1,33 +1,27 @@
-FROM ubuntu:24.04@sha256:33ceb71981b602c1a7443a53469e4dba065f7503eab3078a2d7a57a2ab987517
+FROM python:3.12.12-slim-bookworm@sha256:593bd06efe90efa80dc4eee3948be7c0fde4134606dd40d8dd8dbcade98e669c
 
-ARG DEBIAN_FRONTEND=noninteractive
+ARG SOURCE_DATE_EPOCH=0
 
-RUN apt-get update \
-    && apt-get install --yes --no-install-recommends \
-      ca-certificates \
-      python3.12 \
-      python3.12-venv \
-    && rm -rf /var/lib/apt/lists/* \
-    && python3.12 -m venv /opt/aegis/venv
+RUN python -m venv /opt/aegis/venv
 
-COPY python/requirements-service.lock /opt/aegis/requirements-service.lock
+COPY --chown=65532:65532 python/requirements-service.lock /opt/aegis/requirements-service.lock
 RUN /opt/aegis/venv/bin/pip install \
       --disable-pip-version-check \
       --no-cache-dir \
       --require-hashes \
       --requirement /opt/aegis/requirements-service.lock
 
-COPY python/intelligence/aegis /opt/aegis/python/aegis
-COPY python/intelligence/aegis_mx_intelligence /opt/aegis/python/aegis_mx_intelligence
-COPY python/model_serving/aegis_mx_timeseries /opt/aegis/python/aegis_mx_timeseries
-COPY tools/timeseries_service_entry.py /opt/aegis/timeseries_service_entry.py
-
-RUN useradd --no-create-home --uid 65532 --shell /usr/sbin/nologin aegis \
-    && chown --recursive 65532:65532 /opt/aegis
+COPY --chown=65532:65532 python/intelligence/aegis /opt/aegis/python/aegis
+COPY --chown=65532:65532 python/intelligence/aegis_mx_intelligence /opt/aegis/python/aegis_mx_intelligence
+COPY --chown=65532:65532 python/model_serving/aegis_mx_timeseries /opt/aegis/python/aegis_mx_timeseries
+COPY --chown=65532:65532 tools/timeseries_service_entry.py /opt/aegis/timeseries_service_entry.py
 
 ENV AEGIS_TIMESERIES_HOST=127.0.0.1
 ENV AEGIS_TIMESERIES_PORT=8080
 ENV AEGIS_TIMESERIES_ROLE=timeseries-forecast-api
+ENV AEGIS_TLS_SECRET_ROOT=/var/run/aegis-mx/tls
+ENV AEGIS_SERVICE_IDENTITY=""
+ENV AEGIS_TLS_CLIENT_BINDINGS=""
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONHASHSEED=20260828
 ENV PYTHONPATH=/opt/aegis/python

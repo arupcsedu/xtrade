@@ -1,0 +1,68 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: aegis-regional-workload-safety
+  labels: {app.kubernetes.io/part-of: aegis-mx}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+        scope: Namespaced
+    namespaceSelector:
+      matchLabels: {aegis-mx.io/plane: regional}
+  validations:
+    - expression: >-
+        object.spec.containers.all(c,
+        c.image.matches('^[^[:space:]]+@sha256:[0-9a-f]{64}$') &&
+        !c.image.endsWith('@sha256:0000000000000000000000000000000000000000000000000000000000000000'))
+      message: Regional containers require a resolved immutable nonzero image digest.
+      reason: Forbidden
+    - expression: >-
+        !has(object.spec.initContainers) || object.spec.initContainers.all(c,
+        c.image.matches('^[^[:space:]]+@sha256:[0-9a-f]{64}$') &&
+        !c.image.endsWith('@sha256:0000000000000000000000000000000000000000000000000000000000000000'))
+      message: Regional init containers require a resolved immutable nonzero image digest.
+      reason: Forbidden
+    - expression: >-
+        has(object.metadata.annotations) &&
+        'aegis-mx.io/signature-bundle-sha256' in object.metadata.annotations &&
+        object.metadata.annotations['aegis-mx.io/signature-bundle-sha256'].matches('^[0-9a-f]{64}$') &&
+        object.metadata.annotations['aegis-mx.io/signature-bundle-sha256'] !=
+        '0000000000000000000000000000000000000000000000000000000000000000'
+      message: Cryptographic image-signature verification evidence is required.
+      reason: Forbidden
+    - expression: >-
+        has(object.metadata.annotations) &&
+        'aegis-mx.io/configuration-sha256' in object.metadata.annotations &&
+        object.metadata.annotations['aegis-mx.io/configuration-sha256'].matches('^[0-9a-f]{64}$') &&
+        object.metadata.annotations['aegis-mx.io/configuration-sha256'] !=
+        '0000000000000000000000000000000000000000000000000000000000000000'
+      message: A resolved immutable configuration digest is required.
+      reason: Forbidden
+    - expression: >-
+        has(object.metadata.labels) &&
+        object.metadata.labels['aegis-mx.io/execution-authority'] == 'false'
+      message: Regional pods must explicitly deny execution authority.
+      reason: Forbidden
+    - expression: >-
+        (!has(object.spec.hostNetwork) || !object.spec.hostNetwork) &&
+        (!has(object.spec.hostPID) || !object.spec.hostPID) &&
+        (!has(object.spec.hostIPC) || !object.spec.hostIPC)
+      message: Regional pods cannot join host namespaces.
+      reason: Forbidden
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: aegis-regional-workload-safety
+  labels: {app.kubernetes.io/part-of: aegis-mx}
+spec:
+  policyName: aegis-regional-workload-safety
+  validationActions: [Deny, Audit]
+  matchResources:
+    namespaceSelector:
+      matchLabels: {aegis-mx.io/plane: regional}

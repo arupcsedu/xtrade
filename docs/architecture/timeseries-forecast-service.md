@@ -117,11 +117,25 @@ labels. Request bodies and responses are size bounded. Logs are one-line JSON
 without series values, credentials, checkpoints, or external payloads. Shutdown
 stops admission and drains only up to the configured monotonic deadline.
 
+The listener is default-deny: TLS 1.3 mutual authentication, exactly one
+`spiffe://aegis-mx/<environment>/<service>` client identity, per-route service
+RBAC, per-identity token-bucket admission, and bounded concurrent handlers are
+required before application dispatch. Certificate, private-key, and trust-
+bundle names resolve only inside a read-only secret-manager mount. Material
+changes are hashed and loaded into a fresh context for subsequent handshakes.
+TLS negotiation and HTTP I/O use hard deadlines inside bounded worker slots;
+outgoing clients must compare the verified peer URI SAN with the exact intended
+service identity after every new handshake.
+Plain HTTP requires an explicit loopback-only development flag and is not
+available on wildcard or non-loopback binds.
+
 The checked-in [Dockerfile](../../infra/timeseries_forecast/Dockerfile) contains
 only the Python service and its hash-locked runtime dependency. The
 [Kubernetes manifest](../../infra/timeseries_forecast/kubernetes.yaml) contains
 only these three non-colocated roles, ClusterIP services, probes, resource
-bounds, non-root/read-only security contexts, and a default-deny network policy.
+bounds, non-root/read-only security contexts, read-only mTLS secret mounts, and
+a default-deny/no-egress network policy. TCP probes only establish listener
+availability; an authenticated monitor calls the health/readiness endpoints.
 The image digest is an explicit deployment placeholder and must be replaced by
 an approved built artifact digest before application.
 
@@ -132,5 +146,6 @@ checkpoint. Optional checkpoints are accepted only by lowercase SHA-256
 identity, and their package lock, model card, SBOM, capacity, and walk-forward
 evidence remain deployment prerequisites.
 
-See [ADR 0014](../adr/0014-off-hot-path-timeseries-forecast-serving.md), the
+See [ADR 0014](../adr/0014-off-hot-path-timeseries-forecast-serving.md),
+[ADR 0035](../adr/0035-zero-trust-service-boundaries-and-sandboxed-content.md), the
 [event contracts](event-contracts.md), and the [testing guide](../testing/timeseries-forecast-testing.md).

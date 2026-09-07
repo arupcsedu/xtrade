@@ -1,0 +1,123 @@
+groups:
+  - name: aegis-edge-safety
+    interval: 5s
+    rules:
+      - alert: AegisMarketDataGap
+        expr: increase(aegis_market_data_gaps_total[1m]) > 0
+        for: 0s
+        labels: {severity: critical, subsystem: market-data}
+        annotations:
+          summary: Market-data sequence gap observed
+          runbook: docs/operations/observability-alert-runbook.md#feed-gap-or-stale-feed
+      - alert: AegisFeedStale
+        expr: aegis_market_data_feed_age_ns > 100000000
+        for: 5s
+        labels: {severity: critical, subsystem: market-data}
+        annotations:
+          summary: Market-data observation is older than 100 ms
+          runbook: docs/operations/observability-alert-runbook.md#feed-gap-or-stale-feed
+      - alert: AegisBookInvalid
+        expr: aegis_market_data_book_valid == 0
+        for: 0s
+        labels: {severity: critical, subsystem: order-book}
+        annotations:
+          summary: Book is not valid
+          runbook: docs/operations/observability-alert-runbook.md#feed-gap-or-stale-feed
+      - alert: AegisClockOffsetUnsafe
+        expr: abs(aegis_infrastructure_clock_offset_ns) > 100000
+        for: 5s
+        labels: {severity: critical, subsystem: clock}
+        annotations:
+          summary: Absolute PTP offset exceeds 100 microseconds
+          runbook: docs/operations/observability-alert-runbook.md#clock-unsafe
+      - alert: AegisTelemetryDrop
+        expr: increase(aegis_observability_metric_drops_total[5m]) > 0 or increase(aegis_observability_log_drops_total[5m]) > 0 or increase(aegis_observability_trace_drops_total[5m]) > 0
+        for: 0s
+        labels: {severity: warning, subsystem: observability}
+        annotations:
+          summary: Bounded metric queue rejected one or more points
+          runbook: docs/operations/observability-alert-runbook.md#telemetry-or-queue-loss
+      - alert: AegisQueueDrop
+        expr: increase(aegis_infrastructure_queue_drops_total[5m]) > 0
+        for: 0s
+        labels: {severity: warning, subsystem: infrastructure}
+        annotations:
+          summary: Component bounded queue dropped work
+          runbook: docs/operations/observability-alert-runbook.md#telemetry-or-queue-loss
+      - alert: AegisRingNearCapacity
+        expr: aegis_infrastructure_ring_occupancy > 3686
+        for: 10s
+        labels: {severity: warning, subsystem: infrastructure}
+        annotations:
+          summary: Reference 4096-entry ring exceeds 90 percent occupancy
+          runbook: docs/operations/observability-alert-runbook.md#telemetry-or-queue-loss
+      - alert: AegisModelDeadlineMisses
+        expr: increase(aegis_model_deadline_misses_total[5m]) > 0
+        for: 0s
+        labels: {severity: warning, subsystem: models}
+        annotations:
+          summary: Model deadline miss or late response was discarded
+          runbook: docs/operations/observability-alert-runbook.md#model-health-or-disagreement
+      - alert: AegisModelOodHigh
+        expr: aegis_model_ood_ppm > 800000
+        for: 30s
+        labels: {severity: warning, subsystem: models}
+        annotations:
+          summary: Model OOD score exceeds reference eligibility threshold
+          runbook: docs/operations/observability-alert-runbook.md#model-health-or-disagreement
+      - alert: AegisModelCalibrationLow
+        expr: aegis_model_calibration_ppm < 500000
+        for: 1m
+        labels: {severity: warning, subsystem: models}
+        annotations:
+          summary: Model calibration score is below reference threshold
+          runbook: docs/operations/observability-alert-runbook.md#model-health-or-disagreement
+      - alert: AegisModelDisagreementHigh
+        expr: aegis_ensemble_disagreement_ppm > 500000
+        for: 30s
+        labels: {severity: warning, subsystem: ensemble}
+        annotations:
+          summary: Effective expert disagreement exceeds reference threshold
+          runbook: docs/operations/observability-alert-runbook.md#model-health-or-disagreement
+      - alert: AegisRiskRejectBurst
+        expr: rate(aegis_trading_risk_rejects_total[1m]) > 10
+        for: 30s
+        labels: {severity: warning, subsystem: risk}
+        annotations:
+          summary: Risk reject rate exceeds ten per second
+          runbook: docs/operations/observability-alert-runbook.md#risk-venue-or-execution-degradation
+      - alert: AegisVenueRejectBurst
+        expr: rate(aegis_trading_venue_rejects_total[1m]) > 5
+        for: 30s
+        labels: {severity: critical, subsystem: execution}
+        annotations:
+          summary: Venue reject rate exceeds five per second
+          runbook: docs/operations/observability-alert-runbook.md#risk-venue-or-execution-degradation
+      - alert: AegisExecutionLatencyHigh
+        expr: aegis_latency_quantile_ns{stage="decision_to_send",quantile="999"} > 1000000
+        for: 30s
+        labels: {severity: warning, subsystem: execution}
+        annotations:
+          summary: Decision-to-send p99.9 bucket exceeds one millisecond
+          runbook: docs/operations/observability-alert-runbook.md#risk-venue-or-execution-degradation
+      - alert: AegisDrawdownHigh
+        expr: aegis_trading_drawdown_currency_nanos > 100000000000
+        for: 5s
+        labels: {severity: critical, subsystem: portfolio-risk}
+        annotations:
+          summary: Drawdown exceeds reference threshold of 100 currency units
+          runbook: docs/operations/observability-alert-runbook.md#risk-venue-or-execution-degradation
+      - alert: AegisJournalLag
+        expr: aegis_infrastructure_journal_lag_events > 1000
+        for: 10s
+        labels: {severity: critical, subsystem: journal}
+        annotations:
+          summary: Journal consumer lags producer by more than 1000 records
+          runbook: docs/operations/observability-alert-runbook.md#journal-lag
+      - alert: AegisNicErrors
+        expr: increase(aegis_infrastructure_nic_errors_total[5m]) > 0
+        for: 0s
+        labels: {severity: warning, subsystem: infrastructure}
+        annotations:
+          summary: NIC error counter increased
+          runbook: docs/operations/observability-alert-runbook.md#feed-gap-or-stale-feed
