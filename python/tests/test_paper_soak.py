@@ -141,3 +141,11 @@ def test_aggregate_rejects_duplicate_worker_identity(tmp_path: Path) -> None:
 
     with pytest.raises(paper_soak.SoakError, match="unique"):
         paper_soak.aggregate(_arguments(tmp_path, [first, second]))
+
+
+def test_slurm_launcher_uses_submit_directory_not_spooled_script_path() -> None:
+    """Slurm copies scripts to /var/spool, so BASH_SOURCE is not the checkout."""
+    launcher = Path("tools/slurm/paper-soak.sbatch").read_text()
+    assert "SLURM_SUBMIT_DIR" in launcher
+    assert 'dirname "${BASH_SOURCE[0]}"' not in launcher
+    assert "engineering-contract.md" in launcher

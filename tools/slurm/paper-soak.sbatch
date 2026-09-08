@@ -9,8 +9,13 @@
 
 set -euo pipefail
 
-repository_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+repository_root=${SLURM_SUBMIT_DIR:?submit the job from the repository root}
 cd "$repository_root"
+if [ ! -f CMakeLists.txt ] || [ ! -f docs/architecture/engineering-contract.md ]; then
+  printf 'SLURM_SUBMIT_DIR is not the Aegis-MX repository root: %s\n' \
+    "$repository_root" >&2
+  exit 2
+fi
 
 # shellcheck source=tools/toolchain.sh
 source "$repository_root/tools/toolchain.sh"
