@@ -215,6 +215,11 @@ allocation, blocking disk I/O, network RPC, Python or LLM call, distributed
 database operation, or garbage-collected work. Benchmark instrumentation shall
 be accounted for and shall not obscure queue or overload behavior.
 
+Long-duration PAPER stability evidence uses the fixed thresholds and raw
+artifact contract in [ADR 0043](../adr/0043-bounded-two-tier-paper-soak.md).
+The bounded `make paper-soak-smoke` target validates orchestration only; it must
+not be reported as the two-billion-event Slurm qualification run.
+
 ## Review and evidence requirements
 
 Every phase report shall use this minimum structure:

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/paper-soak-report-v1.schema.json",
+  "title": "Aegis-MX PAPER soak aggregate report",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "mode",
+    "totals",
+    "coverage",
+    "latency_ns",
+    "resources",
+    "thresholds",
+    "evidence",
+    "checks",
+    "limitations",
+    "passed"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "kind": { "const": "paper_soak_aggregate" },
+    "mode": { "const": "PAPER" },
+    "generated_at_wall_utc": { "type": "string" },
+    "source_revisions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "totals": { "type": "object" },
+    "coverage": { "type": "object" },
+    "paper_metrics": { "type": "object" },
+    "latency_ns": { "type": "object" },
+    "resources": { "type": "object" },
+    "thresholds": { "type": "object" },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "checks": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "type": "boolean" }
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "passed": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}

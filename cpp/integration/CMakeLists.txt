@@ -37,13 +37,23 @@ set_target_properties(
   aegis_paper_acceptance PROPERTIES OUTPUT_NAME aegis-paper-acceptance
 )
 
+add_executable(aegis_paper_soak_load tools/paper_soak_load.cpp)
+target_link_libraries(
+  aegis_paper_soak_load
+  PRIVATE aegis::common aegis::synthetic_exchange
+)
+aegis_apply_project_options(aegis_paper_soak_load)
+set_target_properties(
+  aegis_paper_soak_load PROPERTIES OUTPUT_NAME aegis-paper-soak-load
+)
+
 install(
   TARGETS aegis_paper_integration
   EXPORT AegisMXTargets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
 )
 install(
-  TARGETS aegis_paper_acceptance
+  TARGETS aegis_paper_acceptance aegis_paper_soak_load
   RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
 )
 install(
@@ -59,5 +69,16 @@ if(AEGIS_BUILD_TESTS)
       aegis_paper_acceptance
       --machine "${CMAKE_CURRENT_BINARY_DIR}/acceptance-report.json"
       --human "${CMAKE_CURRENT_BINARY_DIR}/system-report.md"
+  )
+  add_test(
+    NAME aegis_paper_soak_load_smoke
+    COMMAND
+      aegis_paper_soak_load
+      --events 8192
+      --session-events 2048
+      --sample-limit 256
+      --realtime-seconds 0
+      --machine "${CMAKE_CURRENT_BINARY_DIR}/soak-load-report.json"
+      --raw "${CMAKE_CURRENT_BINARY_DIR}/soak-load-samples.ndjson"
   )
 endif()

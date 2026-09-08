@@ -66,6 +66,8 @@ struct ScenarioCounters {
   std::uint64_t fills{};
   std::uint64_t explained_orders{};
   std::uint64_t telemetry_drops{};
+  std::uint64_t telemetry_final_queue_occupancy{};
+  std::uint64_t telemetry_maximum_queue_occupancy{};
   std::uint64_t final_absolute_position_units{};
   std::int64_t final_pnl_currency_nanos{};
 };

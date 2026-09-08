@@ -25,6 +25,8 @@ print_help() {
     '  make benchmark-platform-smoke Run the bounded full-platform smoke suite.' \
     '  make benchmark-regression Compare a platform report with an approved baseline.' \
     '  make paper-integration Run all deterministic full-system PAPER scenarios.' \
+    '  make paper-soak      Run a configurable local PAPER soak worker.' \
+    '  make paper-soak-smoke Run the bounded PAPER soak validation.' \
     '  make package          Build C++, Python, control, and SBOM artifacts.' \
     '  make docs-check       Validate local documentation.' \
     '  make schemas-check    Verify generated bindings and golden schema files.' \
@@ -158,7 +160,9 @@ lint_sources() {
   cmake --build --preset ci --parallel
 
   if command -v shellcheck >/dev/null 2>&1; then
-    shellcheck tools/run.sh tools/toolchain.sh tools/slurm/paper-integration.sbatch
+    shellcheck \
+      tools/run.sh tools/toolchain.sh tools/slurm/paper-integration.sbatch \
+      tools/slurm/paper-soak.sbatch
   else
     printf 'NOTE: shellcheck unavailable; CI installs and enforces it.\n'
   fi
@@ -350,6 +354,43 @@ run_paper_integration() {
     --human build/reports/paper-trading/system-report.md
   "$python_bin" -m json.tool \
     build/reports/paper-trading/acceptance-report.json >/dev/null
+}
+
+run_paper_soak() {
+  require_environment
+  local output_dir=${AEGIS_SOAK_OUTPUT_DIR:-build/reports/paper-soak/local}
+  local event_count=${AEGIS_SOAK_EVENTS:-1000000}
+  local cycle_count=${AEGIS_SOAK_CYCLES:-2}
+  mkdir -p "$output_dir"
+  cmake --preset release
+  cmake --build --preset release --parallel
+  "$python_bin" tools/paper_soak.py worker \
+    --build-dir build/release \
+    --output-dir "$output_dir" \
+    --summary "$output_dir/worker-0.json" \
+    --worker-id 0 \
+    --seed "${AEGIS_TEST_SEED:-20260907}" \
+    --events "$event_count" \
+    --session-events "${AEGIS_SOAK_SESSION_EVENTS:-100000}" \
+    --sample-limit "${AEGIS_SOAK_SAMPLE_LIMIT:-8192}" \
+    --realtime-seconds "${AEGIS_SOAK_REALTIME_SECONDS:-1}" \
+    --realtime-rate "${AEGIS_SOAK_REALTIME_RATE:-1000}" \
+    --cycles "$cycle_count"
+  "$python_bin" tools/paper_soak.py aggregate \
+    --worker "$output_dir/worker-0.json" \
+    --minimum-primary-events "$event_count" \
+    --minimum-acceptance-cycles "$cycle_count" \
+    --output "$output_dir/paper-soak-report.json" \
+    --human "$output_dir/stability-report.md"
+}
+
+run_paper_soak_smoke() {
+  AEGIS_SOAK_EVENTS=${AEGIS_SOAK_SMOKE_EVENTS:-100000} \
+    AEGIS_SOAK_SESSION_EVENTS=${AEGIS_SOAK_SMOKE_SESSION_EVENTS:-20000} \
+    AEGIS_SOAK_CYCLES=${AEGIS_SOAK_SMOKE_CYCLES:-1} \
+    AEGIS_SOAK_REALTIME_SECONDS=0 \
+    AEGIS_SOAK_OUTPUT_DIR=build/reports/paper-soak/smoke \
+    run_paper_soak
 }
 
 check_docs() {
@@ -601,6 +642,8 @@ case "$command_name" in
     ;;
   benchmark-regression) run_benchmark_regression ;;
   paper-integration) run_paper_integration ;;
+  paper-soak) run_paper_soak ;;
+  paper-soak-smoke) run_paper_soak_smoke ;;
   package) package_artifacts ;;
   docs-check) check_docs ;;
   schemas-check) check_schemas ;;

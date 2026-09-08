@@ -15,6 +15,13 @@ The
 contract fixes the 16 full-system PAPER scenarios, safety acceptance fields,
 per-stage hashes, counters, and deterministic replay comparison.
 
+The
+[`paper-soak-report-v1.schema.json`](paper-soak-report-v1.schema.json) contract
+defines the aggregate long-duration PAPER stability result, fixed check map,
+coverage totals, resource/latency observations, limitations, and SHA-256 worker
+evidence references. It is an offline evidence contract and carries no trading
+authority.
+
 ## Canonical format
 
 Version 1 uses FlatBuffers 25.12.19, pinned by release archive SHA-256 in the

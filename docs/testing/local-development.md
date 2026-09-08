@@ -196,6 +196,20 @@ scenario definitions, safety order, report contract, and optional
 `parallel`-partition Slurm launcher are documented in
 [Full-system PAPER Trading Validation](full-system-paper-trading.md).
 
+Validate the soak workflow locally, then submit the long profile when the site
+`parallel` partition is available:
+
+```bash
+make paper-soak-smoke
+sbatch --wait tools/slurm/paper-soak.sbatch
+```
+
+The Slurm default produces two billion primary synthetic events plus two
+billion exact replay events across two workers, 20 recurring full-system PAPER
+cycles, raw session/probe evidence, and a machine/human stability report. See
+[Long-duration PAPER Soak Testing](paper-soak-testing.md) and the
+[PAPER Soak Runbook](../operations/paper-soak-runbook.md).
+
 Focused journal tests and the read-only/copy-only tools can be run with:
 
 ```bash

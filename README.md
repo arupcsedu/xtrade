@@ -100,6 +100,8 @@ SHA-256. Go foundation code uses the standard library only.
 | `make benchmark-platform-smoke` | Run the complete matrix with bounded non-qualifying sample counts |
 | `make benchmark-regression` | Compare a platform report against an explicitly supplied approved baseline |
 | `make paper-integration` | Run all 16 deterministic full-system PAPER scenarios and write machine/human acceptance reports |
+| `make paper-soak-smoke` | Validate the bounded long-duration PAPER soak workflow |
+| `make paper-soak` | Run a configurable local accelerated/realtime PAPER soak and retain raw evidence |
 | `make dependency-scan` | Run pip-audit, pinned govulncheck, and the repository secret baseline check |
 | `make chaos-fast` | Run all 23 bounded single-fault scenarios and emit a deterministic JSON report |
 | `make chaos-nightly` | Run the repeated fault soak plus simultaneous fault combinations |
@@ -120,6 +122,10 @@ are documented in
 Full-system PAPER acceptance, report paths, and the optional `parallel`-partition
 Slurm launcher are documented in
 [Full-system PAPER trading validation](docs/testing/full-system-paper-trading.md).
+
+Long-duration accelerated/realtime PAPER soak commands, fixed stability
+thresholds, raw evidence, and the two-node `parallel` Slurm launcher are
+documented in [Long-duration PAPER soak testing](docs/testing/paper-soak-testing.md).
 
 Canonical event contracts are documented in [schemas/README.md](schemas/README.md)
 and [event contracts](docs/architecture/event-contracts.md). This phase requires

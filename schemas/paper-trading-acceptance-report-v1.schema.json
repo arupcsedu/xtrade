@@ -151,7 +151,9 @@
         "route_decisions": {"minimum": 0, "type": "integer"},
         "source_events": {"minimum": 0, "type": "integer"},
         "specialist_forecasts": {"minimum": 0, "type": "integer"},
-        "telemetry_drops": {"minimum": 0, "type": "integer"}
+        "telemetry_drops": {"minimum": 0, "type": "integer"},
+        "telemetry_final_queue_occupancy": {"minimum": 0, "type": "integer"},
+        "telemetry_maximum_queue_occupancy": {"minimum": 0, "type": "integer"}
       },
       "required": [
         "eligible_experts",

@@ -1259,6 +1259,8 @@ scenario_outcome_hash(const ScenarioResult& result) noexcept {
   mix(hash, counters.fills);
   mix(hash, counters.explained_orders);
   mix(hash, counters.telemetry_drops);
+  mix(hash, counters.telemetry_final_queue_occupancy);
+  mix(hash, counters.telemetry_maximum_queue_occupancy);
   mix(hash, counters.final_absolute_position_units);
   mix(hash, std::bit_cast<std::uint64_t>(counters.final_pnl_currency_nanos));
   const auto& component = result.hashes;
@@ -1871,6 +1873,10 @@ scenario_outcome_hash(const ScenarioResult& result) noexcept {
   observability::TelemetryProcessor telemetry_processor{telemetry};
   static_cast<void>(telemetry_processor.drain(128U));
   result.counters.telemetry_drops = telemetry.dropped_points();
+  const auto telemetry_queue = telemetry.queue_metrics();
+  result.counters.telemetry_final_queue_occupancy = telemetry_queue.consumer_lag_events;
+  result.counters.telemetry_maximum_queue_occupancy =
+      telemetry_queue.maximum_consumer_lag_events;
 
   result.hashes.source_events = nonzero_hash(source_hash);
   result.hashes.feature_snapshot = latest_feature_snapshot.stable_hash;
@@ -2175,6 +2181,10 @@ bool write_machine_report(const PaperAcceptanceReport& report,
            << "        \"fills\": " << counters.fills << ",\n"
            << "        \"explained_orders\": " << counters.explained_orders << ",\n"
            << "        \"telemetry_drops\": " << counters.telemetry_drops << ",\n"
+           << "        \"telemetry_final_queue_occupancy\": "
+           << counters.telemetry_final_queue_occupancy << ",\n"
+           << "        \"telemetry_maximum_queue_occupancy\": "
+           << counters.telemetry_maximum_queue_occupancy << ",\n"
            << "        \"final_absolute_position_units\": "
            << counters.final_absolute_position_units << ",\n"
            << "        \"final_pnl_currency_nanos\": "
