@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/operator-drill-audit-record-v1.schema.json",
+  "title": "Aegis-MX PAPER operator drill audit record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "sequence",
+    "previous_sha256",
+    "event",
+    "scope",
+    "command_sequence",
+    "operator_authorized",
+    "update_status",
+    "risk_journal_sequence",
+    "risk_decision_hash",
+    "record_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "kind": {"const": "operator_drill_audit"},
+    "sequence": {"type": "integer", "minimum": 1},
+    "previous_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "event": {
+      "enum": [
+        "baseline_approved",
+        "kill_engaged",
+        "kill_rejection_observed",
+        "unauthorized_clear_rejected",
+        "authorized_clear_applied",
+        "recovery_approved"
+      ]
+    },
+    "scope": {"enum": ["none", "symbol", "strategy", "venue", "firm"]},
+    "command_sequence": {"type": "integer", "minimum": 0},
+    "operator_authorized": {"type": "boolean"},
+    "update_status": {
+      "enum": [
+        "not_applicable",
+        "applied",
+        "invalid",
+        "arithmetic_overflow",
+        "unavailable",
+        "busy"
+      ]
+    },
+    "risk_journal_sequence": {"type": "integer", "minimum": 0},
+    "risk_decision_hash": {"type": "string", "pattern": "^[0-9]+$"},
+    "record_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  },
+  "additionalProperties": false
+}

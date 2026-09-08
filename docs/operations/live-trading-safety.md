@@ -225,6 +225,10 @@ modes are not exemptions for developing abusive behavior.
 
 ## Operational readiness
 
+The consolidated non-live operator entry point is the
+[operational-readiness package](operational-readiness-package.md). Its production
+activation checklist is currently `PROHIBITED` and cannot grant authority.
+
 Before any live-capable deployment, operators need approved runbooks and drills
 for at least:
 

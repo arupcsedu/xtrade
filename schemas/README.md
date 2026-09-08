@@ -181,6 +181,25 @@ SBOMs, provenance records, signature bundles, trusted CI identity, and
 verification result. It is an administrative deployment contract and conveys
 no order-entry authority.
 
+The
+[PAPER operator simulation report v1](operator-simulation-report-v1.schema.json)
+is a strict offline drill result. It fixes the mode to `PAPER`, fixes live
+compilation and production activation to false, records all four required kill
+scopes, and binds the extracted risk-decision audit stream by SHA-256. It has no
+OMS, gateway, network, credential, or live-activation authority.
+
+Each NDJSON line in that stream conforms to the
+[operator drill audit record v1](operator-drill-audit-record-v1.schema.json),
+which fixes the record vocabulary and types for independently verifying the
+sequence and SHA-256 chain.
+
+The
+[live-mode-disabled evidence v1](live-mode-disabled-evidence-v1.schema.json)
+binds the configured build, operator drill, checked-in edge profiles, systemd
+guard, control-plane rejection, and still-open production blockers. A passing
+record means the inspected state is non-live while `production_ready` remains
+false and activation remains `PROHIBITED`.
+
 ## Identifiers
 
 Each identifier, including `AccountId`, is a distinct 16-byte `(high, low)`

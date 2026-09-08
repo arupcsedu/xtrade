@@ -498,8 +498,8 @@ void append_check(std::ostream& output, const std::string_view name, const bool 
          << "  \"primary_elapsed_ns\": " << report.primary_elapsed_ns << ",\n"
          << "  \"replay_elapsed_ns\": " << report.replay_elapsed_ns << ",\n"
          << "  \"realtime_elapsed_ns\": " << report.realtime_elapsed_ns << ",\n"
-         << "  \"accelerated_wall_elapsed_ns\": "
-         << report.accelerated_wall_elapsed_ns << ",\n"
+         << "  \"accelerated_wall_elapsed_ns\": " << report.accelerated_wall_elapsed_ns
+         << ",\n"
          << "  \"accelerated_cpu_time_ns\": " << report.accelerated_cpu_time_ns << ",\n"
          << "  \"accelerated_cpu_utilization_ppm\": "
          << report.accelerated_cpu_utilization_ppm << ",\n"

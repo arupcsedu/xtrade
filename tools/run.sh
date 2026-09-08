@@ -27,6 +27,7 @@ print_help() {
     '  make paper-integration Run all deterministic full-system PAPER scenarios.' \
     '  make paper-soak      Run a configurable local PAPER soak worker.' \
     '  make paper-soak-smoke Run the bounded PAPER soak validation.' \
+    '  make operator-simulation Run the PAPER-only hierarchical kill drill.' \
     '  make package          Build C++, Python, control, and SBOM artifacts.' \
     '  make docs-check       Validate local documentation.' \
     '  make schemas-check    Verify generated bindings and golden schema files.' \
@@ -393,6 +394,25 @@ run_paper_soak_smoke() {
     run_paper_soak
 }
 
+run_operator_simulation() {
+  require_environment
+  local output_dir=${AEGIS_OPERATOR_OUTPUT_DIR:-build/reports/operations}
+  mkdir -p "$output_dir"
+  cmake --preset release
+  cmake --build --preset release --target aegis_operator_simulation --parallel
+  build/release/cpp/integration/aegis-operator-simulation \
+    --seed "${AEGIS_TEST_SEED:-20260908}" \
+    --machine "$output_dir/operator-simulation.json" \
+    --audit "$output_dir/operator-audit.ndjson"
+  "$python_bin" -m json.tool "$output_dir/operator-simulation.json" >/dev/null
+  "$python_bin" tools/operational_readiness.py \
+    --repository "$repository_root" \
+    --operator-report "$output_dir/operator-simulation.json" \
+    --build-dir build/release \
+    --output "$output_dir/live-mode-disabled.json" \
+    --human "$output_dir/live-mode-disabled.md"
+}
+
 check_docs() {
   require_environment
   "$python_bin" tools/docs_check.py
@@ -611,6 +631,7 @@ run_fast() {
   "$0" lint
   "$0" test
   "$0" paper-integration
+  "$0" operator-simulation
   "$0" benchmark
 }
 
@@ -644,6 +665,7 @@ case "$command_name" in
   paper-integration) run_paper_integration ;;
   paper-soak) run_paper_soak ;;
   paper-soak-smoke) run_paper_soak_smoke ;;
+  operator-simulation) run_operator_simulation ;;
   package) package_artifacts ;;
   docs-check) check_docs ;;
   schemas-check) check_schemas ;;

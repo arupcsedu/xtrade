@@ -367,6 +367,26 @@ See [Configuration Control Testing](docs/testing/configuration-control-testing.m
 the [architecture](docs/architecture/configuration-control-plane.md), and the
 [operations runbook](docs/operations/configuration-control-runbook.md).
 
+## Operational readiness and operator drill
+
+The final
+[operational-readiness package](docs/operations/operational-readiness-package.md)
+indexes architecture, ownership, startup/shutdown and daily PAPER checklists,
+incident runbooks, licensed/regulatory reviews, and the deliberately prohibited
+production-activation gate. Run the PAPER-only hierarchical kill simulation and
+generate live-disabled evidence with:
+
+```bash
+AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts \
+  make operator-simulation
+```
+
+The drill exercises symbol, strategy, venue, and firm kills, rejects
+unauthorized clearing, performs an authorized recovery evaluation, and exports
+a hash-chained audit. It has no OMS, gateway, network, credential, or activation
+API. A pass proves that the inspected state remains non-live; it reports
+`production_ready=false` and `activation_status=PROHIBITED`.
+
 ## Shadow and canary model deployment
 
 The off-hot-path Go deployment coordinator compares production and candidate

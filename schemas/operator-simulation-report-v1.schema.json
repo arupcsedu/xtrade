@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/operator-simulation-report-v1.schema.json",
+  "title": "Aegis-MX PAPER operator simulation report",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "kind",
+    "mode",
+    "live_trading_compiled",
+    "production_activation_attempted",
+    "seed",
+    "source_revision",
+    "audit_extract",
+    "checks",
+    "scopes",
+    "passed"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "kind": {"const": "paper_operator_simulation"},
+    "mode": {"const": "PAPER"},
+    "live_trading_compiled": {"const": false},
+    "production_activation_attempted": {"const": false},
+    "seed": {"type": "integer", "minimum": 1},
+    "source_revision": {"type": "string", "minLength": 1},
+    "audit_extract": {
+      "type": "object",
+      "required": ["path", "sha256", "chain_final_sha256", "records", "risk_decisions"],
+      "properties": {
+        "path": {"const": "operator-audit.ndjson"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "chain_final_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "records": {"const": 21},
+        "risk_decisions": {"const": 9}
+      },
+      "additionalProperties": false
+    },
+    "checks": {
+      "type": "object",
+      "required": [
+        "paper_mode_only",
+        "baseline_approved",
+        "every_kill_blocked",
+        "unauthorized_clear_rejected",
+        "authorized_recovery_succeeded",
+        "decision_journal_complete",
+        "audit_chain_valid"
+      ],
+      "properties": {
+        "paper_mode_only": {"const": true},
+        "baseline_approved": {"const": true},
+        "every_kill_blocked": {"const": true},
+        "unauthorized_clear_rejected": {"const": true},
+        "authorized_recovery_succeeded": {"const": true},
+        "decision_journal_complete": {"const": true},
+        "audit_chain_valid": {"const": true}
+      },
+      "additionalProperties": false
+    },
+    "scopes": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": [
+          "scope",
+          "engage_sequence",
+          "clear_sequence",
+          "blocked_journal_sequence",
+          "recovered_journal_sequence",
+          "passed"
+        ],
+        "properties": {
+          "scope": {"enum": ["symbol", "strategy", "venue", "firm"]},
+          "engage_sequence": {"type": "integer", "minimum": 1},
+          "clear_sequence": {"type": "integer", "minimum": 1},
+          "blocked_journal_sequence": {"type": "integer", "minimum": 1},
+          "recovered_journal_sequence": {"type": "integer", "minimum": 1},
+          "passed": {"const": true}
+        },
+        "additionalProperties": false
+      }
+    },
+    "passed": {"const": true}
+  },
+  "additionalProperties": false
+}

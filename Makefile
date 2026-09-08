@@ -1,7 +1,7 @@
 SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
 
-.PHONY: help bootstrap format format-check lint test test-sanitizers test-fuzz benchmark benchmark-platform benchmark-platform-smoke benchmark-regression paper-integration paper-soak paper-soak-smoke package docs-check schemas-check schemas-generate dependency-scan security-test chaos-fast chaos-nightly edge-validate edge-package regional-validate reproducibility-check fast full
+.PHONY: help bootstrap format format-check lint test test-sanitizers test-fuzz benchmark benchmark-platform benchmark-platform-smoke benchmark-regression paper-integration paper-soak paper-soak-smoke operator-simulation package docs-check schemas-check schemas-generate dependency-scan security-test chaos-fast chaos-nightly edge-validate edge-package regional-validate reproducibility-check fast full
 
 help:
 	@tools/run.sh help
@@ -47,6 +47,9 @@ paper-soak:
 
 paper-soak-smoke:
 	@tools/run.sh paper-soak-smoke
+
+operator-simulation:
+	@tools/run.sh operator-simulation
 
 package:
 	@tools/run.sh package
