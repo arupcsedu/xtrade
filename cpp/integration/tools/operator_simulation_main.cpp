@@ -51,9 +51,10 @@ int main(const int argc, char** argv) {
     return 2;
   }
   const auto report = aegis::integration::run_operator_simulation(options.seed);
+  const aegis::integration::OperatorSimulationOutputPaths paths{
+      .audit_extract = options.audit, .machine_report = options.machine};
   if (!aegis::integration::write_operator_audit_extract(report, options.audit) ||
-      !aegis::integration::write_operator_simulation_report(report, options.audit,
-                                                            options.machine)) {
+      !aegis::integration::write_operator_simulation_report(report, paths)) {
     std::cerr << "failed to write operator simulation evidence\n";
     return 3;
   }

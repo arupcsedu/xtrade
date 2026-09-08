@@ -62,6 +62,11 @@ struct OperatorSimulationReport final {
   bool passed{false};
 };
 
+struct OperatorSimulationOutputPaths final {
+  std::filesystem::path audit_extract;
+  std::filesystem::path machine_report;
+};
+
 [[nodiscard]] OperatorSimulationReport
 run_operator_simulation(std::uint64_t seed = kDefaultOperatorSimulationSeed);
 
@@ -70,8 +75,7 @@ run_operator_simulation(std::uint64_t seed = kDefaultOperatorSimulationSeed);
 
 [[nodiscard]] bool
 write_operator_simulation_report(const OperatorSimulationReport& report,
-                                 const std::filesystem::path& audit_path,
-                                 const std::filesystem::path& path);
+                                 const OperatorSimulationOutputPaths& paths);
 
 [[nodiscard]] const char* operator_scope_name(risk::KillSwitchScope scope) noexcept;
 

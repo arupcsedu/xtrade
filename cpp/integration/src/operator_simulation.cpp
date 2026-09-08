@@ -259,17 +259,16 @@ void append_audit(OperatorSimulationReport& report, const std::string_view event
 [[nodiscard]] std::string audit_json(const OperatorSimulationReport& report) {
   std::ostringstream output;
   for (const auto& record : report.audit_records) {
-    output << "{\"schema_version\":\"1.0\",\"kind\":\"operator_drill_audit\","
-           << "\"sequence\":" << record.sequence << ",\"previous_sha256\":\""
-           << record.previous_sha256 << "\",\"event\":\"" << record.event
-           << "\",\"scope\":\"" << record.scope
-           << "\",\"command_sequence\":" << record.command_sequence
-           << ",\"operator_authorized\":"
-           << (record.operator_authorized ? "true" : "false") << ",\"update_status\":\""
-           << record.update_status
-           << "\",\"risk_journal_sequence\":" << record.risk_journal_sequence
-           << ",\"risk_decision_hash\":\"" << record.risk_decision_hash
-           << "\",\"record_sha256\":\"" << record.record_sha256 << "\"}\n";
+    output << R"({"schema_version":"1.0","kind":"operator_drill_audit",)"
+           << R"("sequence":)" << record.sequence << R"(,"previous_sha256":")"
+           << record.previous_sha256 << R"(","event":")" << record.event
+           << R"(","scope":")" << record.scope << R"(","command_sequence":)"
+           << record.command_sequence << R"(,"operator_authorized":)"
+           << (record.operator_authorized ? "true" : "false") << R"(,"update_status":")"
+           << record.update_status << R"(","risk_journal_sequence":)"
+           << record.risk_journal_sequence << R"(,"risk_decision_hash":")"
+           << record.risk_decision_hash << R"(","record_sha256":")"
+           << record.record_sha256 << R"("})" << '\n';
   }
   return output.str();
 }
@@ -447,61 +446,67 @@ bool write_operator_audit_extract(const OperatorSimulationReport& report,
 }
 
 bool write_operator_simulation_report(const OperatorSimulationReport& report,
-                                      const std::filesystem::path& audit_path,
-                                      const std::filesystem::path& path) {
-  if (!ensure_parent(path)) {
+                                      const OperatorSimulationOutputPaths& paths) {
+  if (!ensure_parent(paths.machine_report)) {
     return false;
   }
   const auto& build = common::current_build_info();
-  std::ofstream output{path, std::ios::trunc};
+  std::ofstream output{paths.machine_report, std::ios::trunc};
   if (!output) {
     return false;
   }
-  output << "{\n  \"schema_version\": \"1.0\",\n"
-         << "  \"kind\": \"paper_operator_simulation\",\n"
-         << "  \"mode\": \"PAPER\",\n"
-         << "  \"live_trading_compiled\": "
-         << (build.live_trading_capable ? "true" : "false") << ",\n"
-         << "  \"production_activation_attempted\": "
-         << (report.production_activation_attempted ? "true" : "false") << ",\n"
-         << "  \"seed\": " << report.seed << ",\n"
-         << "  \"source_revision\": \"" << build.source_revision << "\",\n"
-         << "  \"audit_extract\": {\n"
-         << "    \"path\": \"" << audit_path.filename().string() << "\",\n"
-         << "    \"sha256\": \"" << digest_hex(report.audit_extract_sha256) << "\",\n"
-         << "    \"chain_final_sha256\": \"" << report.audit_chain_final_sha256
-         << "\",\n"
-         << "    \"records\": " << report.audit_records.size() << ",\n"
-         << "    \"risk_decisions\": " << report.extracted_risk_decisions << "\n"
-         << "  },\n  \"checks\": {\n"
-         << "    \"paper_mode_only\": " << (report.paper_mode_only ? "true" : "false")
-         << ",\n"
-         << "    \"baseline_approved\": "
-         << (report.baseline_approved ? "true" : "false") << ",\n"
-         << "    \"every_kill_blocked\": "
-         << (report.every_kill_blocked ? "true" : "false") << ",\n"
-         << "    \"unauthorized_clear_rejected\": "
-         << (report.unauthorized_clear_rejected ? "true" : "false") << ",\n"
-         << "    \"authorized_recovery_succeeded\": "
-         << (report.authorized_recovery_succeeded ? "true" : "false") << ",\n"
-         << "    \"decision_journal_complete\": "
-         << (report.decision_journal_complete ? "true" : "false") << ",\n"
-         << "    \"audit_chain_valid\": "
-         << (report.audit_chain_valid ? "true" : "false") << "\n  },\n"
-         << "  \"scopes\": [\n";
+  output << '{' << '\n'
+         << R"(  "schema_version": "1.0",)" << '\n'
+         << R"(  "kind": "paper_operator_simulation",)" << '\n'
+         << R"(  "mode": "PAPER",)" << '\n'
+         << R"(  "live_trading_compiled": )"
+         << (build.live_trading_capable ? "true" : "false") << ',' << '\n'
+         << R"(  "production_activation_attempted": )"
+         << (report.production_activation_attempted ? "true" : "false") << ',' << '\n'
+         << R"(  "seed": )" << report.seed << ',' << '\n'
+         << R"(  "source_revision": ")" << build.source_revision << R"(",)" << '\n'
+         << R"(  "audit_extract": {)" << '\n'
+         << R"(    "path": ")" << paths.audit_extract.filename().string() << R"(",)"
+         << '\n'
+         << R"(    "sha256": ")" << digest_hex(report.audit_extract_sha256) << R"(",)"
+         << '\n'
+         << R"(    "chain_final_sha256": ")" << report.audit_chain_final_sha256
+         << R"(",)" << '\n'
+         << R"(    "records": )" << report.audit_records.size() << ',' << '\n'
+         << R"(    "risk_decisions": )" << report.extracted_risk_decisions << '\n'
+         << R"(  },)" << '\n'
+         << R"(  "checks": {)" << '\n'
+         << R"(    "paper_mode_only": )" << (report.paper_mode_only ? "true" : "false")
+         << ',' << '\n'
+         << R"(    "baseline_approved": )"
+         << (report.baseline_approved ? "true" : "false") << ',' << '\n'
+         << R"(    "every_kill_blocked": )"
+         << (report.every_kill_blocked ? "true" : "false") << ',' << '\n'
+         << R"(    "unauthorized_clear_rejected": )"
+         << (report.unauthorized_clear_rejected ? "true" : "false") << ',' << '\n'
+         << R"(    "authorized_recovery_succeeded": )"
+         << (report.authorized_recovery_succeeded ? "true" : "false") << ',' << '\n'
+         << R"(    "decision_journal_complete": )"
+         << (report.decision_journal_complete ? "true" : "false") << ',' << '\n'
+         << R"(    "audit_chain_valid": )"
+         << (report.audit_chain_valid ? "true" : "false") << '\n'
+         << R"(  },)" << '\n'
+         << R"(  "scopes": [)" << '\n';
   for (std::size_t index = 0U; index < report.scopes.size(); ++index) {
     const auto& scope = report.scopes[index];
-    output << "    {\"scope\": \"" << operator_scope_name(scope.scope)
-           << "\", \"engage_sequence\": " << scope.engage_command_sequence
-           << ", \"clear_sequence\": " << scope.clear_command_sequence
-           << ", \"blocked_journal_sequence\": "
+    output << R"(    {"scope": ")" << operator_scope_name(scope.scope)
+           << R"(", "engage_sequence": )" << scope.engage_command_sequence
+           << R"(, "clear_sequence": )" << scope.clear_command_sequence
+           << R"(, "blocked_journal_sequence": )"
            << scope.blocked_decision.journal_sequence
-           << ", \"recovered_journal_sequence\": "
-           << scope.recovered_decision.journal_sequence
-           << ", \"passed\": " << (scope.passed ? "true" : "false") << '}';
+           << R"(, "recovered_journal_sequence": )"
+           << scope.recovered_decision.journal_sequence << R"(, "passed": )"
+           << (scope.passed ? "true" : "false") << '}';
     output << (index + 1U == report.scopes.size() ? "\n" : ",\n");
   }
-  output << "  ],\n  \"passed\": " << (report.passed ? "true" : "false") << "\n}\n";
+  output << R"(  ],)" << '\n'
+         << R"(  "passed": )" << (report.passed ? "true" : "false") << '\n'
+         << '}' << '\n';
   return output.good();
 }
 

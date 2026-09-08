@@ -7,6 +7,9 @@
 
 namespace {
 
+// Independent assertions retain precise failure evidence; GoogleTest macro
+// expansion inflates the analyzer's cognitive-complexity score.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST(OperatorSimulationTest, HierarchicalKillsBlockAndRecoveryRequiresAuthority) {
   const auto report = aegis::integration::run_operator_simulation();
 
@@ -35,6 +38,9 @@ TEST(OperatorSimulationTest, HierarchicalKillsBlockAndRecoveryRequiresAuthority)
   }
 }
 
+// Independent assertions retain precise failure evidence; GoogleTest macro
+// expansion inflates the analyzer's cognitive-complexity score.
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 TEST(OperatorSimulationTest, FixedSeedProducesStableDecisionAndAuditHashes) {
   const auto first = aegis::integration::run_operator_simulation(20'260'908U);
   const auto second = aegis::integration::run_operator_simulation(20'260'908U);
