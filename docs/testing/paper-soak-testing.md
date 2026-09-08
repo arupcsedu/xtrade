@@ -80,6 +80,32 @@ The output directory contains:
 
 Raw artifacts must be retained together. Do not copy only the Markdown summary,
 change a threshold after execution, or classify a partial run as a pass.
+The aggregate rechecks each worker's raw evidence hashes, requires no descriptor
+variation across sessions, and limits the second-half RSS range to 1 MiB in
+addition to the worker's 64 MiB post-warm-up ceiling.
+
+## Recorded qualification evidence
+
+The two-node qualification run for source revision `3b182c3c` completed as
+Slurm job `19436646` with exit code `0:0` in 12m59s. It passed after generating
+2,000,000,000 primary events, 2,000,000,000 exact replay events, and 120,000
+wall-paced events. It also completed 20 full-system PAPER cycles and 100 focused
+certification probes.
+
+An earlier preflight attempt, job `19436560`, generated zero events and failed
+in five seconds because Slurm's spooled script path was incorrectly treated as
+the checkout path. The launcher now requires and validates `SLURM_SUBMIT_DIR`;
+the failure log and remediation revision are retained in the execution
+metadata.
+
+- [Stability report](evidence/paper-soak-19436646/stability-report.md)
+- [Machine-readable aggregate](evidence/paper-soak-19436646/paper-soak-report.json)
+- [Scheduler and source metadata](evidence/paper-soak-19436646/execution-metadata.json)
+- [Raw evidence directory](evidence/paper-soak-19436646/)
+
+The committed evidence retains machine-readable per-cycle reports, raw session
+and probe NDJSON, and exact test logs. Per-cycle Markdown renderings are omitted
+because they duplicate the committed JSON; the aggregate Markdown is retained.
 
 ## Interpretation
 
@@ -87,4 +113,3 @@ A pass is infrastructure evidence for the repository-owned synthetic/PAPER
 system. It makes no economic-value claim and does not qualify licensed exchange
 or news protocols, a real broker, a physical NIC, site PTP, or production
 hardware. Generator-call timing includes sampling overhead.
-

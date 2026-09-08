@@ -39,11 +39,14 @@ two billion primary events, two billion replay events, at least 20 full-system
 cycles, all checks true, no telemetry drops, no descriptor growth, at most 64
 MiB post-warm-up RSS growth per load worker, and no more than 50% sampled p99
 drift plus a 500 ns measurement-noise allowance. Worker throughput may differ by
-at most 2:1. Thresholds are emitted in the machine report and cannot be changed
-by the worker CLI.
+at most 2:1. The second half of per-session RSS samples may span at most 1 MiB;
+every session sample must have the same file-descriptor count. Thresholds are
+emitted in the machine report and cannot be changed by the worker CLI.
 
 All generated records carry explicit seeds, configuration hashes, build
 revision, host identity, counters, hashes, and SHA-256 evidence references.
+The aggregate distinguishes mean per-worker throughput from concurrent
+multi-node throughput; cross-worker imbalance uses the individual worker rates.
 Report generation is control-path file I/O after or outside event generation;
 it is not part of an execution hot path.
 
@@ -59,4 +62,3 @@ validation, not a claim that billions of orders traversed every strategy or
 execution component. Configuration updates are deterministic test-version
 changes. Licensed feeds, news providers, broker sessions, physical gateway
 fencing, real NICs, and target production hardware remain outside this test.
-

@@ -1,0 +1,109 @@
+{
+  "checks": {
+    "all_workers_passed": true,
+    "clock_state_recovered_safely": true,
+    "cpu_throughput_balanced": true,
+    "deterministic_sampled_replay": true,
+    "journal_integrity": true,
+    "minimum_acceptance_cycles_met": true,
+    "model_freshness_enforced": true,
+    "no_duplicate_order_emission": true,
+    "no_file_descriptor_leak": true,
+    "no_invalid_state_transitions": true,
+    "no_queue_accumulation_or_drops": true,
+    "no_unexplained_memory_growth": true,
+    "paper_mode_only": true,
+    "position_and_pnl_consistent": true,
+    "recovery_from_injected_failures": true,
+    "requested_event_coverage_met": true,
+    "stable_tail_latency": true,
+    "stale_snapshots_not_consumed": true,
+    "worker_evidence_hashes_valid": true,
+    "zero_acknowledged_state_loss": true
+  },
+  "coverage": {
+    "auction_periods": 20,
+    "configuration_updates": 20,
+    "earnings_events": 20,
+    "feed_recoveries": 20,
+    "gateway_restarts": 20,
+    "halts": 20,
+    "leader_failovers": 20,
+    "macro_releases": 20,
+    "model_restarts": 20,
+    "session_transitions": 520
+  },
+  "evidence": [
+    {
+      "path": "/sfs/weka/scratch/djy8hg/xtrade/docs/testing/evidence/paper-soak-19436646/worker-0.json",
+      "sha256": "bafeebdbc05a87f43eef95efc4326f4a6febe132dd08473188ad5ed05b0d8c52"
+    },
+    {
+      "path": "/sfs/weka/scratch/djy8hg/xtrade/docs/testing/evidence/paper-soak-19436646/worker-1.json",
+      "sha256": "8c817a524eb8fcb8bb40568fdea634d14f316c5ab1ece8cc08c9ce784a7823ba"
+    }
+  ],
+  "generated_at_wall_utc": "2026-09-08T04:52:46Z",
+  "kind": "paper_soak_aggregate",
+  "latency_ns": {
+    "maximum": 4230,
+    "p50": 171,
+    "p95": 210,
+    "p99": 250,
+    "p99_9": 510
+  },
+  "limitations": [
+    "This is synthetic/reference PAPER infrastructure validation; it does not qualify a licensed feed, broker protocol, real NIC, or production hardware and makes no profitability claim.",
+    "Generator-call latency includes measurement overhead and is not an end-to-end colocated latency qualification. Configuration changes are deterministic test-version changes, not production control-plane actions."
+  ],
+  "mode": "PAPER",
+  "paper_metrics": {
+    "fills": 200,
+    "final_absolute_position_units": 2000,
+    "final_pnl_currency_nanos": 40000,
+    "gateway_commands": 220,
+    "orders": 220,
+    "risk_approvals": 220,
+    "source_events": 1240,
+    "telemetry_drops": 0,
+    "telemetry_final_queue_occupancy": 0,
+    "telemetry_maximum_queue_occupancy": 8
+  },
+  "passed": true,
+  "resources": {
+    "late_window_rss_range_limit_bytes": 1048576,
+    "maximum_late_window_rss_range_bytes": 0,
+    "maximum_session_file_descriptor_range": 0,
+    "maximum_worker_file_descriptor_growth": 0,
+    "maximum_worker_rss_growth_after_warmup_bytes": 536576,
+    "rss_growth_limit_bytes": 67108864,
+    "throughput_imbalance_limit": 2.0,
+    "throughput_imbalance_ratio": 1.0668649872778087,
+    "worker_accelerated_cpu_utilization_ppm": [
+      997016,
+      996327
+    ]
+  },
+  "schema_version": "1.0",
+  "source_revisions": [
+    "3b182c3c7bc413029c017d74cea6fb9746452d44"
+  ],
+  "thresholds": {
+    "minimum_acceptance_cycles": 20,
+    "minimum_primary_events": 2000000000
+  },
+  "totals": {
+    "acceptance_cycles": 20,
+    "concurrent_accelerated_throughput_events_per_second": 6933342,
+    "generated_events": 4000120000,
+    "hosts": 2,
+    "mean_worker_throughput_events_per_second": 3578930,
+    "primary_events": 2000000000,
+    "probe_runs": 100,
+    "realtime_events": 120000,
+    "replay_events": 2000000000,
+    "telemetry_drops": 0,
+    "telemetry_maximum_queue_occupancy": 8,
+    "workers": 2
+  }
+}

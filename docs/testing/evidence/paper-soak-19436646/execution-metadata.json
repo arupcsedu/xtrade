@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "mode": "PAPER",
+  "slurm_job_id": 19436646,
+  "partition": "parallel",
+  "state": "COMPLETED",
+  "elapsed": "00:12:59",
+  "exit_code": "0:0",
+  "nodes": ["udc-ba04-31c0", "udc-ba04-31c1"],
+  "node_count": 2,
+  "task_count": 2,
+  "source_revision": "3b182c3c7bc413029c017d74cea6fb9746452d44",
+  "deterministic_base_seed": 20260907,
+  "events_per_worker": 1000000000,
+  "acceptance_cycles_per_worker": 10,
+  "realtime_seconds_per_worker": 60,
+  "batch_stdout": "slurm-19436646.out",
+  "batch_stdout_sha256": "034a784672ffad75228503f48eda1dbdd232731420740e0ace2550b5f0dc0983",
+  "preflight_attempt": {
+    "slurm_job_id": 19436560,
+    "state": "FAILED",
+    "elapsed": "00:00:05",
+    "exit_code": "1:0",
+    "events_generated": 0,
+    "cause": "spooled BASH_SOURCE resolved outside the submitted checkout",
+    "remediation_revision": "3b182c3c7bc413029c017d74cea6fb9746452d44",
+    "log": "preflight-failure-19436560.log",
+    "log_sha256": "6f2881c87d025239f88a5f1aa0ffb913bec1da6f1c355416e4a3a9230f0f1c93"
+  }
+}

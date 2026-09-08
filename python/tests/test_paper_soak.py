@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from argparse import Namespace
 from pathlib import Path
@@ -45,6 +46,7 @@ def _worker(worker_id: int = 0, *, passed: bool = True) -> dict[str, object]:
             "realtime_events": 10,
             "primary_elapsed_ns": 1_000_000,
             "replay_elapsed_ns": 1_000_000,
+            "accelerated_wall_elapsed_ns": 2_100_000,
             "accelerated_throughput_events_per_second": 1_000_000,
             "accelerated_cpu_utilization_ppm": 900_000,
             "resources": {
@@ -102,12 +104,42 @@ def _arguments(tmp_path: Path, workers: list[Path]) -> Namespace:
     )
 
 
+def _write_worker(tmp_path: Path, worker_id: int, *, passed: bool = True) -> Path:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    load_report = tmp_path / f"worker-{worker_id}-load.json"
+    load_samples = tmp_path / f"worker-{worker_id}-load.ndjson"
+    probe_records = tmp_path / f"worker-{worker_id}-probes.ndjson"
+    load_report.write_text("{}\n")
+    load_samples.write_text(
+        "".join(
+            json.dumps(
+                {
+                    "rss_bytes": 4_096,
+                    "open_file_descriptors": 5,
+                }
+            )
+            + "\n"
+            for _ in range(2)
+        )
+    )
+    probe_records.write_text("")
+    worker = _worker(worker_id, passed=passed)
+    worker["load"]["session_count"] = 2  # type: ignore[index]
+    worker["evidence"] = {
+        "load_report": load_report.name,
+        "load_report_sha256": hashlib.sha256(load_report.read_bytes()).hexdigest(),
+        "load_samples": load_samples.name,
+        "load_samples_sha256": hashlib.sha256(load_samples.read_bytes()).hexdigest(),
+        "probe_records": probe_records.name,
+        "probe_records_sha256": hashlib.sha256(probe_records.read_bytes()).hexdigest(),
+    }
+    path = tmp_path / f"worker-{worker_id}.json"
+    path.write_text(json.dumps(worker))
+    return path
+
+
 def test_aggregate_accepts_complete_paper_evidence(tmp_path: Path) -> None:
-    workers = []
-    for worker_id in range(2):
-        path = tmp_path / f"worker-{worker_id}.json"
-        path.write_text(json.dumps(_worker(worker_id)))
-        workers.append(path)
+    workers = [_write_worker(tmp_path, worker_id) for worker_id in range(2)]
 
     arguments = _arguments(tmp_path, workers)
     assert paper_soak.aggregate(arguments) == 0
@@ -118,13 +150,17 @@ def test_aggregate_accepts_complete_paper_evidence(tmp_path: Path) -> None:
     assert len(report["evidence"][0]["sha256"]) == 64
     assert report["passed"] is True
     assert report["totals"]["primary_events"] == 2_000
+    assert report["totals"]["mean_worker_throughput_events_per_second"] == 1_000_000
+    assert (
+        report["totals"]["concurrent_accelerated_throughput_events_per_second"]
+        == 1_904_761
+    )
     assert report["checks"]["paper_mode_only"] is True
     assert "synthetic/reference PAPER" in arguments.human.read_text()
 
 
 def test_aggregate_fails_closed_on_worker_failure(tmp_path: Path) -> None:
-    path = tmp_path / "worker-0.json"
-    path.write_text(json.dumps(_worker(passed=False)))
+    path = _write_worker(tmp_path, 0, passed=False)
     arguments = _arguments(tmp_path, [path])
 
     assert paper_soak.aggregate(arguments) == 1
@@ -134,10 +170,8 @@ def test_aggregate_fails_closed_on_worker_failure(tmp_path: Path) -> None:
 
 
 def test_aggregate_rejects_duplicate_worker_identity(tmp_path: Path) -> None:
-    first = tmp_path / "first.json"
-    second = tmp_path / "second.json"
-    first.write_text(json.dumps(_worker()))
-    second.write_text(json.dumps(_worker()))
+    first = _write_worker(tmp_path / "first", 0)
+    second = _write_worker(tmp_path / "second", 0)
 
     with pytest.raises(paper_soak.SoakError, match="unique"):
         paper_soak.aggregate(_arguments(tmp_path, [first, second]))
@@ -149,3 +183,15 @@ def test_slurm_launcher_uses_submit_directory_not_spooled_script_path() -> None:
     assert "SLURM_SUBMIT_DIR" in launcher
     assert 'dirname "${BASH_SOURCE[0]}"' not in launcher
     assert "engineering-contract.md" in launcher
+
+
+def test_aggregate_rejects_tampered_raw_worker_evidence(tmp_path: Path) -> None:
+    path = _write_worker(tmp_path, 0)
+    samples = tmp_path / "worker-0-load.ndjson"
+    samples.write_text(samples.read_text().replace("4096", "4097", 1))
+    arguments = _arguments(tmp_path, [path])
+
+    assert paper_soak.aggregate(arguments) == 1
+    report = json.loads(arguments.output.read_text())
+    assert report["checks"]["worker_evidence_hashes_valid"] is False
+    assert report["passed"] is False

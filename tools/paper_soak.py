@@ -17,6 +17,7 @@ from typing import Any, NoReturn
 
 SCHEMA_VERSION = "1.0"
 PAPER_SCENARIO_COUNT = 16
+MAXIMUM_LATE_WINDOW_RSS_RANGE_BYTES = 1024 * 1024
 PROBE_FILTERS = (
     (
         "leader_failover",
@@ -417,16 +418,58 @@ def _worker_file_evidence(worker_path: Path) -> dict[str, str]:
     return {"path": str(worker_path), "sha256": _sha256(worker_path)}
 
 
+def _worker_raw_observation(
+    worker_path: Path, worker: dict[str, Any]
+) -> dict[str, Any]:
+    evidence = worker.get("evidence")
+    if not isinstance(evidence, dict):
+        _fail("worker evidence map is missing")
+    root = worker_path.resolve().parent
+    hashes_valid = True
+    for name in ("load_report", "load_samples", "probe_records"):
+        relative = evidence.get(name)
+        expected_hash = evidence.get(f"{name}_sha256")
+        if not isinstance(relative, str) or not isinstance(expected_hash, str):
+            _fail("worker evidence reference is malformed")
+        path = root / relative
+        hashes_valid = (
+            hashes_valid and path.is_file() and _sha256(path) == expected_hash
+        )
+
+    samples_path = root / str(evidence["load_samples"])
+    samples = [json.loads(line) for line in samples_path.read_text().splitlines()]
+    if not samples or any(not isinstance(sample, dict) for sample in samples):
+        _fail("worker load sample stream is empty or malformed")
+    expected_sessions = int(worker["load"]["session_count"])
+    if len(samples) != expected_sessions:
+        _fail("worker load sample count does not match the load report")
+    late_window = samples[len(samples) // 2 :]
+    late_rss = [int(sample["rss_bytes"]) for sample in late_window]
+    descriptors = [int(sample["open_file_descriptors"]) for sample in samples]
+    return {
+        "hashes_valid": hashes_valid,
+        "session_sample_count": len(samples),
+        "late_window_rss_range_bytes": max(late_rss) - min(late_rss),
+        "session_file_descriptor_range": max(descriptors) - min(descriptors),
+    }
+
+
 def _markdown_report(report: dict[str, Any]) -> str:
     totals = report["totals"]
     latency = report["latency_ns"]
     resources = report["resources"]
     status = "PASS" if report["passed"] else "FAIL"
     limitations = report["limitations"]
-    throughput = totals["accelerated_throughput_events_per_second"]
+    mean_throughput = totals["mean_worker_throughput_events_per_second"]
+    concurrent_throughput = totals[
+        "concurrent_accelerated_throughput_events_per_second"
+    ]
     rss_growth = resources["maximum_worker_rss_growth_after_warmup_bytes"]
     rss_limit = resources["rss_growth_limit_bytes"]
+    late_rss_range = resources["maximum_late_window_rss_range_bytes"]
+    late_rss_limit = resources["late_window_rss_range_limit_bytes"]
     fd_growth = resources["maximum_worker_file_descriptor_growth"]
+    fd_range = resources["maximum_session_file_descriptor_range"]
     latency_values = "/".join(
         str(latency[name]) for name in ("p50", "p95", "p99", "p99_9", "maximum")
     )
@@ -445,12 +488,14 @@ Status: **{status}**
 - Total generated events: {totals["generated_events"]:,}.
 - Full-system acceptance cycles: {totals["acceptance_cycles"]}.
 - Certification probe executions: {totals["probe_runs"]}.
-- Aggregate accelerated throughput: {throughput:,} events/s.
+- Mean worker accelerated throughput: {mean_throughput:,} events/s.
+- Concurrent multi-node accelerated throughput: {concurrent_throughput:,} events/s.
 
 ## Stability observations
 
 - Post-warm-up RSS growth: maximum {rss_growth:,} bytes; limit {rss_limit:,} bytes.
-- File-descriptor growth: maximum {fd_growth}.
+- Late-session RSS range/limit: {late_rss_range:,}/{late_rss_limit:,} bytes.
+- File-descriptor growth/range: maximum {fd_growth}/{fd_range}.
 - Sampled generator latency p50/p95/p99/p99.9/max: {latency_values} ns.
 - Worker throughput imbalance ratio: {imbalance:.6f}; limit {imbalance_limit:.1f}.
 - PAPER telemetry drops: {totals["telemetry_drops"]}.
@@ -506,6 +551,10 @@ def aggregate(args: argparse.Namespace) -> int:
         _fail("incompatible worker report")
 
     loads = [worker["load"] for worker in workers]
+    raw_observations = [
+        _worker_raw_observation(path, worker)
+        for path, worker in zip(args.worker, workers, strict=True)
+    ]
     primary = sum(int(load["primary_events"]) for load in loads)
     replay = sum(int(load["replay_events"]) for load in loads)
     realtime = sum(int(load["realtime_events"]) for load in loads)
@@ -513,7 +562,17 @@ def aggregate(args: argparse.Namespace) -> int:
         int(load["primary_elapsed_ns"]) + int(load["replay_elapsed_ns"])
         for load in loads
     )
-    throughput = int(((primary + replay) * 1_000_000_000) / elapsed) if elapsed else 0
+    mean_throughput = (
+        int(((primary + replay) * 1_000_000_000) / elapsed) if elapsed else 0
+    )
+    concurrent_wall_elapsed = max(
+        int(load["accelerated_wall_elapsed_ns"]) for load in loads
+    )
+    concurrent_throughput = (
+        int(((primary + replay) * 1_000_000_000) / concurrent_wall_elapsed)
+        if concurrent_wall_elapsed
+        else 0
+    )
     worker_throughputs = [
         int(load["accelerated_throughput_events_per_second"]) for load in loads
     ]
@@ -537,6 +596,9 @@ def aggregate(args: argparse.Namespace) -> int:
     }
     checks = {
         "all_workers_passed": all(worker["passed"] is True for worker in workers),
+        "worker_evidence_hashes_valid": all(
+            observation["hashes_valid"] is True for observation in raw_observations
+        ),
         "paper_mode_only": all(
             worker["mode"] == "PAPER"
             and worker["load"]["live_trading_capable"] is False
@@ -548,9 +610,18 @@ def aggregate(args: argparse.Namespace) -> int:
         ),
         "no_unexplained_memory_growth": all(
             load["checks"]["memory_stable"] is True for load in loads
+        )
+        and all(
+            int(observation["late_window_rss_range_bytes"])
+            <= MAXIMUM_LATE_WINDOW_RSS_RANGE_BYTES
+            for observation in raw_observations
         ),
         "no_file_descriptor_leak": all(
             load["checks"]["file_descriptors_stable"] is True for load in loads
+        )
+        and all(
+            int(observation["session_file_descriptor_range"]) == 0
+            for observation in raw_observations
         ),
         "no_invalid_state_transitions": all(
             worker["checks"]["no_invalid_state_transitions"] is True
@@ -621,7 +692,10 @@ def aggregate(args: argparse.Namespace) -> int:
             "generated_events": primary + replay + realtime,
             "acceptance_cycles": acceptance_cycles,
             "probe_runs": sum(int(worker["probe_runs"]) for worker in workers),
-            "accelerated_throughput_events_per_second": throughput,
+            "mean_worker_throughput_events_per_second": mean_throughput,
+            "concurrent_accelerated_throughput_events_per_second": (
+                concurrent_throughput
+            ),
             "telemetry_drops": metrics["telemetry_drops"],
             "telemetry_maximum_queue_occupancy": metrics[
                 "telemetry_maximum_queue_occupancy"
@@ -636,6 +710,15 @@ def aggregate(args: argparse.Namespace) -> int:
                 int(load["resources"]["maximum_rss_growth_bytes"]) for load in loads
             ),
             "maximum_worker_file_descriptor_growth": max(fd_growth),
+            "maximum_late_window_rss_range_bytes": max(
+                int(observation["late_window_rss_range_bytes"])
+                for observation in raw_observations
+            ),
+            "late_window_rss_range_limit_bytes": (MAXIMUM_LATE_WINDOW_RSS_RANGE_BYTES),
+            "maximum_session_file_descriptor_range": max(
+                int(observation["session_file_descriptor_range"])
+                for observation in raw_observations
+            ),
             "throughput_imbalance_ratio": imbalance,
             "throughput_imbalance_limit": args.throughput_imbalance_limit,
             "worker_accelerated_cpu_utilization_ppm": [

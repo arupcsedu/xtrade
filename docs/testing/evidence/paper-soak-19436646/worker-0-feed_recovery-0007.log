@@ -1,0 +1,12 @@
+Running main() from /sfs/weka/scratch/djy8hg/xtrade/build/release/_deps/googletest-src/googletest/src/gtest_main.cc
+Note: Google Test filter = FeedHandlerTest.RecoversGapBeforeForwardingBufferedEvent
+[==========] Running 1 test from 1 test suite.
+[----------] Global test environment set-up.
+[----------] 1 test from FeedHandlerTest
+[ RUN      ] FeedHandlerTest.RecoversGapBeforeForwardingBufferedEvent
+[       OK ] FeedHandlerTest.RecoversGapBeforeForwardingBufferedEvent (0 ms)
+[----------] 1 test from FeedHandlerTest (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 1 test from 1 test suite ran. (1 ms total)
+[  PASSED  ] 1 test.
