@@ -1,0 +1,94 @@
+{
+  "activation_status": "PROHIBITED",
+  "build": {
+    "build_type": "Release",
+    "live_trading_capable": false,
+    "metadata_path": "/sfs/weka/scratch/djy8hg/xtrade/build/release/build-metadata.json",
+    "metadata_sha256": "0b3cfc452006255bf1a7195b938383f9c18829cfe38e0b436b9e4179d12938d2"
+  },
+  "checks": {
+    "all_edge_profiles_non_live": true,
+    "build_metadata_live_capability_false": true,
+    "cmake_default_live_option_off": true,
+    "configured_build_live_option_off": true,
+    "control_plane_rejects_live_mode": true,
+    "gateway_unit_has_disabled_live_guard": true,
+    "operator_audit_extract_hash_matches": true,
+    "operator_simulation_paper_only": true
+  },
+  "edge_profiles": [
+    {
+      "automatic_activation": false,
+      "live_transmission_enabled": false,
+      "name": "development",
+      "safe": true,
+      "sha256": "2e68e1b6ac20d8562e1c09a0bc5612e14356b52875fbfc59440741fdbd3bdb7c",
+      "trading_mode": "SIMULATION"
+    },
+    {
+      "automatic_activation": false,
+      "live_transmission_enabled": false,
+      "name": "ci",
+      "safe": true,
+      "sha256": "bb95fe2e27268e4a4c2d9ddc384fe3a2ad99880ba2aac4d3bab014289350612a",
+      "trading_mode": "SIMULATION"
+    },
+    {
+      "automatic_activation": false,
+      "live_transmission_enabled": false,
+      "name": "replay",
+      "safe": true,
+      "sha256": "c857421b293a41b58e5236671caa7001fb94e9d49e45bb3d3568a2b4a343f7c7",
+      "trading_mode": "SIMULATION"
+    },
+    {
+      "automatic_activation": false,
+      "live_transmission_enabled": false,
+      "name": "paper",
+      "safe": true,
+      "sha256": "7c200cbf77a5d5dc76dc12c8f4377fdbc36f051f062da9b0f3ce0bc4d213a590",
+      "trading_mode": "PAPER"
+    },
+    {
+      "automatic_activation": false,
+      "live_transmission_enabled": false,
+      "name": "staging",
+      "safe": true,
+      "sha256": "a415b3cf2ad708e01ba9e27ea4630a32e04c9d2f9ce340e85c5d039661522fa7",
+      "trading_mode": "PAPER"
+    },
+    {
+      "automatic_activation": false,
+      "live_transmission_enabled": false,
+      "name": "production-disabled",
+      "safe": true,
+      "sha256": "2d01f3c4986f1bfb723aabc10afbe28e216d2433082d067200ed27f1383f1a0b",
+      "trading_mode": "SIMULATION"
+    }
+  ],
+  "generated_at_wall_utc": "2026-09-08T06:53:02.168980+00:00",
+  "kind": "live_mode_disabled_evidence",
+  "limitations": [
+    "This evidence covers repository-owned builds, profiles, guards, and the synthetic PAPER operator drill; it does not certify a target site or external integration.",
+    "Open production blockers remain authoritative. A passing report proves default-off behavior, not production readiness or permission to activate live trading."
+  ],
+  "live_mode_enabled": false,
+  "open_production_blockers": [
+    "PRD-B002",
+    "PRD-B003",
+    "PRD-B004",
+    "PRD-B005",
+    "PRD-B006"
+  ],
+  "operator_simulation": {
+    "audit_path": "/sfs/weka/scratch/djy8hg/xtrade/docs/testing/evidence/operator-readiness-20260908/operator-audit.ndjson",
+    "audit_sha256": "a167c57693edc5cbd815d814977d79920a573ed371d561ffe6cfacfed4eb2d30",
+    "report_path": "/sfs/weka/scratch/djy8hg/xtrade/docs/testing/evidence/operator-readiness-20260908/operator-simulation.json",
+    "report_sha256": "7cafbc4692796a4d0ada26a408257e14291550141f1bfbfcae8ad27e40446007"
+  },
+  "passed": true,
+  "production_activation_performed": false,
+  "production_ready": false,
+  "schema_version": "1.0",
+  "source_revision": "b04c44cb520f70c82120aef8da7ed80a8eba7864"
+}

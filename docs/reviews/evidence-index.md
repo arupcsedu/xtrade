@@ -72,6 +72,20 @@ hardening at `bab2be626da56acfb2c217ce84def51520758b56`.
 | E-119 | CMake Graphviz plus `tsort` | PASS: 69 nodes, 254 edges, acyclic | Mutable `build/reports/audit/cmake-targets.dot` |
 | E-120 | `git diff --check` | PASS before implementation commit and before evidence commit | Console evidence |
 
+## Final non-live operational readiness evidence
+
+The Prompt 43 drill evidence binds source revision
+`b04c44cb520f70c82120aef8da7ed80a8eba7864`. Its pass status is limited to
+repository-owned synthetic/PAPER operation and explicitly preserves the current
+`STOP / NO-GO` production decision.
+
+| ID | Evidence | Result | Artifact SHA-256 |
+| --- | --- | --- | --- |
+| E-121 | [Operator simulation report](../testing/evidence/operator-readiness-20260908/operator-simulation.json) | PASS: PAPER, live compilation false, no production activation attempt, 4/4 kill scopes | `7cafbc4692796a4d0ada26a408257e14291550141f1bfbfcae8ad27e40446007` |
+| E-122 | [Operator audit extract](../testing/evidence/operator-readiness-20260908/operator-audit.ndjson) | PASS: 21 SHA-256-linked records and nine ordered risk decisions | `a167c57693edc5cbd815d814977d79920a573ed371d561ffe6cfacfed4eb2d30` |
+| E-123 | [Live-mode-disabled evidence](../testing/evidence/operator-readiness-20260908/live-mode-disabled.json) | PASS for all eight non-live controls; `production_ready=false`, activation `PROHIBITED`, five blockers retained | `4834c7bcdee27f75be46865c499e7e935040e60e76b1a0e9deb4a7507172ae89` |
+| E-124 | [Prompt 43 validation summary](../testing/evidence/operator-readiness-20260908/validation-summary.md) | Test, sanitizer, documentation, security and applicability results with limitations | See linked record |
+
 ## Package identities
 
 | Artifact | SHA-256 |

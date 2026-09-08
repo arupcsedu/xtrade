@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "kind": "paper_operator_simulation",
+  "mode": "PAPER",
+  "live_trading_compiled": false,
+  "production_activation_attempted": false,
+  "seed": 20260908,
+  "source_revision": "b04c44cb520f70c82120aef8da7ed80a8eba7864",
+  "audit_extract": {
+    "path": "operator-audit.ndjson",
+    "sha256": "a167c57693edc5cbd815d814977d79920a573ed371d561ffe6cfacfed4eb2d30",
+    "chain_final_sha256": "49e8545d4f79fabd33f2783fd02916fc6fd54ab9f6463d7ab2b68eeb09a55ead",
+    "records": 21,
+    "risk_decisions": 9
+  },
+  "checks": {
+    "paper_mode_only": true,
+    "baseline_approved": true,
+    "every_kill_blocked": true,
+    "unauthorized_clear_rejected": true,
+    "authorized_recovery_succeeded": true,
+    "decision_journal_complete": true,
+    "audit_chain_valid": true
+  },
+  "scopes": [
+    {"scope": "symbol", "engage_sequence": 1, "clear_sequence": 2, "blocked_journal_sequence": 2, "recovered_journal_sequence": 3, "passed": true},
+    {"scope": "strategy", "engage_sequence": 3, "clear_sequence": 4, "blocked_journal_sequence": 4, "recovered_journal_sequence": 5, "passed": true},
+    {"scope": "venue", "engage_sequence": 5, "clear_sequence": 6, "blocked_journal_sequence": 6, "recovered_journal_sequence": 7, "passed": true},
+    {"scope": "firm", "engage_sequence": 7, "clear_sequence": 8, "blocked_journal_sequence": 8, "recovered_journal_sequence": 9, "passed": true}
+  ],
+  "passed": true
+}

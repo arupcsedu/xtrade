@@ -55,3 +55,13 @@ The non-live aggregate conforms to the
 The result is evidence of non-live safety and operator-drill behavior only. A
 pass deliberately retains `production_ready=false` and
 `activation_status=PROHIBITED`.
+
+## Published evidence
+
+The checked-in 2026-09-08 execution is preserved as:
+
+- [operator report](evidence/operator-readiness-20260908/operator-simulation.json)
+- [hash-linked audit extract](evidence/operator-readiness-20260908/operator-audit.ndjson)
+- [machine-readable live-disabled evidence](evidence/operator-readiness-20260908/live-mode-disabled.json)
+- [human-readable live-disabled evidence](evidence/operator-readiness-20260908/live-mode-disabled.md)
+- [validation summary](evidence/operator-readiness-20260908/validation-summary.md)
