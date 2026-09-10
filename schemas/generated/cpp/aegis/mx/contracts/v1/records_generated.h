@@ -50,6 +50,9 @@ struct MarketEventBuilder;
 struct FeatureSnapshotMetadata;
 struct FeatureSnapshotMetadataBuilder;
 
+struct HorizonSpec;
+struct HorizonSpecBuilder;
+
 struct ModelForecast;
 struct ModelForecastBuilder;
 
@@ -2061,6 +2064,94 @@ struct FeatureSnapshotMetadata::Traits {
   static auto constexpr Create = CreateFeatureSnapshotMetadata;
 };
 
+struct HorizonSpec FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef HorizonSpecBuilder Builder;
+  struct Traits;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_UNIT = 4,
+    VT_VALUE = 6,
+    VT_HALT_POLICY = 8,
+    VT_SESSION_ENDPOINT = 10,
+    VT_CALENDAR_VERSION = 12
+  };
+  aegis::mx::contracts::v1::ForecastHorizonUnit unit() const {
+    return static_cast<aegis::mx::contracts::v1::ForecastHorizonUnit>(GetField<uint8_t>(VT_UNIT, 0));
+  }
+  uint64_t value() const {
+    return GetField<uint64_t>(VT_VALUE, 0);
+  }
+  aegis::mx::contracts::v1::HorizonHaltPolicy halt_policy() const {
+    return static_cast<aegis::mx::contracts::v1::HorizonHaltPolicy>(GetField<uint8_t>(VT_HALT_POLICY, 0));
+  }
+  aegis::mx::contracts::v1::HorizonSessionEndpoint session_endpoint() const {
+    return static_cast<aegis::mx::contracts::v1::HorizonSessionEndpoint>(GetField<uint8_t>(VT_SESSION_ENDPOINT, 0));
+  }
+  const aegis::mx::contracts::v1::ConfigurationVersion *calendar_version() const {
+    return GetStruct<const aegis::mx::contracts::v1::ConfigurationVersion *>(VT_CALENDAR_VERSION);
+  }
+  template <bool B = false>
+  bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint8_t>(verifier, VT_UNIT, 1) &&
+           VerifyField<uint64_t>(verifier, VT_VALUE, 8) &&
+           VerifyField<uint8_t>(verifier, VT_HALT_POLICY, 1) &&
+           VerifyField<uint8_t>(verifier, VT_SESSION_ENDPOINT, 1) &&
+           VerifyField<aegis::mx::contracts::v1::ConfigurationVersion>(verifier, VT_CALENDAR_VERSION, 8) &&
+           verifier.EndTable();
+  }
+};
+
+struct HorizonSpecBuilder {
+  typedef HorizonSpec Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_unit(aegis::mx::contracts::v1::ForecastHorizonUnit unit) {
+    fbb_.AddElement<uint8_t>(HorizonSpec::VT_UNIT, static_cast<uint8_t>(unit), 0);
+  }
+  void add_value(uint64_t value) {
+    fbb_.AddElement<uint64_t>(HorizonSpec::VT_VALUE, value, 0);
+  }
+  void add_halt_policy(aegis::mx::contracts::v1::HorizonHaltPolicy halt_policy) {
+    fbb_.AddElement<uint8_t>(HorizonSpec::VT_HALT_POLICY, static_cast<uint8_t>(halt_policy), 0);
+  }
+  void add_session_endpoint(aegis::mx::contracts::v1::HorizonSessionEndpoint session_endpoint) {
+    fbb_.AddElement<uint8_t>(HorizonSpec::VT_SESSION_ENDPOINT, static_cast<uint8_t>(session_endpoint), 0);
+  }
+  void add_calendar_version(const aegis::mx::contracts::v1::ConfigurationVersion *calendar_version) {
+    fbb_.AddStruct(HorizonSpec::VT_CALENDAR_VERSION, calendar_version);
+  }
+  explicit HorizonSpecBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<HorizonSpec> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<HorizonSpec>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<HorizonSpec> CreateHorizonSpec(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    aegis::mx::contracts::v1::ForecastHorizonUnit unit = aegis::mx::contracts::v1::ForecastHorizonUnit::UNKNOWN,
+    uint64_t value = 0,
+    aegis::mx::contracts::v1::HorizonHaltPolicy halt_policy = aegis::mx::contracts::v1::HorizonHaltPolicy::UNKNOWN,
+    aegis::mx::contracts::v1::HorizonSessionEndpoint session_endpoint = aegis::mx::contracts::v1::HorizonSessionEndpoint::UNKNOWN,
+    const aegis::mx::contracts::v1::ConfigurationVersion *calendar_version = nullptr) {
+  HorizonSpecBuilder builder_(_fbb);
+  builder_.add_value(value);
+  builder_.add_calendar_version(calendar_version);
+  builder_.add_session_endpoint(session_endpoint);
+  builder_.add_halt_policy(halt_policy);
+  builder_.add_unit(unit);
+  return builder_.Finish();
+}
+
+struct HorizonSpec::Traits {
+  using type = HorizonSpec;
+  static auto constexpr Create = CreateHorizonSpec;
+};
+
 struct ModelForecast FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef ModelForecastBuilder Builder;
   struct Traits;
@@ -2101,7 +2192,9 @@ struct ModelForecast FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_TARGET_VALUE = 70,
     VT_TARGET_P10 = 72,
     VT_TARGET_P50 = 74,
-    VT_TARGET_P90 = 76
+    VT_TARGET_P90 = 76,
+    VT_HORIZON_SPEC = 78,
+    VT_TARGET_EXCHANGE_EVENT_TIME = 80
   };
   const aegis::mx::contracts::v1::SchemaVersion *schema_version() const {
     return GetStruct<const aegis::mx::contracts::v1::SchemaVersion *>(VT_SCHEMA_VERSION);
@@ -2214,6 +2307,12 @@ struct ModelForecast FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   int64_t target_p90() const {
     return GetField<int64_t>(VT_TARGET_P90, 0);
   }
+  const aegis::mx::contracts::v1::HorizonSpec *horizon_spec() const {
+    return GetPointer<const aegis::mx::contracts::v1::HorizonSpec *>(VT_HORIZON_SPEC);
+  }
+  const aegis::mx::contracts::v1::ExchangeEventTimeNs *target_exchange_event_time() const {
+    return GetStruct<const aegis::mx::contracts::v1::ExchangeEventTimeNs *>(VT_TARGET_EXCHANGE_EVENT_TIME);
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -2254,6 +2353,9 @@ struct ModelForecast FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyField<int64_t>(verifier, VT_TARGET_P10, 8) &&
            VerifyField<int64_t>(verifier, VT_TARGET_P50, 8) &&
            VerifyField<int64_t>(verifier, VT_TARGET_P90, 8) &&
+           VerifyOffset(verifier, VT_HORIZON_SPEC) &&
+           verifier.VerifyTable(horizon_spec()) &&
+           VerifyField<aegis::mx::contracts::v1::ExchangeEventTimeNs>(verifier, VT_TARGET_EXCHANGE_EVENT_TIME, 8) &&
            verifier.EndTable();
   }
 };
@@ -2373,6 +2475,12 @@ struct ModelForecastBuilder {
   void add_target_p90(int64_t target_p90) {
     fbb_.AddElement<int64_t>(ModelForecast::VT_TARGET_P90, target_p90, 0);
   }
+  void add_horizon_spec(::flatbuffers::Offset<aegis::mx::contracts::v1::HorizonSpec> horizon_spec) {
+    fbb_.AddOffset(ModelForecast::VT_HORIZON_SPEC, horizon_spec);
+  }
+  void add_target_exchange_event_time(const aegis::mx::contracts::v1::ExchangeEventTimeNs *target_exchange_event_time) {
+    fbb_.AddStruct(ModelForecast::VT_TARGET_EXCHANGE_EVENT_TIME, target_exchange_event_time);
+  }
   explicit ModelForecastBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -2422,7 +2530,9 @@ inline ::flatbuffers::Offset<ModelForecast> CreateModelForecast(
     int64_t target_value = 0,
     int64_t target_p10 = 0,
     int64_t target_p50 = 0,
-    int64_t target_p90 = 0) {
+    int64_t target_p90 = 0,
+    ::flatbuffers::Offset<aegis::mx::contracts::v1::HorizonSpec> horizon_spec = 0,
+    const aegis::mx::contracts::v1::ExchangeEventTimeNs *target_exchange_event_time = nullptr) {
   ModelForecastBuilder builder_(_fbb);
   builder_.add_target_p90(target_p90);
   builder_.add_target_p50(target_p50);
@@ -2440,6 +2550,8 @@ inline ::flatbuffers::Offset<ModelForecast> CreateModelForecast(
   builder_.add_expected_return_ppm(expected_return_ppm);
   builder_.add_horizon_ns(horizon_ns);
   builder_.add_forecast_value(forecast_value);
+  builder_.add_target_exchange_event_time(target_exchange_event_time);
+  builder_.add_horizon_spec(horizon_spec);
   builder_.add_ood_score_ppm(ood_score_ppm);
   builder_.add_data_quality_score_ppm(data_quality_score_ppm);
   builder_.add_calibration_score_ppm(calibration_score_ppm);

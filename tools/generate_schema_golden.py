@@ -15,8 +15,11 @@ from aegis_mx_intelligence.contracts import (
     DataQualityCode,
     DataQualityContractInput,
     FeatureSnapshotId,
+    ForecastHorizonUnitCode,
     ForecastId,
     GlobalEventId,
+    HorizonHaltPolicyCode,
+    HorizonSessionEndpointCode,
     Identifier128,
     InstrumentId,
     ModelForecastContractInput,
@@ -45,8 +48,8 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 GOLDEN_DIRECTORY = REPOSITORY_ROOT / "schemas/golden"
 DATA_QUALITY_BINARY_PATH = GOLDEN_DIRECTORY / "data_quality_v1.amae"
 DATA_QUALITY_MANIFEST_PATH = GOLDEN_DIRECTORY / "data_quality_v1.json"
-MODEL_FORECAST_BINARY_PATH = GOLDEN_DIRECTORY / "model_forecast_v1_3.amae"
-MODEL_FORECAST_MANIFEST_PATH = GOLDEN_DIRECTORY / "model_forecast_v1_3.json"
+MODEL_FORECAST_BINARY_PATH = GOLDEN_DIRECTORY / "model_forecast_v1_9.amae"
+MODEL_FORECAST_MANIFEST_PATH = GOLDEN_DIRECTORY / "model_forecast_v1_9.json"
 EVENT_INTELLIGENCE_BINARY_PATH = GOLDEN_DIRECTORY / "event_intelligence_v1_4.amae"
 EVENT_INTELLIGENCE_MANIFEST_PATH = GOLDEN_DIRECTORY / "event_intelligence_v1_4.json"
 
@@ -81,7 +84,7 @@ def canonical_data_quality_bytes() -> bytes:
 
 
 def canonical_model_forecast_bytes() -> bytes:
-    """Build the v1.3 forecast fixture shared by C++ and Python tests."""
+    """Build the v1.9 forecast fixture shared by C++ and Python tests."""
     contract = build_model_forecast_contract(
         ModelForecastContractInput(
             record_id=GlobalEventId(Identifier128(0x701, 0x702)),
@@ -104,7 +107,7 @@ def canonical_model_forecast_bytes() -> bytes:
             calibration_score_ppm=900_000,
             data_quality_score_ppm=1_000_000,
             ood_score_ppm=25_000,
-            horizon_ns=1_000_000_000,
+            horizon_ns=300_000_000_000,
             as_of_exchange_event_time_ns=1_800_000_001_000_000_000,
             production_process_monotonic_time_ns=6_000_000,
             expiration_process_monotonic_time_ns=6_250_000,
@@ -114,6 +117,12 @@ def canonical_model_forecast_bytes() -> bytes:
             estimated_market_impact_ppm=250,
             estimated_adverse_selection_cost_ppm=75,
             estimated_fee_cost_ppm=50,
+            horizon_unit=ForecastHorizonUnitCode.TRADING_MINUTES,
+            horizon_value=5,
+            horizon_halt_policy=HorizonHaltPolicyCode.PAUSE,
+            horizon_session_endpoint=HorizonSessionEndpointCode.NOT_APPLICABLE,
+            horizon_calendar_version=ConfigurationVersion(Identifier128(0x791, 0x792)),
+            target_exchange_event_time_ns=1_800_000_301_000_000_000,
         )
     )
     return build_size_prefixed_audit_envelope(
@@ -194,7 +203,7 @@ def manifest(encoded: bytes, file_name: str) -> bytes:
     content = {
         "file": file_name,
         "flatbuffers_version": "25.12.19",
-        "schema_version": "1.8.0",
+        "schema_version": "1.9.0",
         "sha256": hashlib.sha256(encoded).hexdigest(),
         "size_bytes": len(encoded),
         "test_seed": 20_260_828,

@@ -16,7 +16,7 @@ namespace aegis::common {
 namespace wire = ::aegis::mx::contracts::v1;
 
 inline constexpr std::uint16_t kCurrentSchemaMajor = 1;
-inline constexpr std::uint16_t kCurrentSchemaMinor = 8;
+inline constexpr std::uint16_t kCurrentSchemaMinor = 9;
 inline constexpr std::uint32_t kCurrentSchemaPatch = 0;
 inline constexpr std::size_t kMaximumContractBytes = 1U << 20U;
 inline constexpr std::size_t kMaximumEnvelopeBytes = 1U << 22U;
@@ -122,6 +122,16 @@ struct ModelForecastContractInput {
   std::int64_t target_p10{};
   std::int64_t target_p50{};
   std::int64_t target_p90{};
+  wire::ForecastHorizonUnit horizon_unit{
+      wire::ForecastHorizonUnit::ELAPSED_NANOSECONDS};
+  std::uint64_t horizon_value{};
+  wire::HorizonHaltPolicy horizon_halt_policy{wire::HorizonHaltPolicy::NOT_APPLICABLE};
+  wire::HorizonSessionEndpoint horizon_session_endpoint{
+      wire::HorizonSessionEndpoint::NOT_APPLICABLE};
+  // Explicit safe absence preserves aggregate callers across the additive API.
+  ConfigurationVersion
+      horizon_calendar_version{}; // NOLINT(readability-redundant-member-init)
+  std::int64_t target_exchange_event_time_ns{};
 };
 
 struct AuditMetadata {

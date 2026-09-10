@@ -397,6 +397,25 @@ AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts \
 See the [point-in-time testing guide](point-in-time-data-testing.md) and
 [data contract](../architecture/point-in-time-data-contract.md).
 
+Run the bounded POC repository tests and local benchmark in the required
+environment without creating the default data root or using the network:
+
+```bash
+/scratch/djy8hg/env/aegis_mx_contracts/bin/pytest \
+  python/tests/test_data_repository.py \
+  python/tests/test_data_repository_cli.py
+/scratch/djy8hg/env/aegis_mx_contracts/bin/python \
+  tools/benchmark_data_repository.py \
+  --iterations 25 --file-count 32 \
+  --output build/reports/benchmarks/data-repository.json
+```
+
+Installed CLI examples, quota-evidence requirements, and recovery steps are in
+the [bounded storage runbook](../operations/poc-data-storage.md). Tests use only
+temporary roots, deterministic seed `20260909`, synthetic quota evidence, and
+injected filesystem faults. They require no secrets and perform no network
+access or deletion.
+
 ### Control plane
 
 ```bash

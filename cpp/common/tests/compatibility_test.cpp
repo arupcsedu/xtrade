@@ -4,6 +4,8 @@
 #include "aegis/mx/contracts/v1/compatibility_v1_4_generated.h"
 #include "aegis/mx/contracts/v1/compatibility_v1_5_generated.h"
 #include "aegis/mx/contracts/v1/compatibility_v1_6_generated.h"
+#include "aegis/mx/contracts/v1/compatibility_v1_8_generated.h"
+#include "aegis/mx/contracts/v1/compatibility_v1_9_generated.h"
 #include "aegis/mx/contracts/v1/compatibility_v1_generated.h"
 
 #include <gtest/gtest.h>
@@ -20,6 +22,8 @@ namespace v1_3 = aegis::mx::contracts::compat::v1_3;
 namespace v1_4 = aegis::mx::contracts::compat::v1_4;
 namespace v1_5 = aegis::mx::contracts::compat::v1_5;
 namespace v1_6 = aegis::mx::contracts::compat::v1_6;
+namespace v1_8 = aegis::mx::contracts::compat::v1_8;
+namespace v1_9 = aegis::mx::contracts::compat::v1_9;
 
 TEST(CompatibilityTest, OlderReaderIgnoresAdditiveField) {
   flatbuffers::FlatBufferBuilder builder;
@@ -132,6 +136,30 @@ TEST(CompatibilityTest, V16ReaderDefaultsMissingV16Field) {
   const auto* decoded = v1_6::GetCompatibilityProbe(builder.GetBufferPointer());
   EXPECT_EQ(decoded->stable_value(), 41U);
   EXPECT_EQ(decoded->sixth_additive_value(), 0U);
+}
+
+TEST(CompatibilityTest, V18ReaderIgnoresV19Field) {
+  flatbuffers::FlatBufferBuilder builder;
+  const auto probe = v1_9::CreateCompatibilityProbe(builder, 41U, 42U, 43U, 44U, 45U,
+                                                    46U, 47U, 48U, 49U, 50U);
+  v1_9::FinishCompatibilityProbeBuffer(builder, probe);
+  flatbuffers::Verifier verifier{builder.GetBufferPointer(), builder.GetSize()};
+  ASSERT_TRUE(v1_8::VerifyCompatibilityProbeBuffer(verifier));
+  const auto* decoded = v1_8::GetCompatibilityProbe(builder.GetBufferPointer());
+  EXPECT_EQ(decoded->stable_value(), 41U);
+  EXPECT_EQ(decoded->eighth_additive_value(), 49U);
+}
+
+TEST(CompatibilityTest, V19ReaderDefaultsMissingV19Field) {
+  flatbuffers::FlatBufferBuilder builder;
+  const auto probe = v1_8::CreateCompatibilityProbe(builder, 41U, 42U, 43U, 44U, 45U,
+                                                    46U, 47U, 48U, 49U);
+  v1_8::FinishCompatibilityProbeBuffer(builder, probe);
+  flatbuffers::Verifier verifier{builder.GetBufferPointer(), builder.GetSize()};
+  ASSERT_TRUE(v1_9::VerifyCompatibilityProbeBuffer(verifier));
+  const auto* decoded = v1_9::GetCompatibilityProbe(builder.GetBufferPointer());
+  EXPECT_EQ(decoded->stable_value(), 41U);
+  EXPECT_EQ(decoded->ninth_additive_value(), 0U);
 }
 
 } // namespace

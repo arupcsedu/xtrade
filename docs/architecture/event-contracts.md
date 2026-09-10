@@ -87,6 +87,9 @@ The contracts provide the chain needed to reproduce a decision:
   outcome, prior and current state, state version, exchange-session epoch,
   fencing token, normalized external identity, deterministic client order ID,
   exact risk-decision hash, and journal/snapshot sequence and hash evidence;
+- v1.9 model forecasts bind a semantic trading-minute/session specification,
+  explicit halt behavior, calendar version, and target exchange-event time;
+  `horizon_ns` remains the matching elapsed interval for compatible readers;
 - order, fill, and position records retain order/intent identities and their
   relevant timing and unit domains;
 - every transported record is bound to exact bytes by SHA-256.

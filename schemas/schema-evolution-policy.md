@@ -17,10 +17,18 @@ Every domain record, `ContractRecord`, and `AuditEnvelope` carries
 - Patch changes clarify documentation or implementation without changing wire
   layout or meaning.
 
-The current version is `1.8.0`. The C++ semantic validator accepts major 1 and
+The current version is `1.9.0`. The C++ semantic validator accepts major 1 and
 uses FlatBuffers unknown-field behavior for additive minor data. New behavior
 must not rely on an additive field until every safety-relevant consumer has
 been upgraded and its readiness is auditable.
+
+The bounded forecasting data repository uses separate canonical JSON contracts
+with semantic version `1.0.0`: `data-storage-policy-v1`, `data-manifest-v1`, and
+`data-storage-audit-v1`. Their object fields are closed and exact. An additive
+field therefore requires a new side-by-side schema and reader-first rollout;
+removal, renaming, unit changes, canonicalization changes, or hash-framing
+changes require a new major schema filename. Existing manifests and audit
+records remain immutable and are never rewritten during migration.
 
 Version 1.1 appends fixed-point distribution and provenance fields to
 `ModelForecast` and adds the reader-first `RETURN_PPM` enum. Its deployment and
@@ -68,6 +76,12 @@ external/client identity, risk-decision hash, and journal/snapshot evidence to
 and semantic validators deploy before writers; rollback stops v1.8 order-event
 writers before older readers. See
 [ADR 0024](../docs/adr/0024-journal-first-fenced-deterministic-oms.md).
+
+Version 1.9 appends a semantic `HorizonSpec` and explicit target exchange-event
+timestamp to `ModelForecast`. Existing `horizon_ns` remains actual elapsed
+nanoseconds and existing v1.8 bytes remain valid. V1.9 readers deploy before
+calendar-aware writers; rollback stops those writers first. See
+[ADR 0046](../docs/adr/0046-exchange-calendar-forecast-horizons.md).
 
 ## Compatible changes
 

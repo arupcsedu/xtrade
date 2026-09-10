@@ -18,6 +18,7 @@ import aegis.mx.contracts.v1.ExchangeEventTimeNs as exchange_time_wire
 import aegis.mx.contracts.v1.FeatureSnapshotId as feature_snapshot_id_wire
 import aegis.mx.contracts.v1.ForecastId as forecast_id_wire
 import aegis.mx.contracts.v1.GlobalEventId as global_event_id_wire
+import aegis.mx.contracts.v1.HorizonSpec as horizon_spec_wire
 import aegis.mx.contracts.v1.InstrumentId as instrument_id_wire
 import aegis.mx.contracts.v1.ModelForecast as model_forecast_wire
 import aegis.mx.contracts.v1.ModelId as model_id_wire
@@ -35,12 +36,21 @@ from aegis.mx.contracts.v1.ContractPayload import ContractPayload
 from aegis.mx.contracts.v1.ContractRecord import ContractRecord
 from aegis.mx.contracts.v1.DataQualityCode import DataQualityCode as WireDataQualityCode
 from aegis.mx.contracts.v1.DataQualityState import DataQualityState
+from aegis.mx.contracts.v1.ForecastHorizonUnit import (
+    ForecastHorizonUnit as WireForecastHorizonUnit,
+)
 from aegis.mx.contracts.v1.ForecastTarget import ForecastTarget
 from aegis.mx.contracts.v1.ForecastUnit import ForecastUnit
+from aegis.mx.contracts.v1.HorizonHaltPolicy import (
+    HorizonHaltPolicy as WireHorizonHaltPolicy,
+)
+from aegis.mx.contracts.v1.HorizonSessionEndpoint import (
+    HorizonSessionEndpoint as WireHorizonSessionEndpoint,
+)
 from aegis.mx.contracts.v1.RecordType import RecordType
 
 SCHEMA_MAJOR = 1
-SCHEMA_MINOR = 8
+SCHEMA_MINOR = 9
 SCHEMA_PATCH = 0
 MAXIMUM_CONTRACT_BYTES = 1 << 20
 MAXIMUM_ENVELOPE_BYTES = 1 << 22
@@ -115,6 +125,30 @@ class ForecastUnitCode(IntEnum):
     FACTOR_PPM = ForecastUnit.FACTOR_PPM
 
 
+class ForecastHorizonUnitCode(IntEnum):
+    """Known v1.9 semantic forecast-horizon units."""
+
+    ELAPSED_NANOSECONDS = WireForecastHorizonUnit.ELAPSED_NANOSECONDS
+    TRADING_MINUTES = WireForecastHorizonUnit.TRADING_MINUTES
+    TRADING_SESSIONS = WireForecastHorizonUnit.TRADING_SESSIONS
+
+
+class HorizonHaltPolicyCode(IntEnum):
+    """Known v1.9 handling for halt intervals."""
+
+    NOT_APPLICABLE = WireHorizonHaltPolicy.NOT_APPLICABLE
+    REJECT = WireHorizonHaltPolicy.REJECT
+    PAUSE = WireHorizonHaltPolicy.PAUSE
+    COUNT_SCHEDULED = WireHorizonHaltPolicy.COUNT_SCHEDULED
+
+
+class HorizonSessionEndpointCode(IntEnum):
+    """Known v1.9 deterministic session endpoints."""
+
+    NOT_APPLICABLE = WireHorizonSessionEndpoint.NOT_APPLICABLE
+    REGULAR_SESSION_CLOSE = WireHorizonSessionEndpoint.REGULAR_SESSION_CLOSE
+
+
 class ContractValidationError(ValueError):
     """Raised when a record fails closed during offline decoding."""
 
@@ -137,7 +171,7 @@ class DataQualityContractInput:
 
 @dataclass(frozen=True, slots=True)
 class ModelForecastContractInput:
-    """Integer-only v1.3 forecast values for deterministic serialization."""
+    """Integer-only v1.9 forecast values for deterministic serialization."""
 
     record_id: GlobalEventId
     forecast_id: ForecastId
@@ -175,6 +209,14 @@ class ModelForecastContractInput:
     target_p10: int = 0
     target_p50: int = 0
     target_p90: int = 0
+    horizon_unit: ForecastHorizonUnitCode = ForecastHorizonUnitCode.ELAPSED_NANOSECONDS
+    horizon_value: int = 0
+    horizon_halt_policy: HorizonHaltPolicyCode = HorizonHaltPolicyCode.NOT_APPLICABLE
+    horizon_session_endpoint: HorizonSessionEndpointCode = (
+        HorizonSessionEndpointCode.NOT_APPLICABLE
+    )
+    horizon_calendar_version: ConfigurationVersion | None = None
+    target_exchange_event_time_ns: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -334,7 +376,7 @@ def build_data_quality_contract(data: DataQualityContractInput) -> bytes:
 
 
 def build_model_forecast_contract(data: ModelForecastContractInput) -> bytes:
-    """Serialize one canonical, non-size-prefixed v1.3 ModelForecast."""
+    """Serialize one canonical, non-size-prefixed v1.9 ModelForecast."""
     maximum_score = 1_000_000
     maximum_return = 10_000_000
     returns = (
@@ -376,6 +418,79 @@ def build_model_forecast_contract(data: ModelForecastContractInput) -> bytes:
         "as_of_exchange_event_time_ns",
         positive=True,
     )
+    known_horizon_units = {
+        ForecastHorizonUnitCode.ELAPSED_NANOSECONDS,
+        ForecastHorizonUnitCode.TRADING_MINUTES,
+        ForecastHorizonUnitCode.TRADING_SESSIONS,
+    }
+    known_halt_policies = {
+        HorizonHaltPolicyCode.NOT_APPLICABLE,
+        HorizonHaltPolicyCode.REJECT,
+        HorizonHaltPolicyCode.PAUSE,
+        HorizonHaltPolicyCode.COUNT_SCHEDULED,
+    }
+    known_session_endpoints = {
+        HorizonSessionEndpointCode.NOT_APPLICABLE,
+        HorizonSessionEndpointCode.REGULAR_SESSION_CLOSE,
+    }
+    if (
+        not isinstance(data.horizon_unit, ForecastHorizonUnitCode)
+        or data.horizon_unit not in known_horizon_units
+        or not isinstance(data.horizon_halt_policy, HorizonHaltPolicyCode)
+        or data.horizon_halt_policy not in known_halt_policies
+        or not isinstance(data.horizon_session_endpoint, HorizonSessionEndpointCode)
+        or data.horizon_session_endpoint not in known_session_endpoints
+    ):
+        msg = "forecast horizon contains an invalid enum value"
+        raise ValueError(msg)
+
+    horizon_value = data.horizon_value
+    target_exchange_event_time_ns = data.target_exchange_event_time_ns
+    if data.horizon_unit is ForecastHorizonUnitCode.ELAPSED_NANOSECONDS:
+        if (
+            data.horizon_halt_policy is not HorizonHaltPolicyCode.NOT_APPLICABLE
+            or data.horizon_session_endpoint
+            is not HorizonSessionEndpointCode.NOT_APPLICABLE
+            or data.horizon_calendar_version is not None
+        ):
+            msg = "elapsed horizon cannot carry calendar semantics"
+            raise ValueError(msg)
+        horizon_value = horizon_value or data.horizon_ns
+        target_exchange_event_time_ns = (
+            target_exchange_event_time_ns
+            or data.as_of_exchange_event_time_ns + data.horizon_ns
+        )
+    else:
+        if horizon_value == 0 or target_exchange_event_time_ns == 0:
+            msg = "trading horizon requires explicit value and target timestamp"
+            raise ValueError(msg)
+        if data.horizon_calendar_version is None:
+            msg = "trading horizon requires a calendar version"
+            raise ValueError(msg)
+        if data.horizon_halt_policy is HorizonHaltPolicyCode.NOT_APPLICABLE:
+            msg = "trading horizon requires an explicit halt policy"
+            raise ValueError(msg)
+        expected_endpoint = (
+            HorizonSessionEndpointCode.NOT_APPLICABLE
+            if data.horizon_unit is ForecastHorizonUnitCode.TRADING_MINUTES
+            else HorizonSessionEndpointCode.REGULAR_SESSION_CLOSE
+        )
+        if data.horizon_session_endpoint is not expected_endpoint:
+            msg = "forecast horizon unit and session endpoint disagree"
+            raise ValueError(msg)
+    _check_uint64(horizon_value, "horizon_value", positive=True)
+    _check_int64(
+        target_exchange_event_time_ns,
+        "target_exchange_event_time_ns",
+        positive=True,
+    )
+    if (
+        target_exchange_event_time_ns <= data.as_of_exchange_event_time_ns
+        or target_exchange_event_time_ns - data.as_of_exchange_event_time_ns
+        != data.horizon_ns
+    ):
+        msg = "target timestamp and elapsed horizon disagree"
+        raise ValueError(msg)
     _check_uint64(
         data.production_process_monotonic_time_ns,
         "production_process_monotonic_time_ns",
@@ -452,6 +567,26 @@ def build_model_forecast_contract(data: ModelForecastContractInput) -> bytes:
         raise ValueError(msg)
 
     builder = flatbuffers.Builder(1024)
+    horizon_spec_wire.Start(builder)
+    horizon_spec_wire.HorizonSpecAddValue(builder, horizon_value)
+    if data.horizon_calendar_version is not None:
+        calendar_version = configuration_version_wire.CreateConfigurationVersion(
+            builder,
+            data.horizon_calendar_version.high,
+            data.horizon_calendar_version.low,
+        )
+        horizon_spec_wire.HorizonSpecAddCalendarVersion(builder, calendar_version)
+    horizon_spec_wire.HorizonSpecAddSessionEndpoint(
+        builder,
+        cast("Any", data.horizon_session_endpoint),
+    )
+    horizon_spec_wire.HorizonSpecAddHaltPolicy(
+        builder,
+        cast("Any", data.horizon_halt_policy),
+    )
+    horizon_spec_wire.HorizonSpecAddUnit(builder, cast("Any", data.horizon_unit))
+    horizon_spec = horizon_spec_wire.End(builder)
+
     model_forecast_wire.Start(builder)
     model_forecast_wire.ModelForecastAddTargetP90(builder, target_values[3])
     model_forecast_wire.ModelForecastAddTargetP50(builder, target_values[2])
@@ -481,6 +616,15 @@ def build_model_forecast_contract(data: ModelForecastContractInput) -> bytes:
     )
     model_forecast_wire.ModelForecastAddHorizonNs(builder, data.horizon_ns)
     model_forecast_wire.ModelForecastAddForecastValue(builder, target_values[0])
+    target_exchange_time = exchange_time_wire.CreateExchangeEventTimeNs(
+        builder,
+        target_exchange_event_time_ns,
+    )
+    model_forecast_wire.ModelForecastAddTargetExchangeEventTime(
+        builder,
+        target_exchange_time,
+    )
+    model_forecast_wire.ModelForecastAddHorizonSpec(builder, horizon_spec)
     model_forecast_wire.ModelForecastAddOodScorePpm(builder, data.ood_score_ppm)
     model_forecast_wire.ModelForecastAddDataQualityScorePpm(
         builder, data.data_quality_score_ppm

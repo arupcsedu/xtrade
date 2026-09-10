@@ -9,6 +9,7 @@ from aegis.mx.contracts.v1.ConfigurationVersion import ConfigurationVersion
 from aegis.mx.contracts.v1.ExchangeEventTimeNs import ExchangeEventTimeNs
 from aegis.mx.contracts.v1.FeatureSnapshotId import FeatureSnapshotId
 from aegis.mx.contracts.v1.ForecastId import ForecastId
+from aegis.mx.contracts.v1.HorizonSpec import HorizonSpec
 from aegis.mx.contracts.v1.InstrumentId import InstrumentId
 from aegis.mx.contracts.v1.ModelId import ModelId
 from aegis.mx.contracts.v1.ModelVersion import ModelVersion
@@ -328,8 +329,28 @@ class ModelForecast(object):
             return self._tab.Get(flatbuffers.number_types.Int64Flags, o + self._tab.Pos)
         return 0
 
+    # ModelForecast
+    def HorizonSpec(self) -> Optional[HorizonSpec]:
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(78))
+        if o != 0:
+            x = self._tab.Indirect(o + self._tab.Pos)
+            obj = HorizonSpec()
+            obj.Init(self._tab.Bytes, x)
+            return obj
+        return None
+
+    # ModelForecast
+    def TargetExchangeEventTime(self) -> Optional[ExchangeEventTimeNs]:
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(80))
+        if o != 0:
+            x = o + self._tab.Pos
+            obj = ExchangeEventTimeNs()
+            obj.Init(self._tab.Bytes, x)
+            return obj
+        return None
+
 def ModelForecastStart(builder: flatbuffers.Builder):
-    builder.StartObject(37)
+    builder.StartObject(39)
 
 def Start(builder: flatbuffers.Builder):
     ModelForecastStart(builder)
@@ -555,6 +576,18 @@ def ModelForecastAddTargetP90(builder: flatbuffers.Builder, targetP90: int):
 
 def AddTargetP90(builder: flatbuffers.Builder, targetP90: int):
     ModelForecastAddTargetP90(builder, targetP90)
+
+def ModelForecastAddHorizonSpec(builder: flatbuffers.Builder, horizonSpec: int):
+    builder.PrependUOffsetTRelativeSlot(37, flatbuffers.number_types.UOffsetTFlags.py_type(horizonSpec), 0)
+
+def AddHorizonSpec(builder: flatbuffers.Builder, horizonSpec: int):
+    ModelForecastAddHorizonSpec(builder, horizonSpec)
+
+def ModelForecastAddTargetExchangeEventTime(builder: flatbuffers.Builder, targetExchangeEventTime: Any):
+    builder.PrependStructSlot(38, flatbuffers.number_types.UOffsetTFlags.py_type(targetExchangeEventTime), 0)
+
+def AddTargetExchangeEventTime(builder: flatbuffers.Builder, targetExchangeEventTime: Any):
+    ModelForecastAddTargetExchangeEventTime(builder, targetExchangeEventTime)
 
 def ModelForecastEnd(builder: flatbuffers.Builder) -> int:
     return builder.EndObject()

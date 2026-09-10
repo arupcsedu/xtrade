@@ -29,6 +29,7 @@ COMPATIBILITY_SCHEMAS = [
     "schemas/tests/compatibility_v1_6.fbs",
     "schemas/tests/compatibility_v1_7.fbs",
     "schemas/tests/compatibility_v1_8.fbs",
+    "schemas/tests/compatibility_v1_9.fbs",
 ]
 
 
@@ -142,9 +143,17 @@ def main() -> int:
             COMPATIBILITY_SCHEMAS[8],
         ]
     )
+    _run(
+        [
+            str(args.flatc),
+            "--conform",
+            COMPATIBILITY_SCHEMAS[8],
+            COMPATIBILITY_SCHEMAS[9],
+        ]
+    )
     print(
         "FlatBuffers compatibility conformance passed: "
-        "v1 -> v1.1 -> v1.2 -> v1.3 -> v1.4 -> v1.5 -> v1.6 -> v1.7 -> v1.8"
+        "v1 -> v1.1 -> v1.2 -> v1.3 -> v1.4 -> v1.5 -> v1.6 -> v1.7 -> v1.8 -> v1.9"
     )
 
     with tempfile.TemporaryDirectory(prefix="aegis-schema-codegen-") as temp:

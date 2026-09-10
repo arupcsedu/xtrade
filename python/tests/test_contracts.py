@@ -13,6 +13,10 @@ from aegis.mx.contracts.v1.AuditEnvelope import AuditEnvelope
 from aegis.mx.contracts.v1.ContractPayload import ContractPayload
 from aegis.mx.contracts.v1.ContractRecord import ContractRecord
 from aegis.mx.contracts.v1.DataQualityState import DataQualityState
+from aegis.mx.contracts.v1.ForecastHorizonUnit import ForecastHorizonUnit
+from aegis.mx.contracts.v1.HorizonHaltPolicy import HorizonHaltPolicy
+from aegis.mx.contracts.v1.HorizonSessionEndpoint import HorizonSessionEndpoint
+from aegis.mx.contracts.v1.ModelForecast import ModelForecast
 from aegis.mx.contracts.v1.RecordType import RecordType
 from aegis_mx_intelligence.contracts import (
     AuditMetadata,
@@ -22,10 +26,13 @@ from aegis_mx_intelligence.contracts import (
     DataQualityCode,
     DataQualityContractInput,
     FeatureSnapshotId,
+    ForecastHorizonUnitCode,
     ForecastId,
     ForecastTargetCode,
     ForecastUnitCode,
     GlobalEventId,
+    HorizonHaltPolicyCode,
+    HorizonSessionEndpointCode,
     Identifier128,
     InstrumentId,
     ModelForecastContractInput,
@@ -44,7 +51,7 @@ if TYPE_CHECKING:
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 GOLDEN_PATH = REPOSITORY_ROOT / "schemas/golden/data_quality_v1.amae"
-MODEL_FORECAST_GOLDEN_PATH = REPOSITORY_ROOT / "schemas/golden/model_forecast_v1_3.amae"
+MODEL_FORECAST_GOLDEN_PATH = REPOSITORY_ROOT / "schemas/golden/model_forecast_v1_9.amae"
 
 
 def _identifier(high: int, low: int) -> Identifier128:
@@ -107,7 +114,7 @@ def _forecast_input() -> ModelForecastContractInput:
         calibration_score_ppm=900_000,
         data_quality_score_ppm=1_000_000,
         ood_score_ppm=25_000,
-        horizon_ns=1_000_000_000,
+        horizon_ns=300_000_000_000,
         as_of_exchange_event_time_ns=1_800_000_001_000_000_000,
         production_process_monotonic_time_ns=6_000_000,
         expiration_process_monotonic_time_ns=6_250_000,
@@ -117,6 +124,12 @@ def _forecast_input() -> ModelForecastContractInput:
         estimated_market_impact_ppm=250,
         estimated_adverse_selection_cost_ppm=75,
         estimated_fee_cost_ppm=50,
+        horizon_unit=ForecastHorizonUnitCode.TRADING_MINUTES,
+        horizon_value=5,
+        horizon_halt_policy=HorizonHaltPolicyCode.PAUSE,
+        horizon_session_endpoint=HorizonSessionEndpointCode.NOT_APPLICABLE,
+        horizon_calendar_version=ConfigurationVersion(_identifier(0x791, 0x792)),
+        target_exchange_event_time_ns=1_800_000_301_000_000_000,
     )
 
 
@@ -211,6 +224,93 @@ def test_python_encoding_matches_cross_language_golden() -> None:
 
 def test_python_forecast_encoding_matches_cross_language_golden() -> None:
     assert _canonical_forecast_envelope() == MODEL_FORECAST_GOLDEN_PATH.read_bytes()
+
+
+def test_v1_9_forecast_contains_explicit_calendar_horizon_target() -> None:
+    contract = build_model_forecast_contract(_forecast_input())
+    record = ContractRecord.GetRootAs(contract, 0)
+    union_table = record.Payload()
+    assert union_table is not None
+    forecast = ModelForecast()
+    forecast.Init(union_table.Bytes, union_table.Pos)
+    horizon = forecast.HorizonSpec()
+    target = forecast.TargetExchangeEventTime()
+
+    assert horizon is not None
+    assert horizon.Unit() == ForecastHorizonUnit.TRADING_MINUTES
+    assert horizon.Value() == 5
+    assert horizon.HaltPolicy() == HorizonHaltPolicy.PAUSE
+    assert horizon.SessionEndpoint() == HorizonSessionEndpoint.NOT_APPLICABLE
+    assert horizon.CalendarVersion() is not None
+    assert target is not None
+    assert target.Value() == 1_800_000_301_000_000_000
+
+
+def test_v1_9_legacy_elapsed_horizon_is_migrated_explicitly() -> None:
+    legacy = replace(
+        _forecast_input(),
+        horizon_ns=1_000_000_000,
+        horizon_unit=ForecastHorizonUnitCode.ELAPSED_NANOSECONDS,
+        horizon_value=0,
+        horizon_halt_policy=HorizonHaltPolicyCode.NOT_APPLICABLE,
+        horizon_calendar_version=None,
+        target_exchange_event_time_ns=0,
+    )
+    contract = build_model_forecast_contract(legacy)
+    record = ContractRecord.GetRootAs(contract, 0)
+    union_table = record.Payload()
+    assert union_table is not None
+    forecast = ModelForecast()
+    forecast.Init(union_table.Bytes, union_table.Pos)
+    horizon = forecast.HorizonSpec()
+    target = forecast.TargetExchangeEventTime()
+
+    assert horizon is not None
+    assert horizon.Unit() == ForecastHorizonUnit.ELAPSED_NANOSECONDS
+    assert horizon.Value() == 1_000_000_000
+    assert horizon.CalendarVersion() is None
+    assert target is not None
+    assert target.Value() == legacy.as_of_exchange_event_time_ns + legacy.horizon_ns
+
+
+@pytest.mark.parametrize(
+    ("changes", "message"),
+    [
+        ({"horizon_unit": 255}, "invalid enum"),
+        ({"horizon_halt_policy": 255}, "invalid enum"),
+        ({"horizon_session_endpoint": 255}, "invalid enum"),
+        ({"horizon_value": 0}, "explicit value"),
+        ({"target_exchange_event_time_ns": 0}, "target timestamp"),
+        ({"horizon_calendar_version": None}, "calendar version"),
+        (
+            {"horizon_halt_policy": HorizonHaltPolicyCode.NOT_APPLICABLE},
+            "halt policy",
+        ),
+        (
+            {
+                "horizon_unit": ForecastHorizonUnitCode.ELAPSED_NANOSECONDS,
+                "horizon_halt_policy": HorizonHaltPolicyCode.NOT_APPLICABLE,
+            },
+            "calendar semantics",
+        ),
+        (
+            {
+                "horizon_session_endpoint": (
+                    HorizonSessionEndpointCode.REGULAR_SESSION_CLOSE
+                )
+            },
+            "session endpoint",
+        ),
+        ({"target_exchange_event_time_ns": 1_800_000_302_000_000_000}, "disagree"),
+    ],
+)
+def test_v1_9_forecast_horizon_fails_closed(
+    changes: dict[str, object], message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        build_model_forecast_contract(
+            replace(_forecast_input(), **cast("Any", changes))
+        )
 
 
 @pytest.mark.parametrize(

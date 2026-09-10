@@ -1,0 +1,1152 @@
+AEGIS-MX BOUNDED FORECASTING POC IMPLEMENTATION PROMPTS
+======================================================
+
+Run these prompts separately and in numerical order. Prompts 45 through 65
+continue the existing Aegis-MX implementation sequence. The forecasting POC is
+limited to the symbols in /scratch/djy8hg/xtrade/ticker.txt, authorized
+one-minute data, bounded public-event data, and a maximum 100 GB data-root
+footprint.
+
+
+Phase XI — Bounded forecasting proof of concept
+Prompt 45 — Forecasting POC contract and implementation roadmap
+
+Base directory: /scratch/djy8hg/xtrade
+Python environment: /scratch/djy8hg/env/aegis_mx_contracts
+
+Read and follow:
+- docs/architecture/engineering-contract.md
+- docs/architecture/point-in-time-data-contract.md
+- docs/architecture/timeseries-forecast-service.md
+- docs/architecture/licensed-integration-boundaries.md
+- docs/testing/quality-gates.md
+
+Inspect all existing forecasting, research, model-serving, schema, registry,
+backtesting, security, and deployment code before changing anything.
+
+Create the binding POC scope:
+
+1. The sole forecast universe comes from:
+   /scratch/djy8hg/xtrade/ticker.txt
+
+2. The file currently contains 79 unique non-empty symbols. Do not hardcode
+   this count; parse and validate the file.
+
+3. The POC uses:
+   - authorized one-minute OHLCV data;
+   - regular market sessions only;
+   - no separately downloaded daily bars;
+   - derived session summaries where longer horizons require them;
+   - bounded SEC filings, GDELT metadata, and selected ALFRED series;
+   - no quotes, NBBO, ticks, full-depth books, options, extended hours,
+     international markets, or broad global news mirror.
+
+4. Requested horizons:
+   - 5m, 10m, 15m, 30m, 60m;
+   - 2h, 5h;
+   - 1, 5, 10, 21, and 42 trading sessions.
+
+5. The POC forecasts returns and derives implied future prices. It must not
+   claim that raw prices are directly predictable.
+
+6. Storage:
+   - administrative allocation: 250 GB;
+   - target POC data footprint: no more than 80 GB;
+   - project data-root hard limit: 100 GB;
+   - required free reserve: at least 50 GB;
+   - unknown capacity or quota state blocks remote downloads.
+
+7. All functionality remains offline or PAPER-only.
+8. No model or data service may send an order.
+9. No profitability or production-readiness claim is permitted.
+10. Missing or insufficient data produces explicit abstention.
+
+Audit the current implementation against this scope and create:
+
+- docs/architecture/forecasting-poc-contract.md
+- docs/architecture/forecasting-poc-roadmap.md
+- docs/architecture/forecasting-poc-data-flow.mmd
+- docs/testing/forecasting-poc-quality-gates.md
+- docs/adr/0045-bounded-minute-data-forecasting-poc.md
+
+The roadmap must list dependencies, inputs, outputs, acceptance criteria,
+tests, benchmarks, storage gates, and licensed integration blockers for every
+remaining phase.
+
+Verify all documentation links and Mermaid syntax.
+
+Do not implement data downloading, training, forecasting, or business logic in
+this prompt.
+
+
+Prompt 46 — Ticker universe and exchange-calendar horizon contracts
+
+Read:
+- docs/architecture/engineering-contract.md
+- docs/architecture/forecasting-poc-contract.md
+- docs/architecture/forecasting-poc-roadmap.md
+- schemas/schema-evolution-policy.md
+
+Implement immutable universe and forecast-horizon contracts.
+
+Ticker universe requirements:
+
+1. Read symbols only from:
+   /scratch/djy8hg/xtrade/ticker.txt
+
+2. Accept a final line without a trailing newline.
+3. Require one uppercase symbol per non-empty line.
+4. Reject duplicate, malformed, overlength, or ambiguous symbols.
+5. Preserve source-file order for operator reporting.
+6. Produce a canonical sorted representation for deterministic hashing.
+7. Bind every resolved ticker to a stable InstrumentId.
+8. Retain unresolved tickers with explicit reason codes.
+9. Never silently remove unsupported or recently listed instruments.
+10. Record source file SHA-256 and universe snapshot SHA-256.
+
+Implement HorizonSpec for:
+
+- 5, 10, 15, 30, and 60 trading minutes;
+- 2 and 5 trading hours;
+- 1, 5, 10, 21, and 42 trading sessions.
+
+Horizon rules:
+
+- horizons advance through eligible regular-session minutes;
+- closed periods do not count as trading minutes;
+- halts are explicit and governed by configuration;
+- early closes use a versioned calendar;
+- session horizons select deterministic future session endpoints;
+- target timestamps must be explicit;
+- horizon_ns alone must not misrepresent a calendar/session horizon.
+
+Extend schemas additively where necessary. Preserve existing ModelForecast
+compatibility and provide a documented migration.
+
+Add:
+
+- universe and horizon unit tests;
+- malformed ticker-file tests;
+- final-line-without-newline regression test;
+- duplicate-symbol tests;
+- holiday, weekend, halt, and early-close tests;
+- overflow tests;
+- schema golden files;
+- forward/backward compatibility tests;
+- deserialization fuzz tests.
+
+Create:
+
+- docs/architecture/forecast-universe.md
+- docs/architecture/forecast-horizons.md
+- an ADR for exchange-calendar horizon semantics
+
+Run formatter, linter, schema generation, unit tests, compatibility tests, and
+fuzz smoke tests. Report exact output summaries.
+
+Do not fetch external data in this prompt.
+
+
+Prompt 47 — Bounded POC data repository and quota enforcement
+
+Read the forecasting POC contract and horizon/universe contracts.
+
+Implement the offline data-repository foundation under a configurable data
+root. The recommended default is:
+
+/scratch/djy8hg/aegis_mx_poc_data
+
+Never commit downloaded data to Git.
+
+Create logical storage areas:
+
+- quarantine/
+- raw/
+- canonical/
+- derived/
+- datasets/
+- manifests/
+- models/
+- reports/
+- tmp/
+
+Requirements:
+
+1. Treat 250 GB as the total administrative allocation.
+2. Target no more than 80 GB of POC data.
+3. Enforce a 100 GB hard data-root limit.
+4. Require at least 50 GB filesystem reserve.
+5. Limit temporary workspace to 20 GB.
+6. Account for partially downloaded and temporary files.
+7. Refuse admission when capacity, quota, or projected peak usage is unknown.
+8. Use decimal bytes consistently in policy and report binary values separately.
+9. Do not trust filesystem-wide free space as user entitlement.
+10. Never delete data automatically to satisfy a limit.
+
+Implement:
+
+- immutable source and partition manifests;
+- SHA-256 verification;
+- atomic manifest publication;
+- deterministic dataset IDs;
+- source/schema/time/size/record-count metadata;
+- correction and replacement lineage;
+- storage usage and projected-peak calculation;
+- cleanup planning without automatic deletion;
+- structured audit records.
+
+Create commands:
+
+- aegis-data usage
+- aegis-data estimate
+- aegis-data verify
+- aegis-data cleanup-plan
+
+Add tests for:
+
+- insufficient reserve;
+- quota exhaustion;
+- temporary-file accounting;
+- integer overflow;
+- symlink/path traversal;
+- concurrent admission;
+- corrupted manifest;
+- hash mismatch;
+- interrupted publication;
+- unknown quota state.
+
+Create storage architecture, operations, and recovery documentation.
+
+Run formatting, strict typing, linting, unit tests, integration tests, and
+filesystem fault tests using the required Python environment.
+
+Do not perform network downloads in this prompt.
+
+
+Prompt 48 — POC source selection, licensing, and authorization gate
+
+Read:
+- docs/architecture/licensed-integration-boundaries.md
+- docs/architecture/forecasting-poc-contract.md
+- docs/compliance/licensed-integration-checklist.md
+
+Perform a current, source-backed assessment of candidate providers for the 79
+symbols in ticker.txt.
+
+Evaluate at minimum:
+
+- Massive/Polygon minute aggregates;
+- Alpaca IEX historical bars;
+- SEC EDGAR;
+- GDELT;
+- FRED/ALFRED;
+- Nasdaq Trader symbol directories.
+
+For every source document:
+
+- exact dataset;
+- history and market coverage;
+- API or flat-file mechanism;
+- adjustment behavior;
+- rate limits;
+- storage rights;
+- model-training rights;
+- derived-data rights;
+- retention/deletion requirements;
+- personal, academic, professional, and commercial distinctions;
+- credentials required;
+- unsupported ticker or venue risks;
+- source timestamp semantics.
+
+Do not equate free API access with open data or permission to train a model.
+
+Create:
+
+- docs/compliance/forecasting-poc-source-assessment.md
+- docs/compliance/forecasting-poc-source-approval.md
+- infra/data_poc/source-policy.example.json
+- docs/operations/data-source-authorization-runbook.md
+
+The source policy must default every remote source to disabled. It must not
+contain credentials.
+
+Select no provider by assumption. If market-data storage or training rights
+remain ambiguous, stop and request explicit user confirmation or provider
+authorization before implementing its remote adapter.
+
+SEC, GDELT, and ALFRED adapters may be classified separately because their
+terms and underlying-source restrictions differ.
+
+Do not download data or implement a remote provider in this prompt.
+
+
+Prompt 49 — Provider-neutral bounded ingestion framework
+
+Read the accepted source assessment, storage policy, universe contract, and
+engineering contract.
+
+Implement provider-neutral offline ingestion interfaces:
+
+- DataProvider
+- FetchPlan
+- FetchRequest
+- FetchResult
+- SourceObject
+- SourceManifest
+- DownloadCheckpoint
+- RateLimitPolicy
+- RetryPolicy
+- ProviderHealthState
+- DataEntitlementState
+
+Implement:
+
+1. Dry-run planning by default.
+2. Explicit execution flag for remote mutation.
+3. Date, ticker-universe, and dataset filters.
+4. Size estimation before admission.
+5. Bounded concurrency.
+6. Bounded retry with jitter derived from a recorded deterministic seed where
+   appropriate.
+7. Resume using verified byte ranges or complete-object restart.
+8. Content hashing.
+9. Quarantine for malformed or unverifiable objects.
+10. Idempotent re-execution.
+11. Correction/replacement lineage.
+12. Secret-manager/environment credential interface.
+13. Complete credential redaction.
+14. Graceful shutdown with durable checkpoints.
+15. No remote access from unit tests.
+
+Implement:
+
+- filesystem replay provider;
+- synthetic minute-bar provider;
+- deterministic mock HTTP/S3 provider for integration tests.
+
+Create commands:
+
+- aegis-data plan-fetch
+- aegis-data fetch
+- aegis-data resume-fetch
+- aegis-data inspect-source
+
+Add timeout, rate-limit, partial-response, changed-object, duplicate-object,
+oversized-object, quota, and shutdown tests.
+
+Run formatter, linter, strict typing, unit tests, integration tests, security
+tests, and deterministic replay tests.
+
+Do not implement a provider-specific market-data adapter yet.
+
+
+Prompt 50 — Authorized one-minute market-data adapter and bounded pilot
+
+Read:
+
+- docs/compliance/forecasting-poc-source-approval.md
+- docs/architecture/forecasting-poc-contract.md
+- docs/operations/data-source-authorization-runbook.md
+
+Proceed only if the exact minute-data source is approved for:
+
+- persistent local storage;
+- research;
+- model training;
+- derived feature creation;
+- the user's professional/nonprofessional classification.
+
+If approval is absent or ambiguous, stop before remote access and report the
+specific missing authorization.
+
+Implement only the approved provider adapter using its current published
+specification. Do not fabricate endpoints or field semantics.
+
+Requirements:
+
+1. Read the universe from ticker.txt.
+2. Download one-minute OHLCV only.
+3. Use regular-session filtering during canonicalization.
+4. Do not download separate daily bars.
+5. Default to dry-run.
+6. Require explicit --execute for network downloads.
+7. Read credentials from approved external secret locations.
+8. Never print credentials or signed URLs.
+9. Enforce storage admission before every object.
+10. Record provider, dataset, date, request, receipt time, hash, size, and
+    entitlement version.
+11. Preserve unsupported and missing symbols in the result report.
+12. Never fill missing history with synthetic observations.
+
+Run a five-trading-day pilot for the 79-symbol universe.
+
+Verify:
+
+- expected ticker coverage;
+- source and canonical record counts;
+- duplicate and missing-minute behavior;
+- timestamp interpretation;
+- adjustment behavior;
+- checksums;
+- restart/resume;
+- peak disk usage;
+- download rate;
+- no secret exposure.
+
+Create a machine-readable pilot report and human-readable assessment.
+
+Do not execute the full two-year backfill in this prompt.
+
+
+Prompt 51 — Execute and verify the bounded two-year minute backfill
+
+Read the accepted pilot report and source authorization.
+
+Do not make broad code changes. Fix only concrete defects required for a safe
+backfill and test each fix.
+
+Before downloading:
+
+1. Resolve the latest complete market date.
+2. Define and record the exact two-year date range.
+3. Recalculate projected peak storage.
+4. Require project usage below the configured admission threshold.
+5. Require at least 50 GB free reserve.
+6. Verify provider authorization and credentials.
+7. Verify ticker.txt SHA-256.
+8. Verify no overlapping active backfill epoch.
+
+Execute the backfill for every ticker in ticker.txt using one-minute OHLCV only.
+
+Requirements:
+
+- bounded batches;
+- durable checkpoints;
+- idempotent restart;
+- no unbounded retries;
+- per-date and per-object checksums;
+- explicit unsupported/missing ticker records;
+- immutable source manifests;
+- no separate daily-bar download;
+- no silent data deletion;
+- no synthetic filling of missing market history.
+
+After completion run:
+
+- manifest verification;
+- duplicate detection;
+- date/session coverage checks;
+- ticker coverage checks;
+- corruption scan;
+- deterministic reinspection;
+- storage usage report;
+- random partition sample validation with a recorded seed.
+
+Publish raw command output summaries, source object counts, bytes downloaded,
+ticker coverage, gaps, known limitations, and final storage usage.
+
+Do not train models in this prompt.
+
+
+Prompt 52 — Point-in-time instrument reference, calendars, and corporate actions
+
+Read the universe, horizon, point-in-time, and approved-source contracts.
+
+Implement reference-data support for every ticker in ticker.txt:
+
+- stable InstrumentId;
+- current and historical symbol mappings where authorized;
+- listing venue;
+- security type;
+- listing and delisting dates;
+- ticker changes;
+- split history;
+- dividend metadata where required for total-return labels;
+- exchange sessions;
+- holidays;
+- early closes;
+- known halt intervals where available;
+- source and revision provenance.
+
+Use Nasdaq Trader and SEC current mappings only within their documented limits.
+Do not represent current mappings as complete historical truth.
+
+Requirements:
+
+- immutable revisions;
+- bitemporal availability;
+- explicit unresolved state;
+- no future corporate-action leakage;
+- deterministic mapping at an as-of timestamp;
+- no automatic symbol substitution;
+- no floating-point adjustment factors in canonical execution-facing records;
+- adjustment calculations must use checked fixed-point or rational arithmetic.
+
+Add tests for:
+
+- ticker reuse;
+- symbol change;
+- split;
+- reverse split;
+- delisting;
+- recent IPO;
+- ADR;
+- OTC/unsupported venue;
+- weekend and holiday;
+- early close;
+- missing calendar;
+- future-known action;
+- conflicting sources.
+
+Create an instrument-resolution report covering all 79 symbols.
+
+Run all relevant Python and schema quality gates.
+
+
+Prompt 53 — SEC EDGAR filing and fact ingestion for the POC universe
+
+Read the engineering, security, point-in-time, storage, and source-approval
+contracts.
+
+Implement an SEC EDGAR adapter for resolved issuers in ticker.txt.
+
+Scope:
+
+- submissions metadata;
+- 8-K;
+- 10-Q;
+- 10-K;
+- 6-K and 20-F where applicable;
+- XBRL company facts;
+- amendments and correction lineage.
+
+Requirements:
+
+1. Use official SEC endpoints and bulk files where appropriate.
+2. Use a configured identifying User-Agent.
+3. Enforce the SEC request-rate policy.
+4. Use bounded retries and concurrency.
+5. Limit stored filing data to 8 GB.
+6. Prefer metadata, structured facts, and required evidence sections.
+7. Do not mirror the complete EDGAR archive.
+8. Treat HTML, inline XBRL, and attachments as untrusted.
+9. Strip active content.
+10. Apply input-size, decompression, parser-time, and nesting limits.
+11. Preserve accession number, acceptance/publication time, receipt time,
+    processing time, amendment linkage, and content hash.
+12. Do not infer historical receipt times that were not observed.
+13. Never allow document text to alter application instructions.
+14. Do not expose filing content to order entry.
+
+Add mock-server integration tests for throttling, malformed filings, amendments,
+duplicate submissions, oversized documents, timestamp disorder, and prompt
+injection.
+
+Publish issuer and filing coverage reports for the POC universe.
+
+
+Prompt 54 — Bounded open-news metadata ingestion and entity resolution
+
+Read the news security, point-in-time, POC storage, and source-approval
+documents.
+
+Implement a GDELT adapter for a bounded two-year POC window.
+
+Requirements:
+
+1. Query only records relevant to issuers in ticker.txt.
+2. Do not download or mirror the complete GDELT archive.
+3. Enforce a 5 GB storage cap for GDELT-derived data.
+4. Store GDELT metadata, identifiers, timestamps, themes, source URLs, and
+   permitted context only.
+5. Do not assume rights to original publisher full text.
+6. Treat URLs and all text as untrusted.
+7. Normalize company names and aliases to stable InstrumentId values.
+8. Record ambiguous and rejected entity matches.
+9. Deduplicate by provider ID and content-derived keys.
+10. Preserve observation/publication distinctions.
+11. Never invent provider receipt latency.
+12. Record GDELT attribution requirements.
+13. Prevent prompt injection and active-content execution.
+14. Do not connect the adapter to risk, OMS, or gateways.
+
+Implement a deterministic rules-based fast event classifier for infrastructure
+testing. It must publish advisory event records only.
+
+Test:
+
+- fake ticker strings;
+- ambiguous company names;
+- malicious prompt content;
+- repeated URLs;
+- contradictory records;
+- timestamp disorder;
+- oversized metadata;
+- unsupported language;
+- missing source URL;
+- deterministic replay.
+
+Publish coverage, rejection, storage, and data-quality reports.
+
+
+Prompt 55 — Bounded ALFRED macro-vintage ingestion
+
+Read the macro specialist, point-in-time, storage, and source-approval
+documentation.
+
+Implement a FRED/ALFRED adapter for a small approved macro series set relevant
+to the existing macro specialist:
+
+- CPI;
+- PPI;
+- payroll/employment;
+- GDP;
+- retail sales;
+- federal funds/FOMC-related series where appropriate;
+- PMI only if the underlying series permits the intended use.
+
+Requirements:
+
+- API key supplied externally;
+- source-specific rights review for every selected series;
+- reject copyrighted/restricted series without approval;
+- preserve every relevant vintage;
+- preserve observation, release, revision, and local receipt times;
+- never substitute revised values for release-time values;
+- bounded requests and storage below 1 GB;
+- immutable manifests and hashes;
+- no secrets in logs;
+- deterministic as-known-at queries.
+
+Add tests for initial release, revision, conflicting vintage, missing release,
+future leakage, throttling, malformed response, and deterministic replay.
+
+Document selected series, source owner, units, transformations, and limitations.
+
+
+Prompt 56 — Canonical minute normalization and persistent point-in-time storage
+
+Read all POC source manifests and the existing point-in-time reference
+implementation.
+
+Implement streaming raw-to-canonical normalization.
+
+Canonical minute record:
+
+- stable InstrumentId;
+- source ticker;
+- venue/market identifier where available;
+- session ID and trading date;
+- minute start and end timestamps;
+- integer open/high/low/close ticks;
+- integer volume;
+- optional integer trade count and VWAP with explicit units;
+- source publication/availability and local receipt/processing times;
+- data-quality state;
+- source object and record identity;
+- schema version and record hash.
+
+Requirements:
+
+1. Never load the complete dataset into memory.
+2. Write partitioned Parquet with Zstandard compression.
+3. Partition by date and deterministic instrument bucket.
+4. Avoid per-ticker tiny files.
+5. Do not forward-fill missing minutes.
+6. Do not fabricate zero-volume bars.
+7. Reject impossible prices, negative volume, timestamp disorder, and duplicate
+   conflicting bars.
+8. Treat identical duplicates idempotently.
+9. Apply only point-in-time-known symbol and corporate-action information.
+10. Do not download or create a second vendor daily dataset.
+11. Publish quality reports before accepting a partition.
+12. Publish manifests atomically.
+
+Replace or extend the in-memory point-in-time store with a bounded persistent
+offline implementation while preserving exact query semantics.
+
+Add parity tests against the reference store, malformed-data tests, recovery
+tests, deterministic hash tests, and memory/storage benchmarks.
+
+
+Prompt 57 — Leakage-safe feature and label dataset builder
+
+Read the canonical minute, calendar, horizon, universe, and point-in-time
+contracts.
+
+Implement an offline dataset builder for all resolved symbols in ticker.txt.
+
+Derive from minute data:
+
+- returns at multiple intraday windows;
+- volume and relative volume;
+- realized volatility;
+- high-low range;
+- intraday gap;
+- time-of-day and session position;
+- market and sector-relative returns;
+- rolling session statistics;
+- news/event flags;
+- macro-event flags;
+- data-quality features;
+- derived session OHLCV summaries.
+
+No separately sourced daily bars are permitted.
+
+Generate labels for:
+
+- 5m, 10m, 15m, 30m, 60m;
+- 2h and 5h;
+- 1, 5, 10, 21, and 42 trading sessions.
+
+Labels must include:
+
+- future target timestamp;
+- return PPM;
+- direction;
+- future integer price ticks;
+- corporate-action version;
+- validity state;
+- missing-label reason.
+
+Requirements:
+
+- no label/feature overlap;
+- no future symbol mapping;
+- no future corporate action;
+- no future news or macro revision;
+- training-only normalization fit;
+- chronological splits;
+- 42-session purge/embargo;
+- deterministic seed 20260831;
+- immutable dataset manifest and SHA-256;
+- bounded streaming construction;
+- peak data-root usage below 100 GB.
+
+Add intentionally leaking fixtures and prove rejection.
+
+Report label coverage for every ticker and horizon. Recent listings and
+unsupported instruments must remain visible with explicit reason codes.
+
+
+Prompt 58 — Pooled multi-horizon model training
+
+Use only:
+/scratch/djy8hg/env/aegis_mx_contracts
+
+Install new dependencies only inside that environment, pin exact versions, and
+update the repository lock file and SBOM.
+
+Read the accepted dataset manifest and model registry contracts.
+
+Train and compare:
+
+1. Zero-return baseline
+2. Last-value baseline
+3. Seasonal-naive baseline
+4. Moving-average baseline
+5. Regularized linear return model
+6. Logistic direction model
+7. Gradient-boosted return model
+8. Gradient-boosted direction model
+9. Quantile-compatible model
+10. One compact temporal model only if resource gates permit
+
+Use pooled cross-instrument training. Do not train a complex independent model
+for every ticker.
+
+Requirements:
+
+- all twelve horizons;
+- fixed feature ordering;
+- training-only normalization;
+- deterministic seeds;
+- explicit instrument and horizon features;
+- missing-value policy;
+- confidence and calibration;
+- OOD profile;
+- dataset and feature-schema hashes;
+- no future leakage;
+- no raw-price-only success claim;
+- no Python in the execution hot path;
+- stable native or ONNX export where appropriate;
+- Python/exported-runtime prediction parity;
+- signed artifact manifest.
+
+Register artifacts only through OFFLINE_VALIDATED or REPLAY_VALIDATED.
+Do not promote to SHADOW, CANARY, LIMITED_RISK, or PRODUCTION in this prompt.
+
+Run CPU training first. Use one GPU only for the compact temporal model unless
+benchmarks justify more.
+
+Report training time, RAM, GPU memory, model size, metrics, and limitations.
+
+
+Prompt 59 — Twelve-horizon forecast CLI and bounded inference service
+
+Read the universe, horizon, dataset, model-serving, and signed-artifact
+contracts.
+
+Implement:
+
+- aegis-forecast
+- batch universe forecasting
+- single-ticker forecasting
+- forecast result inspection
+- JSON and Parquet output
+
+Required commands:
+
+aegis-forecast \
+  --ticker AAPL \
+  --horizons 5m,10m,15m,30m,60m,2h,5h,1d,1w,2w,1mo,2mo
+
+aegis-forecast \
+  --universe-file /scratch/djy8hg/xtrade/ticker.txt \
+  --as-of latest-complete-minute \
+  --output forecasts.parquet
+
+Requirements:
+
+1. A requested ticker must exist in the validated universe.
+2. Universe mode must produce a result record for every ticker.
+3. Each ticker/horizon produces either a valid forecast or explicit abstention.
+4. Forecast expected return and quantiles in PPM.
+5. Derive implied future prices using checked integer arithmetic.
+6. Publish model, feature, dataset, configuration, universe, and source hashes.
+7. Enforce model expiration and inference deadlines.
+8. Reject stale, missing, malformed, NaN, Inf, or incompatible output.
+9. Use deterministic output ordering.
+10. Batch inference outside the trading hot path.
+11. Never call risk, OMS, router, or gateway.
+12. Expose version, health, readiness, configuration hash, metrics, structured
+    logs, and graceful shutdown.
+13. Do not log licensed inputs or document text.
+
+Add tests for all 79 symbols, all horizons, missing history, recent IPO,
+unsupported venue, stale data, artifact mismatch, deadline miss, CPU fallback,
+overflow, and repeated-output hashes.
+
+Benchmark complete-universe inference on CPU and one GPU.
+
+
+Prompt 60 — Leakage-safe model performance evaluation
+
+Implement:
+
+- aegis-forecast-evaluate
+- per-ticker reports
+- per-horizon reports
+- pooled reports
+- sector/regime reports
+- baseline comparison
+- machine-readable and human-readable outputs
+
+Use chronological walk-forward evaluation with a 42-session embargo.
+
+Report:
+
+Forecast metrics:
+- MAE and RMSE for return;
+- implied-price MAE and RMSE;
+- directional accuracy;
+- log loss;
+- Brier score;
+- calibration error;
+- p10/p50/p90 coverage;
+- prediction-interval width;
+- OOD rate;
+- abstention rate;
+- baseline-relative improvement.
+
+Data metrics:
+- sample count;
+- valid coverage;
+- missing intervals;
+- corporate-action exclusions;
+- news/macro availability;
+- unsupported instruments.
+
+Optional infrastructure-only economic metrics:
+- turnover;
+- cost sensitivity;
+- no-cost versus configured-cost results;
+- forecast decay.
+
+Minute bars cannot prove queue position, passive fills, or tick-level execution.
+Do not report such metrics as observed.
+
+Define minimum sample thresholds. Mark insufficient ticker/horizon combinations
+as INSUFFICIENT_EVALUATION_DATA instead of publishing unstable scores.
+
+Bind every report to:
+
+- dataset hash;
+- universe hash;
+- model artifact hash;
+- feature schema;
+- configuration hash;
+- split boundaries;
+- seed;
+- code commit;
+- environment metadata.
+
+Repeated evaluation must produce identical deterministic hashes.
+
+Add leakage, insufficient-sample, calibration, quantile, malformed-prediction,
+and report-schema tests.
+
+
+Prompt 61 — POC resource and performance qualification
+
+Read the POC storage and performance policies.
+
+Create a repeatable Slurm benchmark suite using available cluster partitions.
+
+Measure:
+
+- download throughput using approved test data;
+- canonical rows per second;
+- feature rows per second;
+- label-generation throughput;
+- peak RSS;
+- peak temporary disk usage;
+- final data-root usage;
+- CPU training duration;
+- GPU training duration;
+- GPU memory high-water mark;
+- complete-universe inference latency;
+- forecasts per second;
+- model-load time;
+- report-generation time.
+
+Scenarios:
+
+1. Five-day pilot
+2. One-month dataset
+3. Full approved two-year POC dataset
+4. Single ticker
+5. Complete ticker.txt universe
+6. CPU inference
+7. Single-GPU inference
+8. Missing-data-heavy universe
+9. News-event burst
+
+Safety gates:
+
+- target data footprint <= 80 GB;
+- hard data-root limit <= 100 GB;
+- temporary workspace <= 20 GB;
+- filesystem reserve >= 50 GB;
+- no unbounded memory growth;
+- no unbounded queue;
+- no hidden network fetch during inference;
+- no GPU requirement for deterministic fallback.
+
+Preserve raw benchmark JSON and hardware metadata. Distinguish login-node,
+parallel-partition, and GPU-partition results.
+
+Create a regression policy with reasonable evidence-based tolerances. Do not
+silently weaken thresholds.
+
+Run formatter, linter, unit tests, benchmark smoke tests, and the approved
+Slurm jobs. Report job IDs and output summaries.
+
+
+Prompt 62 — Full data-to-forecast proof-of-concept validation
+
+Integrate the bounded POC pipeline:
+
+ticker.txt
+→ universe validation
+→ authorized minute-data ingestion
+→ reference/calendar/corporate actions
+→ SEC/GDELT/ALFRED ingestion
+→ canonical point-in-time storage
+→ features and labels
+→ chronological dataset
+→ model training
+→ signed artifact
+→ twelve-horizon inference
+→ walk-forward evaluation
+→ performance and resource reports
+
+Run the complete pipeline for every symbol in ticker.txt.
+
+Acceptance:
+
+1. Every source ticker is present in the final coverage report.
+2. Every ticker/horizon has either a forecast or explicit abstention.
+3. No missing record is fabricated.
+4. No separately sourced daily data is used.
+5. Derived session summaries are reproducible from minute data.
+6. All point-in-time leakage tests pass.
+7. Repeated dataset builds produce identical hashes.
+8. Repeated deterministic inference produces identical hashes.
+9. Signed model and dataset provenance verifies.
+10. Model artifact tampering is rejected.
+11. Storage remains within configured limits.
+12. No secret appears in logs or reports.
+13. News text cannot alter system instructions.
+14. No model or service reaches risk, OMS, router, or gateway.
+15. Live trading remains disabled.
+16. Reports distinguish infrastructure validation from economic evidence.
+
+Produce:
+
+- schemas/forecasting-poc-acceptance-v1.schema.json
+- build/reports/forecasting-poc/acceptance.json
+- docs/testing/evidence/forecasting-poc/system-report.md
+- docs/testing/evidence/forecasting-poc/command-summary.md
+- docs/testing/evidence/forecasting-poc/evidence-index.md
+
+Do not claim success without command output and report hashes.
+
+
+Prompt 63 — Independent hostile review of the forecasting POC
+
+Act as an independent reviewer. Do not add features during the audit.
+
+Inspect the complete data and forecasting implementation.
+
+Attempt to identify:
+
+- ticker omission;
+- ticker reuse or mapping ambiguity;
+- unsupported venue treated as valid;
+- future-data leakage;
+- corporate-action leakage;
+- news correction leakage;
+- macro revision leakage;
+- randomized time-series splitting;
+- label overlap;
+- stale inference inputs;
+- fabricated missing bars;
+- invalid price adjustment;
+- integer overflow;
+- schema incompatibility;
+- nondeterministic output;
+- model artifact replacement;
+- unbounded download;
+- quota bypass;
+- temporary-file leakage;
+- secret exposure;
+- prompt injection;
+- licensing or attribution violation;
+- economic claims unsupported by the evidence;
+- accidental connection to trading components.
+
+Use only safe, local, synthetic, mock, or copied test artifacts. Do not attack
+external providers or systems.
+
+For every successful finding:
+
+1. Add or identify a failing local regression test.
+2. Record exact reproduction evidence.
+3. Classify BLOCKER, CRITICAL, HIGH, MEDIUM, or LOW.
+4. Explain the root cause.
+5. Recommend the smallest remediation.
+6. Do not implement remediation until the report is complete.
+
+Create:
+
+- docs/reviews/forecasting-poc-audit.md
+- docs/reviews/forecasting-poc-blockers.md
+- docs/reviews/forecasting-poc-risk-register.md
+- docs/reviews/forecasting-poc-evidence-index.md
+
+Do not declare the POC safe or economically successful merely because ordinary
+tests pass.
+
+
+Prompt 64 — Remediate forecasting POC blockers and critical findings
+
+Read the completed independent forecasting POC audit.
+
+Fix every BLOCKER and CRITICAL issue.
+
+For each issue:
+
+1. Reproduce it with a failing local test.
+2. Preserve the failing evidence.
+3. Document the root cause.
+4. Implement the smallest robust fix.
+5. Add deterministic regression tests.
+6. Run relevant schema, unit, integration, security, leakage, replay, storage,
+   inference, and benchmark tests.
+7. Update the forecasting POC risk register.
+8. Link exact command output and report hashes.
+
+Do not:
+
+- weaken storage thresholds;
+- relax leakage checks;
+- suppress unsupported tickers;
+- fabricate history;
+- remove failing tests;
+- weaken signature or provenance validation;
+- grant additional data-source rights;
+- enable live trading.
+
+After remediation, rerun Prompt 63 as a fresh audit.
+
+Do not close the phase while a BLOCKER or CRITICAL finding remains.
+
+
+Prompt 65 — Final bounded forecasting POC handoff
+
+Create the final operational and research handoff without enabling live trading.
+
+Include:
+
+1. Architecture and data-flow diagram
+2. Exact ticker-universe manifest and hash
+3. Horizon definitions
+4. Approved source and licensing summary
+5. Data dictionary
+6. Storage layout and measured usage
+7. Download and update procedure
+8. Data-quality procedure
+9. Point-in-time and leakage controls
+10. Feature definitions
+11. Label definitions
+12. Model cards
+13. Training commands
+14. Forecast commands
+15. Evaluation commands
+16. CPU/GPU benchmark results
+17. Performance limitations
+18. Unsupported and insufficient-history ticker report
+19. Reproducibility instructions
+20. Backup and cleanup plan
+21. Security and prompt-injection controls
+22. Evidence that no trading connection exists
+23. Evidence that live mode remains disabled
+24. Requirements for scaling beyond the 79-symbol POC
+25. Storage investment triggers for broader data
+
+Create:
+
+- docs/operations/forecasting-poc-runbook.md
+- docs/research/forecasting-poc-model-card.md
+- docs/research/forecasting-poc-data-card.md
+- docs/research/forecasting-poc-results.md
+- docs/architecture/forecasting-poc-final-architecture.md
+- docs/testing/evidence/forecasting-poc/final-evidence-index.md
+
+Run the complete fast validation suite and all relevant POC tests.
+
+Report:
+
+- files changed;
+- architectural decisions;
+- exact commands and output summaries;
+- dataset/model/report hashes;
+- storage usage;
+- benchmarks;
+- known limitations;
+- unresolved noncritical risks;
+- requirements for the next scale phase.
+
+Do not perform production activation, live trading, remote push, or Git commit
+unless separately requested.

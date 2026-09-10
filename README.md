@@ -95,7 +95,7 @@ SHA-256. Go foundation code uses the standard library only.
 | `make test` | Build and run CTest/GoogleTest, pytest with 100% coverage threshold, and Go tests |
 | `make test-sanitizers` | Run separate ASan, UBSan, TSan C++ builds and the Go race detector |
 | `make test-fuzz` | Run deterministic Clang libFuzzer + UBSan deserialization smoke tests; ASan remains a separate sanitizer gate |
-| `make benchmark` | Run the release-mode Google Benchmark smoke workload and retain JSON output |
+| `make benchmark` | Run release-mode C++ and Python smoke workloads, including bounded data-repository usage/hash/admission measurements, and retain JSON output |
 | `make benchmark-platform` | Run the pinned, warmed 14-stage/9-scenario suite with qualification sample counts |
 | `make benchmark-platform-smoke` | Run the complete matrix with bounded non-qualifying sample counts |
 | `make benchmark-regression` | Compare a platform report against an explicitly supplied approved baseline |
@@ -252,6 +252,23 @@ The normative semantics are in the
 [point-in-time data contract](docs/architecture/point-in-time-data-contract.md),
 with focused commands in
 [Point-in-time Data Testing](docs/testing/point-in-time-data-testing.md).
+
+The bounded forecasting POC adds the local-only `aegis-data` command for an
+external data root. It creates the fixed storage layout, reports logical and
+allocated usage, fail-closes storage estimates without authoritative quota
+evidence, verifies immutable manifests and objects, and produces cleanup plans
+without deleting anything:
+
+```bash
+/scratch/djy8hg/env/aegis_mx_contracts/bin/aegis-data \
+  --data-root /scratch/djy8hg/aegis_mx_poc_data usage
+/scratch/djy8hg/env/aegis_mx_contracts/bin/aegis-data \
+  --data-root /scratch/djy8hg/aegis_mx_poc_data verify
+```
+
+The [storage architecture](docs/architecture/poc-data-repository.md) and
+[operations runbook](docs/operations/poc-data-storage.md) document quota input,
+admission estimates, recovery, and the exact non-network/non-deletion boundary.
 
 ## Durable journal tools
 

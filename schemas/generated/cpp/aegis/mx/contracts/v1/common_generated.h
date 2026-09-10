@@ -480,6 +480,114 @@ inline const char *EnumNameForecastTarget(ForecastTarget e) {
   return EnumNamesForecastTarget()[index];
 }
 
+enum class ForecastHorizonUnit : uint8_t {
+  UNKNOWN = 0,
+  ELAPSED_NANOSECONDS = 1,
+  TRADING_MINUTES = 2,
+  TRADING_SESSIONS = 3,
+  MIN = UNKNOWN,
+  MAX = TRADING_SESSIONS
+};
+
+inline const ForecastHorizonUnit (&EnumValuesForecastHorizonUnit())[4] {
+  static const ForecastHorizonUnit values[] = {
+    ForecastHorizonUnit::UNKNOWN,
+    ForecastHorizonUnit::ELAPSED_NANOSECONDS,
+    ForecastHorizonUnit::TRADING_MINUTES,
+    ForecastHorizonUnit::TRADING_SESSIONS
+  };
+  return values;
+}
+
+inline const char * const *EnumNamesForecastHorizonUnit() {
+  static const char * const names[5] = {
+    "UNKNOWN",
+    "ELAPSED_NANOSECONDS",
+    "TRADING_MINUTES",
+    "TRADING_SESSIONS",
+    nullptr
+  };
+  return names;
+}
+
+inline const char *EnumNameForecastHorizonUnit(ForecastHorizonUnit e) {
+  if (::flatbuffers::IsOutRange(e, ForecastHorizonUnit::UNKNOWN, ForecastHorizonUnit::TRADING_SESSIONS)) return "";
+  const size_t index = static_cast<size_t>(e);
+  return EnumNamesForecastHorizonUnit()[index];
+}
+
+enum class HorizonHaltPolicy : uint8_t {
+  UNKNOWN = 0,
+  NOT_APPLICABLE = 1,
+  REJECT = 2,
+  PAUSE = 3,
+  COUNT_SCHEDULED = 4,
+  MIN = UNKNOWN,
+  MAX = COUNT_SCHEDULED
+};
+
+inline const HorizonHaltPolicy (&EnumValuesHorizonHaltPolicy())[5] {
+  static const HorizonHaltPolicy values[] = {
+    HorizonHaltPolicy::UNKNOWN,
+    HorizonHaltPolicy::NOT_APPLICABLE,
+    HorizonHaltPolicy::REJECT,
+    HorizonHaltPolicy::PAUSE,
+    HorizonHaltPolicy::COUNT_SCHEDULED
+  };
+  return values;
+}
+
+inline const char * const *EnumNamesHorizonHaltPolicy() {
+  static const char * const names[6] = {
+    "UNKNOWN",
+    "NOT_APPLICABLE",
+    "REJECT",
+    "PAUSE",
+    "COUNT_SCHEDULED",
+    nullptr
+  };
+  return names;
+}
+
+inline const char *EnumNameHorizonHaltPolicy(HorizonHaltPolicy e) {
+  if (::flatbuffers::IsOutRange(e, HorizonHaltPolicy::UNKNOWN, HorizonHaltPolicy::COUNT_SCHEDULED)) return "";
+  const size_t index = static_cast<size_t>(e);
+  return EnumNamesHorizonHaltPolicy()[index];
+}
+
+enum class HorizonSessionEndpoint : uint8_t {
+  UNKNOWN = 0,
+  NOT_APPLICABLE = 1,
+  REGULAR_SESSION_CLOSE = 2,
+  MIN = UNKNOWN,
+  MAX = REGULAR_SESSION_CLOSE
+};
+
+inline const HorizonSessionEndpoint (&EnumValuesHorizonSessionEndpoint())[3] {
+  static const HorizonSessionEndpoint values[] = {
+    HorizonSessionEndpoint::UNKNOWN,
+    HorizonSessionEndpoint::NOT_APPLICABLE,
+    HorizonSessionEndpoint::REGULAR_SESSION_CLOSE
+  };
+  return values;
+}
+
+inline const char * const *EnumNamesHorizonSessionEndpoint() {
+  static const char * const names[4] = {
+    "UNKNOWN",
+    "NOT_APPLICABLE",
+    "REGULAR_SESSION_CLOSE",
+    nullptr
+  };
+  return names;
+}
+
+inline const char *EnumNameHorizonSessionEndpoint(HorizonSessionEndpoint e) {
+  if (::flatbuffers::IsOutRange(e, HorizonSessionEndpoint::UNKNOWN, HorizonSessionEndpoint::REGULAR_SESSION_CLOSE)) return "";
+  const size_t index = static_cast<size_t>(e);
+  return EnumNamesHorizonSessionEndpoint()[index];
+}
+
 enum class IntentAction : uint8_t {
   UNKNOWN = 0,
   BUY = 1,

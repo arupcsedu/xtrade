@@ -1,0 +1,93 @@
+"""Filesystem integration tests for the ``aegis-data`` command."""
+
+from __future__ import annotations
+
+import json
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+from aegis_mx_research import DECIMAL_GB
+from aegis_mx_research.data_cli import main
+
+
+def _base(root: Path) -> list[str]:
+    return ["--data-root", str(root)]
+
+
+def _quota() -> list[str]:
+    return [
+        "--quota-limit-bytes",
+        str(250 * DECIMAL_GB),
+        "--quota-used-bytes",
+        str(10 * DECIMAL_GB),
+        "--quota-source",
+        "synthetic-cli-fixture",
+        "--quota-observed-at-utc",
+        "2026-09-09T16:00:00Z",
+        "--quota-authoritative",
+    ]
+
+
+def test_usage_outputs_labeled_decimal_and_binary_values(
+    tmp_path: Path, capsys: object
+) -> None:
+    root = tmp_path / "data"
+    assert main([*_base(root), "usage"]) == 0
+    output = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert output["command"] == "usage"
+    assert output["report"]["total"]["bytes_decimal"] >= 0
+    assert "gib_binary" in output["report"]["total"]
+    assert output["audit"]["outcome"] == "SUCCEEDED"
+
+
+def test_estimate_requires_authoritative_quota_and_reports_denial(
+    tmp_path: Path, capsys: object
+) -> None:
+    root = tmp_path / "data"
+    assert main([*_base(root), "estimate", "--output-bytes", "1"]) == 2
+    denied = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert denied["report"]["admitted"] is False
+    assert "QUOTA_UNKNOWN" in denied["report"]["reasons"]
+
+    arguments = [
+        *_base(root),
+        "estimate",
+        "--output-bytes",
+        "1000",
+        "--temporary-bytes",
+        "2000",
+        "--retry-overhead-bytes",
+        "3000",
+        *_quota(),
+    ]
+    assert main(arguments) == 0
+    accepted = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert accepted["report"]["admitted"] is True
+
+
+def test_verify_and_cleanup_plan_are_read_only(tmp_path: Path, capsys: object) -> None:
+    root = tmp_path / "data"
+    assert main([*_base(root), "verify"]) == 0
+    verified = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert verified["report"]["passed"] is True
+
+    temporary = root / "tmp" / "interrupted.part"
+    temporary.write_bytes(b"temporary")
+    assert main([*_base(root), "cleanup-plan", "--target-bytes", "0"]) == 0
+    planned = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert planned["report"]["automatic_deletion_performed"] is False
+    assert planned["report"]["candidates"]
+    assert temporary.read_bytes() == b"temporary"
+
+
+def test_cli_fails_closed_with_structured_error(tmp_path: Path, capsys: object) -> None:
+    root = tmp_path / "data"
+    root.mkdir()
+    (root / "raw").symlink_to(tmp_path, target_is_directory=True)
+    assert main([*_base(root), "usage"]) == 1
+    error = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert error["command"] == "usage"
+    assert error["error"]["code"] == "SYMLINK_DETECTED"
+    assert error["audit"]["outcome"] == "REJECTED"

@@ -198,6 +198,30 @@ enum ForecastTarget : ubyte {
   SECTOR_FACTOR = 6
 }
 
+// Additive v1.9 semantic forecast-horizon vocabulary. UNKNOWN is unsafe.
+// ELAPSED_NANOSECONDS exists only to make legacy horizon_ns records explicit;
+// POC writers use TRADING_MINUTES or TRADING_SESSIONS.
+enum ForecastHorizonUnit : ubyte {
+  UNKNOWN = 0,
+  ELAPSED_NANOSECONDS = 1,
+  TRADING_MINUTES = 2,
+  TRADING_SESSIONS = 3
+}
+
+enum HorizonHaltPolicy : ubyte {
+  UNKNOWN = 0,
+  NOT_APPLICABLE = 1,
+  REJECT = 2,
+  PAUSE = 3,
+  COUNT_SCHEDULED = 4
+}
+
+enum HorizonSessionEndpoint : ubyte {
+  UNKNOWN = 0,
+  NOT_APPLICABLE = 1,
+  REGULAR_SESSION_CLOSE = 2
+}
+
 enum IntentAction : ubyte {
   UNKNOWN = 0,
   BUY = 1,

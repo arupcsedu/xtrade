@@ -144,6 +144,12 @@ sequence and hash evidence. Readers and semantic validators deploy before v1.8
 writers. See
 [ADR 0024](../docs/adr/0024-journal-first-fenced-deterministic-oms.md).
 
+Schema v1.9 additively extends `ModelForecast` with a semantic horizon unit,
+value, explicit halt policy, deterministic session endpoint, calendar version,
+and target exchange-event timestamp. `horizon_ns` remains the actual elapsed
+interval for compatible readers and cannot define a trading-session horizon.
+See [ADR 0046](../docs/adr/0046-exchange-calendar-forecast-horizons.md).
+
 Timestamp types are not interchangeable:
 
 - `ExchangeEventTimeNs`: venue-originated nanoseconds since the Unix epoch;
@@ -199,6 +205,17 @@ binds the configured build, operator drill, checked-in edge profiles, systemd
 guard, control-plane rejection, and still-open production blockers. A passing
 record means the inspected state is non-live while `production_ready` remains
 false and activation remains `PROHIBITED`.
+
+The bounded forecasting POC uses three off-hot-path JSON contracts. The
+[storage policy v1](data-storage-policy-v1.schema.json) fixes the five decimal-
+byte limits. The [data manifest v1](data-manifest-v1.schema.json) describes
+content-addressed source and partition envelopes, explicit timestamp domains,
+and correction/replacement lineage. The
+[storage audit v1](data-storage-audit-v1.schema.json) binds each administrative
+result to the root, policy, evidence, reason codes, and the invariant that no
+network access occurred. Runtime decoders additionally verify canonical bytes,
+semantic time ordering, object size and SHA-256, references, and manifest
+identity. These contracts do not enter a trading path.
 
 ## Identifiers
 

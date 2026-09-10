@@ -173,6 +173,16 @@ table FeatureSnapshotMetadata {
   feature_payload_sha256:Sha256Digest;
 }
 
+// Versioned semantic horizon added in v1.9. calendar_version is absent only
+// for ELAPSED_NANOSECONDS compatibility records. Trading horizons require it.
+table HorizonSpec {
+  unit:ForecastHorizonUnit = UNKNOWN;
+  value:ulong;
+  halt_policy:HorizonHaltPolicy = UNKNOWN;
+  session_endpoint:HorizonSessionEndpoint = UNKNOWN;
+  calendar_version:ConfigurationVersion;
+}
+
 table ModelForecast {
   schema_version:SchemaVersion;
   forecast_id:ForecastId;
@@ -218,6 +228,11 @@ table ModelForecast {
   target_p10:long;
   target_p50:long;
   target_p90:long;
+  // Additive v1.9 semantic horizon and its explicit exchange-event target.
+  // horizon_ns remains the actual elapsed interval for older consumers; it
+  // does not define trading-minute or trading-session semantics.
+  horizon_spec:HorizonSpec;
+  target_exchange_event_time:ExchangeEventTimeNs;
 }
 
 // Fixed-layout per-expert audit item added in v1.5. Entries are emitted in

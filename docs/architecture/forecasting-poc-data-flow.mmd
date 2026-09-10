@@ -1,0 +1,107 @@
+flowchart TD
+  TICKERS["ticker.txt<br/>sole requested symbol source"]
+  UVAL["Universe validation<br/>source order, stable IDs, canonical hash"]
+  HORIZON["Versioned HorizonSpec<br/>trading minutes and session endpoints"]
+  POLICY["Default-disabled source policy<br/>rights, terms, credentials, timestamps"]
+  ADMISSION["Storage admission<br/>quota, reserve, current and projected peak"]
+
+  TICKERS --> UVAL
+  UVAL --> HORIZON
+  UVAL --> POLICY
+  POLICY --> ADMISSION
+
+  subgraph SOURCES["Authorized bounded source acquisition"]
+    MINUTE["Approved one-minute OHLCV adapter"]
+    REF["Reference, calendars, and corporate actions"]
+    SEC["SEC filings and structured facts"]
+    GDELT["Bounded GDELT metadata"]
+    ALFRED["Selected FRED and ALFRED vintages"]
+  end
+
+  ADMISSION --> MINUTE
+  ADMISSION --> REF
+  ADMISSION --> SEC
+  ADMISSION --> GDELT
+  ADMISSION --> ALFRED
+
+  subgraph LANDING["Immutable landing zone"]
+    QUARANTINE["Quarantine<br/>malformed or unverifiable objects"]
+    RAW["Raw source objects<br/>hashes and durable checkpoints"]
+    SMAN["Source manifests<br/>time, rights, lineage, size, count"]
+  end
+
+  MINUTE --> RAW
+  REF --> RAW
+  SEC --> RAW
+  GDELT --> RAW
+  ALFRED --> RAW
+  MINUTE -. invalid .-> QUARANTINE
+  REF -. invalid .-> QUARANTINE
+  SEC -. invalid .-> QUARANTINE
+  GDELT -. invalid .-> QUARANTINE
+  ALFRED -. invalid .-> QUARANTINE
+  RAW --> SMAN
+
+  NORMALIZE["Streaming canonicalization<br/>integer minute records and source lineage"]
+  PIT["Persistent point-in-time store<br/>event, knowledge, revision, validity"]
+  PARQUET["Partitioned canonical Parquet<br/>date and instrument bucket"]
+  QUALITY["Data-quality reports<br/>coverage, gaps, duplicates, rejects"]
+
+  RAW --> NORMALIZE
+  SMAN --> NORMALIZE
+  HORIZON --> NORMALIZE
+  NORMALIZE --> PIT
+  NORMALIZE --> PARQUET
+  NORMALIZE --> QUALITY
+  QUALITY -->|accepted partitions only| PARQUET
+
+  FEATURES["Leakage-safe feature builder<br/>minute and derived session features"]
+  LABELS["Twelve-horizon labels<br/>explicit future target timestamps"]
+  LEAKAGE["Point-in-time leakage gate<br/>chronological split and 42-session embargo"]
+  DATASET["Immutable dataset manifest<br/>source, universe, schema, split, seed hashes"]
+
+  PIT --> FEATURES
+  PARQUET --> FEATURES
+  PARQUET --> LABELS
+  HORIZON --> LABELS
+  REF --> LABELS
+  FEATURES --> LEAKAGE
+  LABELS --> LEAKAGE
+  LEAKAGE -->|accepted only| DATASET
+
+  TRAIN["Baseline-first pooled training<br/>instrument and horizon features"]
+  EXPORT["Stable native or ONNX export<br/>runtime parity"]
+  REGISTRY["Signed model registry<br/>OFFLINE or REPLAY validated only"]
+
+  DATASET --> TRAIN
+  TRAIN --> EXPORT
+  EXPORT --> REGISTRY
+
+  CONTEXT["Point-in-time context builder<br/>latest complete eligible minute"]
+  INFER["Bounded batch inference<br/>CPU plus optional single-GPU path"]
+  ABSTAIN["Forecast or explicit abstention<br/>for every ticker and horizon"]
+  IMPLIED["Checked implied-price derivation<br/>integer ticks plus return provenance"]
+
+  PIT --> CONTEXT
+  PARQUET --> CONTEXT
+  HORIZON --> CONTEXT
+  REGISTRY --> INFER
+  CONTEXT --> INFER
+  INFER --> ABSTAIN
+  ABSTAIN --> IMPLIED
+
+  EVALUATE["Chronological walk-forward evaluation<br/>ticker, horizon, pooled, sector, regime"]
+  RESOURCE["Resource qualification<br/>storage, RSS, CPU, GPU, throughput, latency"]
+  EVIDENCE["Acceptance and handoff evidence<br/>hashes, limitations, source rights"]
+
+  DATASET --> EVALUATE
+  ABSTAIN --> EVALUATE
+  IMPLIED --> EVALUATE
+  EVALUATE --> RESOURCE
+  QUALITY --> RESOURCE
+  RESOURCE --> EVIDENCE
+  REGISTRY --> EVIDENCE
+  SMAN --> EVIDENCE
+
+  NOTRADE["No risk, OMS, router, gateway, or live activation"]
+  ABSTAIN -. advisory outputs only .-> NOTRADE

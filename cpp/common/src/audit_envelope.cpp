@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <span>
 #include <utility>
 
@@ -539,6 +540,55 @@ validate_model_forecast_v1_3(const wire::ModelForecast* record) noexcept {
 }
 
 [[nodiscard]] ValidationResult
+validate_model_forecast_v1_9(const wire::ModelForecast* record) noexcept {
+  const auto* spec = record->horizon_spec();
+  const auto* target = record->target_exchange_event_time();
+  const auto* as_of = record->as_of_exchange_event_time();
+  if (spec == nullptr) {
+    return {ValidationError::missing_payload};
+  }
+  if (!valid_enum(spec->unit()) || !valid_enum(spec->halt_policy()) ||
+      !valid_enum(spec->session_endpoint())) {
+    return {ValidationError::invalid_enum};
+  }
+  if (spec->value() == 0U || !positive_timestamp(target) ||
+      !positive_timestamp(as_of) || target->value() <= as_of->value() ||
+      static_cast<std::uint64_t>(target->value() - as_of->value()) !=
+          record->horizon_ns()) {
+    return {ValidationError::invalid_relationship};
+  }
+
+  switch (spec->unit()) {
+  case wire::ForecastHorizonUnit::ELAPSED_NANOSECONDS:
+    if (spec->value() != record->horizon_ns() ||
+        spec->halt_policy() != wire::HorizonHaltPolicy::NOT_APPLICABLE ||
+        spec->session_endpoint() != wire::HorizonSessionEndpoint::NOT_APPLICABLE ||
+        spec->calendar_version() != nullptr) {
+      return {ValidationError::invalid_relationship};
+    }
+    return {};
+  case wire::ForecastHorizonUnit::TRADING_MINUTES:
+    if (!valid_identifier(spec->calendar_version()) ||
+        spec->halt_policy() == wire::HorizonHaltPolicy::NOT_APPLICABLE ||
+        spec->session_endpoint() != wire::HorizonSessionEndpoint::NOT_APPLICABLE) {
+      return {ValidationError::invalid_relationship};
+    }
+    return {};
+  case wire::ForecastHorizonUnit::TRADING_SESSIONS:
+    if (!valid_identifier(spec->calendar_version()) ||
+        spec->halt_policy() == wire::HorizonHaltPolicy::NOT_APPLICABLE ||
+        spec->session_endpoint() !=
+            wire::HorizonSessionEndpoint::REGULAR_SESSION_CLOSE) {
+      return {ValidationError::invalid_relationship};
+    }
+    return {};
+  case wire::ForecastHorizonUnit::UNKNOWN:
+    return {ValidationError::invalid_enum};
+  }
+  return {ValidationError::invalid_enum};
+}
+
+[[nodiscard]] ValidationResult
 validate_model_forecast(const wire::ModelForecast* record) noexcept {
   if (record == nullptr) {
     return {ValidationError::missing_payload};
@@ -573,7 +623,11 @@ validate_model_forecast(const wire::ModelForecast* record) noexcept {
     return {ValidationError::invalid_value};
   }
   if (record->schema_version()->minor() >= 3U) {
-    return validate_model_forecast_v1_3(record);
+    const auto base = validate_model_forecast_v1_3(record);
+    if (!base.ok() || record->schema_version()->minor() < 9U) {
+      return base;
+    }
+    return validate_model_forecast_v1_9(record);
   }
   if (record->schema_version()->minor() >= 1U) {
     return validate_model_forecast_v1_1(record);
@@ -1629,6 +1683,25 @@ flatbuffers::DetachedBuffer build_model_forecast_contract(
   const wire::ProcessMonotonicTimeNs expiration_time{
       input.expiration_process_monotonic_time_ns};
   const wire::ExchangeEventTimeNs as_of_time{input.as_of_exchange_event_time_ns};
+  const auto horizon_value =
+      input.horizon_value == 0U ? input.horizon_ns : input.horizon_value;
+  const wire::ConfigurationVersion horizon_calendar_version{
+      input.horizon_calendar_version.high(), input.horizon_calendar_version.low()};
+  const auto* horizon_calendar =
+      input.horizon_calendar_version.valid() ? &horizon_calendar_version : nullptr;
+  const auto horizon_spec = wire::CreateHorizonSpec(
+      builder, input.horizon_unit, horizon_value, input.horizon_halt_policy,
+      input.horizon_session_endpoint, horizon_calendar);
+  std::int64_t target_exchange_event_time_ns = input.target_exchange_event_time_ns;
+  if (target_exchange_event_time_ns == 0 &&
+      input.horizon_unit == wire::ForecastHorizonUnit::ELAPSED_NANOSECONDS &&
+      input.as_of_exchange_event_time_ns > 0 &&
+      std::cmp_less_equal(input.horizon_ns, std::numeric_limits<std::int64_t>::max() -
+                                                input.as_of_exchange_event_time_ns)) {
+    target_exchange_event_time_ns = input.as_of_exchange_event_time_ns +
+                                    static_cast<std::int64_t>(input.horizon_ns);
+  }
+  const wire::ExchangeEventTimeNs target_exchange_time{target_exchange_event_time_ns};
   const auto forecast = wire::CreateModelForecast(
       builder, &version, &forecast_id, &session_id, &model_id, &model_version,
       &instrument_id, &feature_snapshot_id, &configuration_version, input.forecast_unit,
@@ -1650,7 +1723,8 @@ flatbuffers::DetachedBuffer build_model_forecast_contract(
       input.forecast_target == wire::ForecastTarget::RETURN ? input.return_p50_ppm
                                                             : input.target_p50,
       input.forecast_target == wire::ForecastTarget::RETURN ? input.return_p90_ppm
-                                                            : input.target_p90);
+                                                            : input.target_p90,
+      horizon_spec, &target_exchange_time);
   const auto record = wire::CreateContractRecord(
       builder, &version, &record_id, wire::RecordType::MODEL_FORECAST,
       wire::ContractPayload::ModelForecast, forecast.Union());

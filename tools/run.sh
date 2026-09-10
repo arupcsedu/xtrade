@@ -226,6 +226,8 @@ run_fuzz() {
   cp schemas/golden/data_quality_v1.amae "$corpus_dir/data_quality_v1.amae"
   cp schemas/golden/model_forecast_v1_3.amae \
     "$corpus_dir/model_forecast_v1_3.amae"
+  cp schemas/golden/model_forecast_v1_9.amae \
+    "$corpus_dir/model_forecast_v1_9.amae"
   build/fuzz/cpp/common/aegis_audit_envelope_fuzz \
     -runs="${AEGIS_FUZZ_RUNS:-10000}" \
     -seed="${AEGIS_TEST_SEED:-20260828}" \
@@ -292,6 +294,10 @@ run_benchmark() {
     --iterations="${AEGIS_POINT_IN_TIME_BENCHMARK_ITERATIONS:-100}" \
     --records="${AEGIS_POINT_IN_TIME_BENCHMARK_RECORDS:-256}" \
     --output=build/reports/benchmarks/point-in-time.json
+  "$python_bin" tools/benchmark_data_repository.py \
+    --iterations="${AEGIS_DATA_REPOSITORY_BENCHMARK_ITERATIONS:-25}" \
+    --file-count="${AEGIS_DATA_REPOSITORY_BENCHMARK_FILES:-64}" \
+    --output=build/reports/benchmarks/data-repository.json
   (
     cd control
     go test -run '^$' \

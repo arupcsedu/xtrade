@@ -11,6 +11,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = ["flatbuffers==25.12.19"]
 
 [project.scripts]
+aegis-data = "aegis_mx_research.data_cli:cli_main"
 aegis-chaos-run = "tools.chaos_runner:main"
 aegis-performance-benchmark = "tools.performance_benchmark:main"
 edge-deployment = "tools.edge_deployment:main"
@@ -43,6 +44,9 @@ packages = [
 "schemas/edge-host-facts-v1.schema.json" = "schemas/edge-host-facts-v1.schema.json"
 "schemas/edge-rollback-manifest-v1.schema.json" = "schemas/edge-rollback-manifest-v1.schema.json"
 "schemas/regional-release-lock-v1.schema.json" = "schemas/regional-release-lock-v1.schema.json"
+"schemas/data-manifest-v1.schema.json" = "schemas/data-manifest-v1.schema.json"
+"schemas/data-storage-audit-v1.schema.json" = "schemas/data-storage-audit-v1.schema.json"
+"schemas/data-storage-policy-v1.schema.json" = "schemas/data-storage-policy-v1.schema.json"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -67,6 +71,9 @@ include = [
   "/schemas/edge-host-facts-v1.schema.json",
   "/schemas/edge-rollback-manifest-v1.schema.json",
   "/schemas/regional-release-lock-v1.schema.json",
+  "/schemas/data-manifest-v1.schema.json",
+  "/schemas/data-storage-audit-v1.schema.json",
+  "/schemas/data-storage-policy-v1.schema.json",
 ]
 
 [tool.ruff]

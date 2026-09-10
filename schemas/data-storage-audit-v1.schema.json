@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/data-storage-audit-v1.schema.json",
+  "title": "Aegis-MX bounded storage audit record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "audit_id",
+    "automatic_deletion_performed",
+    "data_root",
+    "evidence_sha256",
+    "network_access_performed",
+    "live_trading_capable",
+    "observed_at_wall_utc",
+    "operation",
+    "outcome",
+    "policy_sha256",
+    "reason_codes",
+    "schema_version"
+  ],
+  "properties": {
+    "audit_id": {"type": "string", "pattern": "^storage-audit-[a-f0-9]{64}$"},
+    "automatic_deletion_performed": {"const": false},
+    "data_root": {"type": "string", "minLength": 1, "maxLength": 4096},
+    "evidence_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "network_access_performed": {"const": false},
+    "live_trading_capable": {"const": false},
+    "observed_at_wall_utc": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "(Z|\\+00:00)$"
+    },
+    "operation": {"type": "string", "minLength": 1, "maxLength": 160},
+    "outcome": {"enum": ["SUCCEEDED", "REJECTED"]},
+    "policy_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "reason_codes": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {"type": "string", "minLength": 1, "maxLength": 160}
+    },
+    "schema_version": {"const": "1.0.0"}
+  }
+}
