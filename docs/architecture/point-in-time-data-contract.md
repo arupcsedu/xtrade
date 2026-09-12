@@ -118,3 +118,10 @@ The store is bounded but uses Python allocation and linear reference scans. It
 does not provide a database, licensed provider connector, distributed snapshot,
 retention enforcement, or hot-path cache. Production analytical storage must
 preserve these semantics and prove query parity before replacing it.
+
+Prompt 52 adds a side-by-side closed JSON v1 instrument-reference contract. It
+does not change this v1 record family or query boundary. The sidecar adds
+detailed instrument revisions, explicit calendar closures, halt-coverage state,
+and checked rational actions while preserving the same effective-time and
+known-time rule. See
+[point-in-time instrument reference data](point-in-time-instrument-reference.md).

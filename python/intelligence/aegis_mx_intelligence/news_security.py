@@ -126,6 +126,17 @@ def _is_suspicious_segment(segment: str) -> bool:
     )
 
 
+def contains_prompt_injection(value: str) -> bool:
+    """Detect instruction-like untrusted metadata without executing it."""
+    if len(value) > MAX_TEXT_CHARACTERS:
+        return True
+    return any(
+        _is_suspicious_segment(segment)
+        for segment in _SENTENCE.split(value)
+        if segment.strip()
+    )
+
+
 def _normalize_visible_text(value: str) -> str:
     lines = []
     for line in value.replace("\x00", " ").splitlines():

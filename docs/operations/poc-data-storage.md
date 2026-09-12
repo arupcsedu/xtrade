@@ -40,7 +40,7 @@ Substitute current, authoritative quota evidence:
   --output-bytes 1000000000 \
   --temporary-bytes 200000000 \
   --retry-overhead-bytes 100000000 \
-  --quota-limit-bytes 250000000000 \
+  --quota-limit-bytes 10995116277760 \
   --quota-used-bytes 10000000000 \
   --quota-source allocation-authority \
   --quota-observed-at-utc 2026-09-09T16:00:00Z \
@@ -51,6 +51,11 @@ Exit status `0` means the estimate is admitted under the observed state; it is
 not download authorization. Status `2` means a computed policy rejection.
 Malformed or unavailable state returns status `1`. Omitting any quota field
 produces `QUOTA_UNKNOWN` and fails closed.
+
+On this cluster, obtain both limit and current usage with
+`/opt/rci/bin/hdquota -s`. The authoritative scratch soft limit is 10 TiB,
+serialized exactly as `10995116277760` bytes. Do not reuse the 200 GB home
+quota or rounded human-readable values.
 
 ## Verify integrity
 

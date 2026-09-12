@@ -2,8 +2,8 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Dependency-aware implementation plan |
-| Audit date | 2026-09-09 |
+| Status | Prompts 45–53 complete and verified; Prompts 54 and 55 are the next independent data dependencies |
+| Audit date | 2026-09-11 |
 | Scope | Current repository plus Prompts 46 through 65 |
 | Contract | [Bounded forecasting POC contract](forecasting-poc-contract.md) |
 | Data flow | [Mermaid source](forecasting-poc-data-flow.mmd) |
@@ -50,11 +50,11 @@ must not be used as the current implementation inventory.
 | Research | Immutable bitemporal types, bounded in-memory `PointInTimeStore`, `as_known_at` queries, chronological manifest types, and deterministic leakage findings | Persistent analytical store, minute bars, partitions/manifests, streaming dataset construction, all requested feature/label families, and 42-session embargo semantics |
 | Training | Deterministic synthetic microstructure dataset, fixed-point logistic training, native export, and C++ parity for seven microstructure roles | Historical OHLCV training, pooled multi-horizon regressors/classifiers/quantiles, model cards, POC artifact export, and resource measurements |
 | Registry/deployment control | Signed content-addressed Go registry, exact feature-schema compatibility, immutable lifecycle/audit, offline/replay validation, shadow/canary controls, rollback, and disable | POC artifact-manifest integration and environment evidence; production promotion remains out of scope |
-| Intelligence | Provider-neutral document interface, mock/filesystem providers, injected official-public boundary, prompt defenses, process sandbox, deterministic news, filings/earnings, and macro specialist contracts | SEC EDGAR adapter, GDELT adapter/entity coverage, FRED/ALFRED vintage adapter, exact approved source semantics, and bounded persistent manifests |
+| Intelligence | Provider-neutral document interface, mock/filesystem providers, injected official-public boundary, prompt defenses, process sandbox, deterministic news, filings/earnings, macro specialist contracts, and bounded SEC ticker/submissions/company-facts ingestion | GDELT adapter/entity coverage and FRED/ALFRED vintage adapter |
 | Backtesting/evaluation | Offline deterministic event-level C++ simulator with synthetic order/price events and execution/cost reports; basic time-series walk-forward MAE/RMSE comparator | Minute-bar forecasting evaluator, per-ticker/horizon/sector/regime reports, required calibration/directional/quantile metrics, and explicit insufficient-data output |
 | Security | Zero-trust service identities, TLS 1.3 mTLS, secret-mount abstraction, bounded parsers, document sandbox, secret/dependency scans, signed artifacts/configurations | Source-specific credential bindings, downloader SSRF/path controls, data-license enforcement, restricted source retention, and POC no-trading dependency proof |
 | Deployment | Non-hot-path TimesFM Docker/Kubernetes skeleton and isolated regional manifests with fail-closed image placeholders | Data/training batch execution profiles, POC Slurm jobs, storage mounts/quotas, backup policy, and approved immutable images |
-| Historical data | No committed data and no external POC data root | Every remote source object, canonical minute partition, derived dataset, trained POC model, and result report |
+| Historical data | No data is committed to Git; the owner-only external root contains an accepted five-session pilot and verified 501-session Alpaca IEX minute backfill with 9,462,709 canonical records | Event-source data, derived datasets, trained POC models, and evaluation reports |
 
 The declared Python runtime currently depends only on FlatBuffers; no Parquet,
 dataframe, exchange-calendar, gradient-boosting, ONNX, or deep-learning package
@@ -68,8 +68,8 @@ license/security review, SBOM regeneration, and installation only in
 | --- | --- | --- | --- |
 | FPOC-001 | Closed by Prompt 46 | Existing contexts still use elapsed `horizon_ns`, but the canonical v1.9 contract now distinguishes elapsed, trading-minute, and trading-session semantics and binds an explicit target | Integrate the v1.9 resolver into context/dataset construction in later prompts; do not regress to elapsed-only semantics |
 | FPOC-002 | Closed by Prompt 47 | The bounded external-root layout, fail-closed quota admission, immutable manifests, verification, cleanup planner, audits, CLI, schemas, and benchmarks are implemented | Future writers must retain the admission lease and Prompt 48 source authorization remains mandatory before any download |
-| FPOC-003 | External authorization | The repository contains no approved market-data/news/macro source policy or provider credentials | Complete the source assessment and obtain explicit rights before provider adapters or remote access |
-| FPOC-004 | Blocking Prompts 49–55 | No generic data downloader or specific minute, SEC, GDELT, or ALFRED adapter exists | Build mock-first bounded ingestion, then only approved adapters |
+| FPOC-003 | Closed for the Prompt 50 Alpaca scope | A private, expiring, owner-only academic policy authorizes Basic IEX one-minute bars; the checked-in policy remains deny-by-default and no other source is enabled | Reassess on expiry or any account, terms, purpose, universe, or distribution change; authorize every future source independently |
+| FPOC-004 | Closed for minute and SEC data by Prompts 49–53 | Provider-neutral bounded ingestion and the authorized Alpaca IEX minute adapter produced a verified two-year dataset; SEC report v1.1 binds the same closed date window, retrieves only intersecting historical submission shards, and provides current associations, submissions, company facts, immutable manifests, and complete-universe coverage with one unresolved symbol | Build only separately authorized GDELT and FRED/ALFRED adapters in Prompts 54–55; do not infer historical ticker truth, publication time, or amendment parents from absent SEC fields |
 | FPOC-005 | Blocking Prompt 56 | Point-in-time storage is in-memory, allocating, and linearly scanned; there is no minute schema or Parquet path | Implement streaming canonicalization and persistent query-parity storage |
 | FPOC-006 | Blocking Prompt 57 | There is no multi-instrument minute feature/label builder or twelve-horizon dataset manifest | Build it only after canonical data, reference data, and calendar contracts pass |
 | FPOC-007 | Blocking Prompt 58 | Existing training is synthetic microstructure infrastructure and unrelated to minute return forecasting | Train baseline-first pooled POC models and export signed artifacts |
@@ -78,11 +78,12 @@ license/security review, SBOM regeneration, and installation only in
 
 ## Capacity baseline and planning envelope
 
-The administrative allocation is stated as 250 GB. The audit observed about
-2.56 GB in the repository and approximately 12.58 TB free on the shared
-filesystem. Neither observation proves user quota headroom. The recommended data
-root is currently absent. Prompt 47 must obtain an authoritative quota state or
-require an operator-supplied, audited quota declaration before remote mutation.
+The authoritative 2026-09-11 `/opt/rci/bin/hdquota -s` observation established
+a 10 TiB scratch soft quota, 608,990,093,312 bytes used, and
+10,386,126,184,448 bytes available. The POC root remains independently bounded
+to an 80 GB target and 100 GB hard limit. Every mutation still requires current
+quota evidence; a historical observation cannot silently authorize a later
+operation.
 
 The following preliminary steady-state envelopes make the 80 GB target visible;
 they are admission ceilings, not size promises or permission to borrow capacity:
@@ -200,6 +201,10 @@ Prompt 56 or 57. Parallel work cannot bypass the named acceptance gates.
 
 ### Prompt 49 — Provider-neutral bounded ingestion
 
+- Status: Implemented and locally verified with synthetic, filesystem, and
+  socket-free deterministic mock providers. No real remote adapter or download
+  was added; the checked-in source policy remains disabled.
+
 - Inputs: accepted source policy, storage admission API, universe manifest, and
   external credential interface.
 - Outputs: provider-neutral fetch contracts, dry-run planner, bounded executor,
@@ -217,6 +222,10 @@ Prompt 56 or 57. Parallel work cannot bypass the named acceptance gates.
   matching approval.
 
 ### Prompt 50 — Authorized minute-data adapter and pilot
+
+Status on 2026-09-11: implemented and accepted for the conditionally authorized
+Alpaca Basic IEX scope. The five-session pilot covered all 79 requested symbols,
+retained `KRKNF` as unsupported OTC, and passed manifest/hash/sample checks.
 
 - Inputs: exact approved source specification and entitlement, universe
   manifest, storage/ingestion framework, calendars, and external credentials.
@@ -237,6 +246,11 @@ Prompt 56 or 57. Parallel work cannot bypass the named acceptance gates.
 
 ### Prompt 51 — Bounded two-year minute backfill
 
+Status on 2026-09-11: complete. The 501-session backfill produced 9,462,709
+canonical records in 36,520 partitions. Two exact-coverage verification passes
+were byte-identical and the full repository scan found no manifest or object
+errors. The external data root uses 7,782,178,266 logical bytes.
+
 - Inputs: accepted pilot, unchanged source approval, latest complete market
   date, exact range, universe digest, capacity projection, and credentials.
 - Outputs: immutable two-year source manifests, checkpoints, coverage/gap/
@@ -254,6 +268,12 @@ Prompt 56 or 57. Parallel work cannot bypass the named acceptance gates.
   approval, or credential state is unknown.
 
 ### Prompt 52 — Point-in-time reference, calendars, and corporate actions
+
+Status on 2026-09-11: implemented and verified using already retained Alpaca
+current-asset and retrospective-calendar evidence only. The owner-only report
+covers all 79 symbols, but correctly remains `PARTIAL_REFERENCE_COVERAGE` and
+unsafe for historical training because authoritative historical symbology,
+actions, delistings, and halts are not authorized or available.
 
 - Inputs: universe/horizon contracts, approved reference sources, existing
   bitemporal types/store, and source manifests.
@@ -291,6 +311,11 @@ Prompt 56 or 57. Parallel work cannot bypass the named acceptance gates.
   requirements must remain current.
 
 ### Prompt 54 — Bounded GDELT metadata and entity resolution
+
+Status: implemented and locally verified; the real two-year retrieval remains
+externally gated by a Google Cloud project, BigQuery access/billing, and a
+short-lived OAuth token. No GDELT or publisher data was downloaded during
+implementation.
 
 - Inputs: resolved issuer aliases, approved GDELT policy, bounded ingestion,
   point-in-time contract, and untrusted-text controls.
@@ -564,8 +589,8 @@ The following cannot be completed from repository contents alone:
   pinned dependency/checkpoint, rights review, model card, SBOM, signature,
   runtime parity, and resource qualification. It is not necessary to prove the
   baseline-first POC.
-- The stated 250 GB allocation needs authoritative quota evidence. Shared
-  filesystem capacity is insufficient.
+- Scratch quota evidence must be refreshed with `/opt/rci/bin/hdquota -s`
+  before mutation. Shared filesystem capacity alone remains insufficient.
 - Production identities, secret-manager values, immutable image digests, and
   organization approval roles are external deployment inputs. None is needed
   for safe local mock testing, and none authorizes live trading.

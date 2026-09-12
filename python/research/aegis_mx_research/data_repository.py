@@ -17,11 +17,12 @@ from typing import TYPE_CHECKING, Final, Self, cast
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Mapping, Sequence
 
-DATA_REPOSITORY_SCHEMA_VERSION: Final = "1.0.0"
+DATA_REPOSITORY_SCHEMA_VERSION: Final = "2.0.0"
 MANIFEST_SCHEMA_VERSION: Final = "1.0.0"
 AUDIT_SCHEMA_VERSION: Final = "1.0.0"
 DECIMAL_GB: Final = 1_000_000_000
 BINARY_GIB: Final = 1 << 30
+BINARY_TIB: Final = 1 << 40
 MAX_BYTES: Final = (1 << 63) - 1
 MAX_MANIFEST_BYTES: Final = 1_048_576
 MAX_PATH_BYTES: Final = 512
@@ -224,7 +225,7 @@ def _validate_relative_path(
 class StoragePolicy:
     """Immutable decimal-byte limits for the bounded POC."""
 
-    administrative_allocation_bytes: int = 250 * DECIMAL_GB
+    administrative_allocation_bytes: int = 10 * BINARY_TIB
     target_root_bytes: int = 80 * DECIMAL_GB
     hard_root_bytes: int = 100 * DECIMAL_GB
     minimum_reserve_bytes: int = 50 * DECIMAL_GB
@@ -249,7 +250,7 @@ class StoragePolicy:
                 message = "storage policy limits are inconsistent or unsupported"
                 raise StorageError(StorageErrorCode.INVALID_POLICY, message) from error
         if (
-            self.administrative_allocation_bytes != 250 * DECIMAL_GB
+            self.administrative_allocation_bytes != 10 * BINARY_TIB
             or self.target_root_bytes > 80 * DECIMAL_GB
             or self.hard_root_bytes > 100 * DECIMAL_GB
             or self.minimum_reserve_bytes < 50 * DECIMAL_GB
@@ -1539,6 +1540,85 @@ class DataRepository:
             final_path,
             fault_injector,
         )
+
+    def publish_staged_object(
+        self,
+        staged_relative_path: str,
+        final_relative_path: str,
+        *,
+        expected_sha256: str,
+        expected_size_bytes: int,
+        lease: AdmissionLease,
+    ) -> Path:
+        """Atomically publish one verified staged object under an active lease.
+
+        Staging is restricted to ``tmp/`` and final publication to a declared
+        immutable object area (never ``tmp/`` or ``manifests/``). An identical
+        existing object makes the operation idempotent; conflicting bytes are
+        never replaced.
+        """
+        if not lease.active or lease.root != self.root:
+            raise StorageError(
+                StorageErrorCode.ADMISSION_DENIED,
+                "object publication requires an active admission lease",
+            )
+        staged_relative = _validate_relative_path(
+            staged_relative_path, allowed_areas=frozenset({"tmp"})
+        )
+        final_relative = _validate_relative_path(
+            final_relative_path,
+            allowed_areas=OBJECT_AREAS,
+        )
+        _validate_sha256(expected_sha256, "expected_sha256")
+        _validate_byte_count(expected_size_bytes, "expected_size_bytes")
+        staged_path = self.root.joinpath(*staged_relative.parts)
+        final_path = self.root.joinpath(*final_relative.parts)
+        self._assert_safe_path(staged_path)
+        self._assert_safe_path(final_path)
+        staged_status = self._validate_regular_file(staged_path)
+        if staged_status.st_size != expected_size_bytes:
+            raise StorageError(
+                StorageErrorCode.SIZE_MISMATCH,
+                "staged object size does not match the expected size",
+            )
+        if self._hash_secure_file(staged_path) != expected_sha256:
+            raise StorageError(
+                StorageErrorCode.HASH_MISMATCH,
+                "staged object SHA-256 does not match the expected digest",
+            )
+
+        final_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        self._assert_safe_path(final_path.parent)
+        if final_path.exists() or final_path.is_symlink():
+            final_status = self._validate_regular_file(final_path)
+            if (
+                final_status.st_size != expected_size_bytes
+                or self._hash_secure_file(final_path) != expected_sha256
+            ):
+                raise StorageError(
+                    StorageErrorCode.IMMUTABLE_CONFLICT,
+                    "an immutable object path already contains different bytes",
+                )
+            staged_path.unlink()
+            self._sync_directory(staged_path.parent)
+            return final_path
+
+        try:
+            os.link(staged_path, final_path, follow_symlinks=False)
+            self._sync_directory(final_path.parent)
+            staged_path.unlink()
+            self._sync_directory(staged_path.parent)
+        except FileExistsError as error:
+            raise StorageError(
+                StorageErrorCode.IMMUTABLE_CONFLICT,
+                "an immutable object appeared concurrently and was not replaced",
+            ) from error
+        except OSError as error:
+            raise StorageError(
+                StorageErrorCode.INTERRUPTED_PUBLICATION,
+                "object publication was interrupted",
+            ) from error
+        return final_path
 
     def _prepare_manifest_publication(
         self, manifest: DataManifest, lease: AdmissionLease

@@ -1,0 +1,56 @@
+{
+  "$id": "https://aegis-mx.invalid/schemas/alpaca-paper-certification-authorization-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "account_reset_authorized": {"const": false},
+    "asset_class": {"const": "us_equity"},
+    "authorization_id": {
+      "maxLength": 128,
+      "pattern": "^[a-z0-9][a-z0-9_-]{2,127}$",
+      "type": "string"
+    },
+    "configuration_sha256": {"$ref": "#/$defs/sha256"},
+    "expected_session_date": {"format": "date", "type": "string"},
+    "expires_at_utc": {"format": "date-time", "type": "string"},
+    "extended_hours_enabled": {"const": false},
+    "issued_at_utc": {"format": "date-time", "type": "string"},
+    "maximum_orders": {"maximum": 5, "minimum": 1, "type": "integer"},
+    "maximum_quantity_per_order": {"const": 1},
+    "mode": {"const": "PAPER"},
+    "order_cancellation_authorized": {"const": true},
+    "order_submission_authorized": {"const": true},
+    "preserve_existing_orders_positions": {"const": true},
+    "schema_version": {"const": "1.0.0"},
+    "short_selling_enabled": {"const": false},
+    "system_path_source_sha256": {"$ref": "#/$defs/sha256"},
+    "tool_source_sha256": {"$ref": "#/$defs/sha256"},
+    "universe_snapshot_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "required": [
+    "account_reset_authorized",
+    "asset_class",
+    "authorization_id",
+    "configuration_sha256",
+    "expected_session_date",
+    "expires_at_utc",
+    "extended_hours_enabled",
+    "issued_at_utc",
+    "maximum_orders",
+    "maximum_quantity_per_order",
+    "mode",
+    "order_cancellation_authorized",
+    "order_submission_authorized",
+    "preserve_existing_orders_positions",
+    "schema_version",
+    "short_selling_enabled",
+    "system_path_source_sha256",
+    "tool_source_sha256",
+    "universe_snapshot_sha256"
+  ],
+  "title": "Aegis-MX Alpaca PAPER certification authorization v1",
+  "type": "object",
+  "$defs": {
+    "sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"}
+  }
+}

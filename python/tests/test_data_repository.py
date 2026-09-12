@@ -151,7 +151,7 @@ def _resign(envelope: dict[str, Any]) -> bytes:
 def test_policy_defaults_are_decimal_and_deterministic() -> None:
     policy = StoragePolicy()
     assert Path("/scratch/djy8hg/aegis_mx_poc_data") == DEFAULT_DATA_ROOT
-    assert policy.administrative_allocation_bytes == 250_000_000_000
+    assert policy.administrative_allocation_bytes == 10_995_116_277_760
     assert policy.target_root_bytes == 80_000_000_000
     assert policy.hard_root_bytes == 100_000_000_000
     assert policy.minimum_reserve_bytes == 50_000_000_000
@@ -164,7 +164,7 @@ def test_policy_defaults_are_decimal_and_deterministic() -> None:
     "changes",
     [
         {"administrative_allocation_bytes": 0},
-        {"administrative_allocation_bytes": 249 * DECIMAL_GB},
+        {"administrative_allocation_bytes": 250 * DECIMAL_GB},
         {"target_root_bytes": -1},
         {"target_root_bytes": 81 * DECIMAL_GB},
         {"target_root_bytes": 101 * DECIMAL_GB},
@@ -392,10 +392,32 @@ def test_admission_uses_stricter_quota_and_accounts_for_overhead(
     )
     decision = repository.estimate(request, quota)
     assert decision.admitted
-    assert decision.effective_quota_limit_bytes == 250 * DECIMAL_GB
+    assert decision.effective_quota_limit_bytes == 300 * DECIMAL_GB
     assert decision.projected_root_peak_bytes == decision.usage.total_bytes + 6_000
     assert decision.projected_temporary_peak_bytes == 5_000
     assert decision.projected_quota_used_bytes == quota.used_bytes + 6_000  # type: ignore[operator]
+
+
+def test_verified_scratch_quota_does_not_inherit_obsolete_home_ceiling(
+    tmp_path: Path,
+) -> None:
+    repository = _repository(tmp_path)
+    quota = replace(
+        _quota(),
+        limit_bytes=10_995_116_277_760,
+        used_bytes=608_990_093_312,
+        source="/opt/rci/bin/hdquota",
+        observed_at_utc="2026-09-11T00:12:13.122793Z",
+    )
+    decision = repository.estimate(
+        StorageRequest("verified-scratch-pilot", 23_277_475, 1_868_276, 0),
+        quota,
+    )
+    assert decision.admitted
+    assert decision.effective_quota_limit_bytes == 10_995_116_277_760
+    assert decision.projected_quota_used_bytes == 609_015_239_063
+    assert decision.projected_root_peak_bytes == decision.usage.total_bytes + 25_145_751
+    assert decision.projected_temporary_peak_bytes == 1_868_276
 
 
 def test_integer_overflow_and_invalid_request_are_rejected(tmp_path: Path) -> None:
@@ -567,6 +589,139 @@ def test_publication_requires_a_live_sufficient_lease(tmp_path: Path) -> None:
     lease.close()
     with pytest.raises(StorageError, match="lease"):
         repository.publish_manifest(manifest, lease)
+
+
+def test_staged_object_publication_validates_lease_size_and_hash(
+    tmp_path: Path,
+) -> None:
+    repository = _repository(tmp_path)
+    request = StorageRequest("staged-object-validation", 10_000, 10_000, 0)
+    payload = b"verified-object"
+    digest = hashlib.sha256(payload).hexdigest()
+    staged_relative = "tmp/downloads/object.partial"
+    final_relative = f"raw/provider/{digest}.bin"
+
+    with repository.acquire_admission(request, _quota()) as lease:
+        pass
+    _write_object(repository, staged_relative, payload)
+    with pytest.raises(StorageError, match="active admission lease"):
+        repository.publish_staged_object(
+            staged_relative,
+            final_relative,
+            expected_sha256=digest,
+            expected_size_bytes=len(payload),
+            lease=lease,
+        )
+
+    other_repository = _repository(tmp_path / "other")
+    with (
+        other_repository.acquire_admission(request, _quota()) as other_lease,
+        pytest.raises(StorageError, match="active admission lease"),
+    ):
+        repository.publish_staged_object(
+            staged_relative,
+            final_relative,
+            expected_sha256=digest,
+            expected_size_bytes=len(payload),
+            lease=other_lease,
+        )
+
+    with repository.acquire_admission(request, _quota()) as active_lease:
+        with pytest.raises(StorageError, match="size does not match"):
+            repository.publish_staged_object(
+                staged_relative,
+                final_relative,
+                expected_sha256=digest,
+                expected_size_bytes=len(payload) + 1,
+                lease=active_lease,
+            )
+        with pytest.raises(StorageError, match="SHA-256 does not match"):
+            repository.publish_staged_object(
+                staged_relative,
+                final_relative,
+                expected_sha256="12" * 32,
+                expected_size_bytes=len(payload),
+                lease=active_lease,
+            )
+
+
+def test_staged_object_publication_is_idempotent_and_conflict_safe(
+    tmp_path: Path,
+) -> None:
+    repository = _repository(tmp_path)
+    request = StorageRequest("staged-object-idempotence", 10_000, 10_000, 0)
+    payload = b"verified-object"
+    digest = hashlib.sha256(payload).hexdigest()
+    staged_relative = "tmp/downloads/object.partial"
+    final_relative = f"raw/provider/{digest}.bin"
+    final_path = _write_object(repository, final_relative, payload)
+
+    with repository.acquire_admission(request, _quota()) as lease:
+        _write_object(repository, staged_relative, payload)
+        assert (
+            repository.publish_staged_object(
+                staged_relative,
+                final_relative,
+                expected_sha256=digest,
+                expected_size_bytes=len(payload),
+                lease=lease,
+            )
+            == final_path
+        )
+        assert not (repository.root / staged_relative).exists()
+
+        _write_object(repository, staged_relative, payload)
+        final_path.write_bytes(b"short")
+        with pytest.raises(StorageError, match="different bytes"):
+            repository.publish_staged_object(
+                staged_relative,
+                final_relative,
+                expected_sha256=digest,
+                expected_size_bytes=len(payload),
+                lease=lease,
+            )
+
+        final_path.write_bytes(b"tampered-object")
+        assert final_path.stat().st_size == len(payload)
+        with pytest.raises(StorageError, match="different bytes"):
+            repository.publish_staged_object(
+                staged_relative,
+                final_relative,
+                expected_sha256=digest,
+                expected_size_bytes=len(payload),
+                lease=lease,
+            )
+
+
+@pytest.mark.parametrize("failure", [FileExistsError(), OSError()])
+def test_staged_object_publication_wraps_link_failures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure: OSError
+) -> None:
+    repository = _repository(tmp_path)
+    request = StorageRequest("staged-object-link-failure", 10_000, 10_000, 0)
+    payload = b"verified-object"
+    digest = hashlib.sha256(payload).hexdigest()
+    staged_relative = "tmp/downloads/object.partial"
+    _write_object(repository, staged_relative, payload)
+
+    def fail_link(*_args: object, **_kwargs: object) -> None:
+        raise failure
+
+    monkeypatch.setattr(os, "link", fail_link)
+    with repository.acquire_admission(request, _quota()) as lease:
+        expected = (
+            "appeared concurrently"
+            if isinstance(failure, FileExistsError)
+            else "publication was interrupted"
+        )
+        with pytest.raises(StorageError, match=expected):
+            repository.publish_staged_object(
+                staged_relative,
+                f"raw/provider/{digest}.bin",
+                expected_sha256=digest,
+                expected_size_bytes=len(payload),
+                lease=lease,
+            )
 
 
 def test_interrupted_publication_is_visible_and_never_replaces(
@@ -1386,8 +1541,11 @@ def test_secure_read_and_hash_detect_open_size_short_read_and_races(
 
 def test_storage_json_schemas_match_runtime_contracts() -> None:
     schema_root = Path("schemas")
-    policy_schema = json.loads(
+    legacy_policy_schema = json.loads(
         (schema_root / "data-storage-policy-v1.schema.json").read_text()
+    )
+    policy_schema = json.loads(
+        (schema_root / "data-storage-policy-v2.schema.json").read_text()
     )
     manifest_schema = json.loads(
         (schema_root / "data-manifest-v1.schema.json").read_text()
@@ -1396,6 +1554,12 @@ def test_storage_json_schemas_match_runtime_contracts() -> None:
         (schema_root / "data-storage-audit-v1.schema.json").read_text()
     )
     assert set(policy_schema["required"]) == set(StoragePolicy().to_dict())
+    assert (
+        legacy_policy_schema["properties"]["administrative_allocation_bytes_decimal"][
+            "const"
+        ]
+        == 250_000_000_000
+    )
     assert (
         manifest_schema["$defs"]["sourceEnvelope"]["properties"][
             "manifest_schema_version"

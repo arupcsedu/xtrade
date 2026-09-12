@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/sec-edgar-artifact-manifest-v1.schema.json",
+  "title": "Aegis-MX SEC EDGAR artifact manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "acceptance_time_max_utc_ns",
+    "acceptance_time_min_utc_ns",
+    "dataset",
+    "manifest_id",
+    "manifest_sha256",
+    "object_sha256",
+    "parent_manifest_id",
+    "processing_time_utc_ns",
+    "publication_time_max_utc_ns",
+    "publication_time_min_utc_ns",
+    "publication_time_reason",
+    "receipt_time_utc_ns",
+    "record_count",
+    "schema_name",
+    "schema_version",
+    "size_bytes_decimal",
+    "source_revision",
+    "source_url_sha256",
+    "storage_path",
+    "universe_snapshot_sha256"
+  ],
+  "properties": {
+    "acceptance_time_max_utc_ns": {"type": ["integer", "null"], "minimum": 1},
+    "acceptance_time_min_utc_ns": {"type": ["integer", "null"], "minimum": 1},
+    "dataset": {
+      "enum": [
+        "COMPANY_TICKERS",
+        "SUBMISSIONS",
+        "COMPANY_FACTS",
+        "PRIMARY_FILING_DOCUMENT"
+      ]
+    },
+    "manifest_id": {"type": "string", "pattern": "^sec-[0-9a-f]{64}$"},
+    "manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "object_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "parent_manifest_id": {"type": ["string", "null"], "pattern": "^sec-[0-9a-f]{64}$"},
+    "processing_time_utc_ns": {"type": "integer", "minimum": 1},
+    "publication_time_max_utc_ns": {"type": ["integer", "null"], "minimum": 1},
+    "publication_time_min_utc_ns": {"type": ["integer", "null"], "minimum": 1},
+    "publication_time_reason": {"type": "string", "minLength": 1, "maxLength": 128},
+    "receipt_time_utc_ns": {"type": "integer", "minimum": 1},
+    "record_count": {"type": "integer", "minimum": 0},
+    "schema_name": {"type": "string", "minLength": 1, "maxLength": 128},
+    "schema_version": {"const": "1.0.0"},
+    "size_bytes_decimal": {"type": "integer", "minimum": 1, "maximum": 8000000000},
+    "source_revision": {"const": "sec-edgar-public-api-reviewed-2026-09-11"},
+    "source_url_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "storage_path": {
+      "type": "string",
+      "pattern": "^raw/sec-edgar/(company_tickers|submissions|company_facts|primary_filing_document)/[0-9a-f]{64}\\.(json|html)$"
+    },
+    "universe_snapshot_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

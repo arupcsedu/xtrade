@@ -290,15 +290,20 @@ before reactivation.
 This repository now has a local simulation/paper gateway, final deterministic
 safety predicate, bounded audit journal, session/recovery model, synthetic
 decoders, and a default-off compile boundary for future live-only adapters. It
-still has no live adapter, socket/transport, endpoint, credential path,
+still has no live adapter, live socket/transport, live endpoint, live credential path,
 configuration signer, operator authorization service, durable activation
 journal, or approved account/venue policy. The `PAPER` implementation is an
-isolated internal broker model; it does not connect to a broker paper endpoint.
-Therefore no real or provider paper order transmission is implemented or
-authorized.
+isolated internal broker model. An off-hot-path
+[Alpaca PAPER certification tool](alpaca-paper-certification-runbook.md) accepts
+one fixed, nonmarketable command only after deterministic router, risk, OMS,
+and final paper-gate evidence validates. The tool rejects evidence from a
+live-capable build and every report fixes `live_trading_enabled` to false. This
+is not an always-on gateway, and broker responses are not yet applied back into
+the OMS.
 
-Before any real adapter work, accepted ADRs must complete configuration signing
-and trust roots, operator authorization and expiry, durable activation-journal
-policy, venue-specific recovery, and approved risk/account/session policies.
-Authorized specifications and certification evidence are mandatory; the local
-synthetic/paper semantics cannot be assumed for a venue.
+Before continuous adapter operation or any real-money work, accepted ADRs must
+complete configuration signing and trust roots, operator authorization and
+expiry, durable activation-journal policy, provider-specific response/recovery,
+and approved risk/account/session policies. Authorized specifications and
+certification evidence are mandatory; local synthetic/paper semantics cannot be
+assumed for a venue.

@@ -12,6 +12,11 @@ dependencies = ["flatbuffers==25.12.19"]
 
 [project.scripts]
 aegis-data = "aegis_mx_research.data_cli:cli_main"
+aegis-alpaca-data = "aegis_mx_research.alpaca_historical:cli_main"
+aegis-reference = "aegis_mx_research.reference_data:cli_main"
+aegis-sec-edgar = "aegis_mx_research.sec_edgar:cli_main"
+aegis-gdelt = "aegis_mx_research.gdelt:cli_main"
+aegis-alpaca-paper = "tools.alpaca_paper_certification:cli_main"
 aegis-chaos-run = "tools.chaos_runner:main"
 aegis-performance-benchmark = "tools.performance_benchmark:main"
 edge-deployment = "tools.edge_deployment:main"
@@ -47,6 +52,22 @@ packages = [
 "schemas/data-manifest-v1.schema.json" = "schemas/data-manifest-v1.schema.json"
 "schemas/data-storage-audit-v1.schema.json" = "schemas/data-storage-audit-v1.schema.json"
 "schemas/data-storage-policy-v1.schema.json" = "schemas/data-storage-policy-v1.schema.json"
+"schemas/data-storage-policy-v2.schema.json" = "schemas/data-storage-policy-v2.schema.json"
+"schemas/data-source-policy-v1.schema.json" = "schemas/data-source-policy-v1.schema.json"
+"schemas/alpaca-paper-certification-authorization-v1.schema.json" = "schemas/alpaca-paper-certification-authorization-v1.schema.json"
+"schemas/alpaca-paper-certification-report-v1.schema.json" = "schemas/alpaca-paper-certification-report-v1.schema.json"
+"schemas/alpaca-paper-system-path-evidence-v1.schema.json" = "schemas/alpaca-paper-system-path-evidence-v1.schema.json"
+"schemas/instrument-reference-snapshot-v1.schema.json" = "schemas/instrument-reference-snapshot-v1.schema.json"
+"schemas/instrument-resolution-report-v1.schema.json" = "schemas/instrument-resolution-report-v1.schema.json"
+"schemas/sec-edgar-approval-v1.schema.json" = "schemas/sec-edgar-approval-v1.schema.json"
+"schemas/sec-edgar-artifact-manifest-v1.schema.json" = "schemas/sec-edgar-artifact-manifest-v1.schema.json"
+"schemas/sec-edgar-coverage-report-v1.schema.json" = "schemas/sec-edgar-coverage-report-v1.schema.json"
+"schemas/sec-edgar-coverage-report-v1_1.schema.json" = "schemas/sec-edgar-coverage-report-v1_1.schema.json"
+"schemas/gdelt-approval-v1.schema.json" = "schemas/gdelt-approval-v1.schema.json"
+"schemas/gdelt-artifact-manifest-v1.schema.json" = "schemas/gdelt-artifact-manifest-v1.schema.json"
+"schemas/gdelt-metadata-record-v1.schema.json" = "schemas/gdelt-metadata-record-v1.schema.json"
+"schemas/gdelt-run-report-v1.schema.json" = "schemas/gdelt-run-report-v1.schema.json"
+"infra/data_poc" = "infra/data_poc"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -74,6 +95,22 @@ include = [
   "/schemas/data-manifest-v1.schema.json",
   "/schemas/data-storage-audit-v1.schema.json",
   "/schemas/data-storage-policy-v1.schema.json",
+  "/schemas/data-storage-policy-v2.schema.json",
+  "/schemas/data-source-policy-v1.schema.json",
+  "/schemas/alpaca-paper-certification-authorization-v1.schema.json",
+  "/schemas/alpaca-paper-certification-report-v1.schema.json",
+  "/schemas/alpaca-paper-system-path-evidence-v1.schema.json",
+  "/schemas/instrument-reference-snapshot-v1.schema.json",
+  "/schemas/instrument-resolution-report-v1.schema.json",
+  "/schemas/sec-edgar-approval-v1.schema.json",
+  "/schemas/sec-edgar-artifact-manifest-v1.schema.json",
+  "/schemas/sec-edgar-coverage-report-v1.schema.json",
+  "/schemas/sec-edgar-coverage-report-v1_1.schema.json",
+  "/schemas/gdelt-approval-v1.schema.json",
+  "/schemas/gdelt-artifact-manifest-v1.schema.json",
+  "/schemas/gdelt-metadata-record-v1.schema.json",
+  "/schemas/gdelt-run-report-v1.schema.json",
+  "/infra/data_poc",
 ]
 
 [tool.ruff]
@@ -128,6 +165,43 @@ ignore = [
   "PLR0917",
 ]
 "python/intelligence/aegis_mx_intelligence/options_types.py" = ["C901"]
+"python/research/aegis_mx_research/ingestion.py" = [
+  "BLE001",
+  "C901",
+  "FBT001",
+  "FBT003",
+  "PERF401",
+  "PLR0911",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
+  "PLR0917",
+  "TRY301",
+]
+"python/research/aegis_mx_research/alpaca_historical.py" = [
+  "C901",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
+  "PLR2004",
+  "S311",
+  "TRY301",
+]
+"python/research/aegis_mx_research/sec_edgar.py" = [
+  "C901",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
+  "PLR0917",
+  "TRY301",
+]
+"python/research/aegis_mx_research/gdelt.py" = [
+  "C901",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
+  "PLR0917",
+]
 "python/tests/**/*.py" = ["D103", "INP001", "PLR2004", "S101"]
 "python/tests/test_news_pipeline.py" = [
   "D102",
@@ -168,6 +242,16 @@ ignore = [
   "PLR0913",
   "PT011",
 ]
+"python/tests/test_ingestion.py" = ["C901", "PLR0912", "PLR0913", "SLF001"]
+"python/tests/test_alpaca_paper_certification.py" = [
+  "C901",
+  "PLR0911",
+  "PLR0912",
+  "PLR0913",
+]
+"python/tests/test_alpaca_historical.py" = ["ARG005", "PLR0913", "SLF001"]
+"python/tests/test_sec_edgar.py" = ["SLF001"]
+"python/tests/test_gdelt.py" = ["PLR0915", "SLF001"]
 "tools/**/*.py" = ["INP001", "S603", "S607", "T201"]
 "tools/chaos_runner.py" = [
   "EM101",
@@ -208,6 +292,20 @@ ignore = [
   "PTH105",
   "TRY003",
   "TRY004",
+]
+"tools/source_policy_check.py" = [
+  "C901",
+  "EM101",
+  "EM102",
+  "PLR0912",
+  "PLR2004",
+  "TRY003",
+]
+"tools/alpaca_paper_certification.py" = [
+  "C901",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
 ]
 
 [tool.mypy]

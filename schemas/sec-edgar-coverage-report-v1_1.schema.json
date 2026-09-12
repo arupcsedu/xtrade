@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/sec-edgar-coverage-report-v1_1.schema.json",
+  "title": "Aegis-MX SEC EDGAR issuer and filing coverage report v1.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "filing_end_date",
+    "filing_start_date",
+    "generated_at_utc_ns",
+    "issuer_coverage",
+    "network_access_performed",
+    "report_sha256",
+    "request_count",
+    "schema_version",
+    "summary",
+    "universe_sha256"
+  ],
+  "properties": {
+    "filing_end_date": {"type": ["string", "null"], "format": "date"},
+    "filing_start_date": {"type": ["string", "null"], "format": "date"},
+    "generated_at_utc_ns": {"type": "integer", "minimum": 1},
+    "issuer_coverage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "amendment_count",
+          "cik",
+          "errors",
+          "fact_count",
+          "filing_count",
+          "forms",
+          "historical_shard_count",
+          "issuer_name",
+          "resolution_status",
+          "ticker"
+        ],
+        "properties": {
+          "amendment_count": {"type": "integer", "minimum": 0},
+          "cik": {"type": ["string", "null"], "pattern": "^[0-9]{10}$"},
+          "errors": {"type": "array", "items": {"type": "string"}},
+          "fact_count": {"type": "integer", "minimum": 0},
+          "filing_count": {"type": "integer", "minimum": 0},
+          "forms": {
+            "type": "object",
+            "additionalProperties": {"type": "integer", "minimum": 0}
+          },
+          "historical_shard_count": {"type": "integer", "minimum": 0},
+          "issuer_name": {"type": ["string", "null"]},
+          "resolution_status": {
+            "enum": ["RESOLVED_CURRENT_ONLY", "UNRESOLVED", "AMBIGUOUS"]
+          },
+          "ticker": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9]*(?:[.-][A-Z0-9]+)?$"
+          }
+        }
+      }
+    },
+    "network_access_performed": {"type": "boolean"},
+    "report_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "request_count": {"type": "integer", "minimum": 0},
+    "schema_version": {"const": "1.1.0"},
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "amendment_count",
+        "fact_count",
+        "filing_count",
+        "historical_shard_count",
+        "requested_ticker_count",
+        "resolved_ticker_count",
+        "unresolved_ticker_count"
+      ],
+      "properties": {
+        "amendment_count": {"type": "integer", "minimum": 0},
+        "fact_count": {"type": "integer", "minimum": 0},
+        "filing_count": {"type": "integer", "minimum": 0},
+        "historical_shard_count": {"type": "integer", "minimum": 0},
+        "requested_ticker_count": {"type": "integer", "minimum": 1},
+        "resolved_ticker_count": {"type": "integer", "minimum": 0},
+        "unresolved_ticker_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "universe_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

@@ -4,11 +4,13 @@ flowchart TD
   HORIZON["Versioned HorizonSpec<br/>trading minutes and session endpoints"]
   POLICY["Default-disabled source policy<br/>rights, terms, credentials, timestamps"]
   ADMISSION["Storage admission<br/>quota, reserve, current and projected peak"]
+  INGEST["Provider-neutral ingestion<br/>dry-run, bounded fetch, checkpoint, quarantine"]
 
   TICKERS --> UVAL
   UVAL --> HORIZON
   UVAL --> POLICY
   POLICY --> ADMISSION
+  ADMISSION --> INGEST
 
   subgraph SOURCES["Authorized bounded source acquisition"]
     MINUTE["Approved one-minute OHLCV adapter"]
@@ -18,11 +20,11 @@ flowchart TD
     ALFRED["Selected FRED and ALFRED vintages"]
   end
 
-  ADMISSION --> MINUTE
-  ADMISSION --> REF
-  ADMISSION --> SEC
-  ADMISSION --> GDELT
-  ADMISSION --> ALFRED
+  INGEST --> MINUTE
+  INGEST --> REF
+  INGEST --> SEC
+  INGEST --> GDELT
+  INGEST --> ALFRED
 
   subgraph LANDING["Immutable landing zone"]
     QUARANTINE["Quarantine<br/>malformed or unverifiable objects"]

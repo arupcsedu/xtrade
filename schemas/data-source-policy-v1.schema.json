@@ -1,0 +1,275 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/data-source-policy-v1.schema.json",
+  "title": "Aegis-MX bounded forecasting POC source policy v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "assessment_date",
+    "contains_secrets",
+    "live_trading_capable",
+    "model_training_authorized",
+    "network_downloads_authorized",
+    "policy_id",
+    "policy_mode",
+    "remote_sources_default_enabled",
+    "schema_version",
+    "sources",
+    "universe",
+    "use_classification"
+  ],
+  "properties": {
+    "$schema": {"type": "string", "minLength": 1},
+    "schema_version": {"const": "1.0.0"},
+    "policy_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{2,127}$"
+    },
+    "assessment_date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "policy_mode": {"const": "DENY_BY_DEFAULT"},
+    "remote_sources_default_enabled": {"const": false},
+    "network_downloads_authorized": {"type": "boolean"},
+    "model_training_authorized": {"type": "boolean"},
+    "contains_secrets": {"const": false},
+    "live_trading_capable": {"const": false},
+    "use_classification": {
+      "enum": [
+        "UNDECLARED",
+        "PERSONAL",
+        "ACADEMIC",
+        "PROFESSIONAL",
+        "COMMERCIAL",
+        "GOVERNMENTAL"
+      ]
+    },
+    "universe": {"$ref": "#/$defs/universe"},
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/source"}
+    }
+  },
+  "$defs": {
+    "universe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observed_unique_symbol_count",
+        "source_path",
+        "source_sha256"
+      ],
+      "properties": {
+        "source_path": {"type": "string", "minLength": 1},
+        "source_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "observed_unique_symbol_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        }
+      }
+    },
+    "rights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "access",
+        "derived_data",
+        "model_training",
+        "persistent_storage",
+        "redistribution",
+        "retention_deletion"
+      ],
+      "properties": {
+        "access": {"$ref": "#/$defs/rightState"},
+        "persistent_storage": {"$ref": "#/$defs/rightState"},
+        "model_training": {"$ref": "#/$defs/rightState"},
+        "derived_data": {"$ref": "#/$defs/rightState"},
+        "redistribution": {"$ref": "#/$defs/rightState"},
+        "retention_deletion": {"$ref": "#/$defs/rightState"}
+      }
+    },
+    "rightState": {
+      "enum": ["DOCUMENTED", "PROHIBITED", "UNRESOLVED", "NOT_APPLICABLE"]
+    },
+    "boundedDescription": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "unsupportedScopeRisks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/boundedDescription"}
+    },
+    "evidenceUrls": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^https://\\S+$",
+        "maxLength": 2048
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "adjustment_revision_semantics",
+        "adapter_implementation_authorized",
+        "approval_expires_at_utc",
+        "approval_record_sha256",
+        "authentication_method",
+        "authorization_status",
+        "dataset",
+        "delivery_mechanism",
+        "enabled",
+        "evidence_urls",
+        "history_coverage",
+        "market_coverage",
+        "network_download_authorized",
+        "provider",
+        "published_rate_limit",
+        "remote",
+        "rights",
+        "source_id",
+        "source_timestamp_semantics",
+        "specification_revision",
+        "unsupported_scope_risks"
+      ],
+      "properties": {
+        "source_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{2,127}$"
+        },
+        "provider": {"type": "string", "minLength": 1, "maxLength": 256},
+        "dataset": {"type": "string", "minLength": 1, "maxLength": 512},
+        "specification_revision": {"$ref": "#/$defs/boundedDescription"},
+        "history_coverage": {"$ref": "#/$defs/boundedDescription"},
+        "market_coverage": {"$ref": "#/$defs/boundedDescription"},
+        "delivery_mechanism": {"$ref": "#/$defs/boundedDescription"},
+        "adjustment_revision_semantics": {
+          "$ref": "#/$defs/boundedDescription"
+        },
+        "published_rate_limit": {"$ref": "#/$defs/boundedDescription"},
+        "source_timestamp_semantics": {
+          "$ref": "#/$defs/boundedDescription"
+        },
+        "unsupported_scope_risks": {
+          "$ref": "#/$defs/unsupportedScopeRisks"
+        },
+        "evidence_urls": {"$ref": "#/$defs/evidenceUrls"},
+        "remote": {"const": true},
+        "enabled": {"type": "boolean"},
+        "adapter_implementation_authorized": {"type": "boolean"},
+        "network_download_authorized": {"type": "boolean"},
+        "authorization_status": {
+          "enum": [
+            "BLOCKED",
+            "REVIEW_REQUIRED",
+            "APPROVED",
+            "DENIED",
+            "EXPIRED"
+          ]
+        },
+        "authentication_method": {
+          "enum": [
+            "EXTERNAL_API_KEY",
+            "EXTERNAL_KEY_SECRET_PAIR",
+            "NONE_FOR_PUBLIC_FILES",
+            "NONE_USER_AGENT_REQUIRED"
+          ]
+        },
+        "approval_record_sha256": {
+          "oneOf": [
+            {"type": "null"},
+            {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+          ]
+        },
+        "approval_expires_at_utc": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            }
+          ]
+        },
+        "rights": {"$ref": "#/$defs/rights"}
+      },
+      "allOf": [
+        {
+          "if": {
+            "anyOf": [
+              {"properties": {"enabled": {"const": true}}},
+              {
+                "properties": {
+                  "adapter_implementation_authorized": {"const": true}
+                }
+              },
+              {
+                "properties": {
+                  "network_download_authorized": {"const": true}
+                }
+              }
+            ]
+          },
+          "then": {
+            "properties": {
+              "authorization_status": {"const": "APPROVED"}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "authorization_status": {"const": "APPROVED"}
+            }
+          },
+          "then": {
+            "properties": {
+              "approval_record_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "approval_expires_at_utc": {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+              },
+              "rights": {
+                "properties": {
+                  "access": {"enum": ["DOCUMENTED", "NOT_APPLICABLE"]},
+                  "persistent_storage": {
+                    "enum": ["DOCUMENTED", "NOT_APPLICABLE"]
+                  },
+                  "model_training": {
+                    "enum": ["DOCUMENTED", "NOT_APPLICABLE"]
+                  },
+                  "derived_data": {
+                    "enum": ["DOCUMENTED", "NOT_APPLICABLE"]
+                  },
+                  "redistribution": {
+                    "enum": ["DOCUMENTED", "NOT_APPLICABLE"]
+                  },
+                  "retention_deletion": {
+                    "enum": ["DOCUMENTED", "NOT_APPLICABLE"]
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

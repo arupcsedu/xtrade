@@ -8,6 +8,7 @@
 /build/
 /dist/
 /_CPack_Packages/
+slurm-*.out
 __pycache__/
 *.egg-info/
 *.key

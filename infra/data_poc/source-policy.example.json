@@ -1,0 +1,281 @@
+{
+  "$schema": "../../schemas/data-source-policy-v1.schema.json",
+  "schema_version": "1.0.0",
+  "policy_id": "forecasting-poc-source-policy-example",
+  "assessment_date": "2026-09-11",
+  "policy_mode": "DENY_BY_DEFAULT",
+  "remote_sources_default_enabled": false,
+  "network_downloads_authorized": false,
+  "model_training_authorized": false,
+  "contains_secrets": false,
+  "live_trading_capable": false,
+  "use_classification": "UNDECLARED",
+  "universe": {
+    "source_path": "/scratch/djy8hg/xtrade/ticker.txt",
+    "source_sha256": "c4bfd957725741d76f847405294258f4a8d31d16dff58b0a7c033bafbb446f79",
+    "observed_unique_symbol_count": 79
+  },
+  "sources": [
+    {
+      "source_id": "massive_stocks_minute_aggregates",
+      "provider": "Massive.com, Inc.",
+      "dataset": "Stocks REST Custom Bars 1-minute aggregates",
+      "specification_revision": "REST v2 public documentation and market-data terms reviewed 2026-09-09",
+      "history_coverage": "Stocks Basic advertises two years of history",
+      "market_coverage": "Plan advertises all US stocks and 100 percent market coverage; universe coverage unverified",
+      "delivery_mechanism": "Authenticated HTTPS REST with pagination",
+      "adjustment_revision_semantics": "Split-adjusted by default; unadjusted optional; no-bar intervals omitted",
+      "published_rate_limit": "Stocks Basic: 5 API calls per minute",
+      "source_timestamp_semantics": "Unix milliseconds at start of aggregate window; session class not encoded",
+      "unsupported_scope_risks": [
+        "OTC and recently listed coverage unverified",
+        "Historical ticker mappings and corporate-action completeness unverified"
+      ],
+      "evidence_urls": [
+        "https://massive.com/pricing?product=stocks",
+        "https://massive.com/docs/rest/stocks/aggregates/custom-bars?assetClass=stocks&license=personal&name=stocks_basic",
+        "https://massive.com/legal/market-data-terms-of-service"
+      ],
+      "remote": true,
+      "enabled": false,
+      "adapter_implementation_authorized": false,
+      "network_download_authorized": false,
+      "authorization_status": "BLOCKED",
+      "authentication_method": "EXTERNAL_API_KEY",
+      "approval_record_sha256": null,
+      "approval_expires_at_utc": null,
+      "rights": {
+        "access": "DOCUMENTED",
+        "persistent_storage": "PROHIBITED",
+        "model_training": "PROHIBITED",
+        "derived_data": "PROHIBITED",
+        "redistribution": "PROHIBITED",
+        "retention_deletion": "UNRESOLVED"
+      }
+    },
+    {
+      "source_id": "alpaca_iex_historical_bars",
+      "provider": "AlpacaDB, Inc.",
+      "dataset": "Market Data API v2 Historical Stock Bars, IEX 1-minute feed",
+      "specification_revision": "Market Data API v2 documentation, Alpaca Terms, and Customer Agreement reviewed 2026-09-11",
+      "history_coverage": "Basic plan documents history since 2016",
+      "market_coverage": "US stocks and ETFs on IEX only; not consolidated US market coverage",
+      "delivery_mechanism": "Authenticated HTTPS REST with multi-symbol pagination",
+      "adjustment_revision_semantics": "Raw default; split, dividend, spin-off, all, and combinations documented; asof controls symbol mapping",
+      "published_rate_limit": "Basic: 200 historical API calls per minute",
+      "source_timestamp_semantics": "RFC 3339 left edge of minute derived by truncating source trade timestamp",
+      "unsupported_scope_risks": [
+        "IEX-only bars can be absent despite activity on other venues",
+        "OTC, inactive, halted, and renamed instruments need explicit resolution"
+      ],
+      "evidence_urls": [
+        "https://docs.alpaca.markets/us/docs/about-market-data-api",
+        "https://docs.alpaca.markets/us/v1.1/docs/historical-stock-data-1",
+        "https://docs.alpaca.markets/us/reference/stockbars",
+        "https://files.alpaca.markets/disclosures/library/TermsAndConditions.pdf",
+        "https://files.alpaca.markets/disclosures/library/AcctAppMarginAndCustAgmt.pdf"
+      ],
+      "remote": true,
+      "enabled": false,
+      "adapter_implementation_authorized": false,
+      "network_download_authorized": false,
+      "authorization_status": "BLOCKED",
+      "authentication_method": "EXTERNAL_KEY_SECRET_PAIR",
+      "approval_record_sha256": null,
+      "approval_expires_at_utc": null,
+      "rights": {
+        "access": "DOCUMENTED",
+        "persistent_storage": "UNRESOLVED",
+        "model_training": "UNRESOLVED",
+        "derived_data": "UNRESOLVED",
+        "redistribution": "UNRESOLVED",
+        "retention_deletion": "UNRESOLVED"
+      }
+    },
+    {
+      "source_id": "sec_edgar_structured_data",
+      "provider": "U.S. Securities and Exchange Commission",
+      "dataset": "EDGAR Submissions JSON and Company Facts XBRL",
+      "specification_revision": "SEC EDGAR data API documentation reviewed 2026-09-09",
+      "history_coverage": "Recent submissions plus historical shards; XBRL coverage varies by filer, form, and taxonomy",
+      "market_coverage": "SEC-reporting filers; ticker-to-CIK and instrument coverage are not guaranteed",
+      "delivery_mechanism": "Public HTTPS JSON; bounded filer-specific requests",
+      "adjustment_revision_semantics": "Amendments, corrections, XBRL contexts, units, and accession lineage remain distinct",
+      "published_rate_limit": "Maximum 10 requests per second across machines under SEC fair access",
+      "source_timestamp_semantics": "Acceptance time, filing date, report period, change date, and local receipt are distinct",
+      "unsupported_scope_risks": [
+        "Ticker-to-CIK mapping is time-varying",
+        "Foreign issuers and nonstandard XBRL contexts may be incomplete"
+      ],
+      "evidence_urls": [
+        "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
+        "https://www.sec.gov/filergroup/announcements-old/new-rate-control-limits",
+        "https://www.sec.gov/about/privacy-information"
+      ],
+      "remote": true,
+      "enabled": false,
+      "adapter_implementation_authorized": false,
+      "network_download_authorized": false,
+      "authorization_status": "REVIEW_REQUIRED",
+      "authentication_method": "NONE_USER_AGENT_REQUIRED",
+      "approval_record_sha256": null,
+      "approval_expires_at_utc": null,
+      "rights": {
+        "access": "DOCUMENTED",
+        "persistent_storage": "DOCUMENTED",
+        "model_training": "UNRESOLVED",
+        "derived_data": "UNRESOLVED",
+        "redistribution": "DOCUMENTED",
+        "retention_deletion": "UNRESOLVED"
+      }
+    },
+    {
+      "source_id": "sec_edgar_filing_documents",
+      "provider": "U.S. Securities and Exchange Commission",
+      "dataset": "Selected EDGAR filing documents by accession and document class",
+      "specification_revision": "SEC EDGAR archive and website policies reviewed 2026-09-09",
+      "history_coverage": "Filer and form dependent EDGAR archive history",
+      "market_coverage": "SEC-reporting filers; arbitrary exhibits and linked content are excluded by default",
+      "delivery_mechanism": "Public HTTPS EDGAR archive documents after accession discovery",
+      "adjustment_revision_semantics": "Amendments and post-acceptance corrections are separate immutable versions",
+      "published_rate_limit": "Maximum 10 requests per second across machines under SEC fair access",
+      "source_timestamp_semantics": "Acceptance, dissemination, filing, report, revision, and local receipt times are distinct",
+      "unsupported_scope_risks": [
+        "Issuer-authored active content and exhibits are untrusted",
+        "Copyright, privacy, and model-training treatment vary by document class"
+      ],
+      "evidence_urls": [
+        "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
+        "https://www.sec.gov/about/webmaster-frequently-asked-questions",
+        "https://www.sec.gov/about/privacy-information"
+      ],
+      "remote": true,
+      "enabled": false,
+      "adapter_implementation_authorized": false,
+      "network_download_authorized": false,
+      "authorization_status": "BLOCKED",
+      "authentication_method": "NONE_USER_AGENT_REQUIRED",
+      "approval_record_sha256": null,
+      "approval_expires_at_utc": null,
+      "rights": {
+        "access": "DOCUMENTED",
+        "persistent_storage": "UNRESOLVED",
+        "model_training": "UNRESOLVED",
+        "derived_data": "UNRESOLVED",
+        "redistribution": "UNRESOLVED",
+        "retention_deletion": "UNRESOLVED"
+      }
+    },
+    {
+      "source_id": "gdelt_2_metadata",
+      "provider": "The GDELT Project",
+      "dataset": "GDELT 2.0 Events, Mentions, and Global Knowledge Graph metadata only",
+      "specification_revision": "GDELT 2.0 public codebooks and terms reviewed 2026-09-09",
+      "history_coverage": "GDELT 2.0 begins 2015-02-19 and updates every 15 minutes",
+      "market_coverage": "Global news-derived entities and events; no ticker or issuer completeness guarantee",
+      "delivery_mechanism": "Public compressed raw update files; BigQuery is separately gated",
+      "adjustment_revision_semantics": "No financial adjustment; Events, Mentions, and GKG observations remain distinct",
+      "published_rate_limit": "No contractual raw-file request limit identified; conservative bounded polling required",
+      "source_timestamp_semantics": "DATEADDED is UTC database-addition time; event, mention, publication, and local receipt times differ",
+      "unsupported_scope_risks": [
+        "Linked publisher article bodies are outside GDELT dataset rights",
+        "Entity ambiguity, discovery lag, and missing publication times require abstention"
+      ],
+      "evidence_urls": [
+        "https://gdeltproject.org/about.html#termsofuse",
+        "https://gdeltproject.org/data.html",
+        "https://data.gdeltproject.org/documentation/GDELT-Event_Codebook-V2.0.pdf"
+      ],
+      "remote": true,
+      "enabled": false,
+      "adapter_implementation_authorized": false,
+      "network_download_authorized": false,
+      "authorization_status": "REVIEW_REQUIRED",
+      "authentication_method": "NONE_FOR_PUBLIC_FILES",
+      "approval_record_sha256": null,
+      "approval_expires_at_utc": null,
+      "rights": {
+        "access": "DOCUMENTED",
+        "persistent_storage": "DOCUMENTED",
+        "model_training": "DOCUMENTED",
+        "derived_data": "DOCUMENTED",
+        "redistribution": "DOCUMENTED",
+        "retention_deletion": "UNRESOLVED"
+      }
+    },
+    {
+      "source_id": "fred_alfred_selected_series",
+      "provider": "Federal Reserve Bank of St. Louis and original series owners",
+      "dataset": "FRED API observations and ALFRED vintages; empty series allowlist",
+      "specification_revision": "FRED API v1 public documentation and terms reviewed 2026-09-09",
+      "history_coverage": "Series-specific observation and vintage history",
+      "market_coverage": "Selected economic series only; no equity ticker coverage",
+      "delivery_mechanism": "Authenticated HTTPS REST returning bounded JSON",
+      "adjustment_revision_semantics": "Raw units and vintages are canonical; transformations and aggregation are versioned derived data",
+      "published_rate_limit": "Up to 120 requests per minute before HTTP 429",
+      "source_timestamp_semantics": "Observation date, real-time interval, vintage date, release date, last update, and local receipt differ",
+      "unsupported_scope_risks": [
+        "Original-owner copyright and use restrictions vary per series",
+        "Vintage dates do not prove an intraday official publication time"
+      ],
+      "evidence_urls": [
+        "https://fred.stlouisfed.org/docs/api/fred/series_observations.html",
+        "https://fred.stlouisfed.org/docs/api/fred/series_vintagedates.html",
+        "https://fred.stlouisfed.org/docs/api/terms_of_use.html"
+      ],
+      "remote": true,
+      "enabled": false,
+      "adapter_implementation_authorized": false,
+      "network_download_authorized": false,
+      "authorization_status": "BLOCKED",
+      "authentication_method": "EXTERNAL_API_KEY",
+      "approval_record_sha256": null,
+      "approval_expires_at_utc": null,
+      "rights": {
+        "access": "DOCUMENTED",
+        "persistent_storage": "UNRESOLVED",
+        "model_training": "UNRESOLVED",
+        "derived_data": "UNRESOLVED",
+        "redistribution": "UNRESOLVED",
+        "retention_deletion": "UNRESOLVED"
+      }
+    },
+    {
+      "source_id": "nasdaq_trader_symbol_directories",
+      "provider": "Nasdaq, Inc.",
+      "dataset": "Nasdaq Trader nasdaqlisted.txt and otherlisted.txt",
+      "specification_revision": "Nasdaq Trader directory definitions and website terms reviewed 2026-09-09",
+      "history_coverage": "Current trading-day directories updated periodically; not a historical symbol master",
+      "market_coverage": "Nasdaq-listed and documented other-exchange-listed securities; OTC coverage not established",
+      "delivery_mechanism": "Public pipe-delimited web or FTP text files",
+      "adjustment_revision_semantics": "No price adjustment; current file changes require immutable snapshot lineage",
+      "published_rate_limit": "No public request-rate guarantee identified; conservative polling required",
+      "source_timestamp_semantics": "Final-row file creation time has mmddyyyyhhmm format and undocumented timezone",
+      "unsupported_scope_risks": [
+        "No point-in-time historical ticker and corporate-action coverage",
+        "Suffix, share-class, intraday add-delete, and timezone semantics need resolution"
+      ],
+      "evidence_urls": [
+        "https://www.nasdaqtrader.com/trader.aspx?id=symboldirdefs",
+        "https://nasdaqtrader.com/trader.aspx?id=symbollookup",
+        "https://www.nasdaq.com/legal"
+      ],
+      "remote": true,
+      "enabled": false,
+      "adapter_implementation_authorized": false,
+      "network_download_authorized": false,
+      "authorization_status": "BLOCKED",
+      "authentication_method": "NONE_FOR_PUBLIC_FILES",
+      "approval_record_sha256": null,
+      "approval_expires_at_utc": null,
+      "rights": {
+        "access": "DOCUMENTED",
+        "persistent_storage": "PROHIBITED",
+        "model_training": "PROHIBITED",
+        "derived_data": "PROHIBITED",
+        "redistribution": "PROHIBITED",
+        "retention_deletion": "UNRESOLVED"
+      }
+    }
+  ]
+}

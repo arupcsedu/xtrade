@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/gdelt-artifact-manifest-v1.schema.json",
+  "title": "Aegis-MX GDELT artifact manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["attribution", "event_time_max_ns", "event_time_min_ns", "manifest_id", "manifest_sha256", "object_sha256", "plan_id", "processing_time_utc_ns", "publication_time_reason", "receipt_time_utc_ns", "record_count", "schema_name", "schema_version", "size_bytes_decimal", "source_revision", "storage_path", "universe_snapshot_sha256"],
+  "properties": {
+    "attribution": {"const": "Data source: The GDELT Project (https://www.gdeltproject.org/)"},
+    "event_time_max_ns": {"type": "integer", "minimum": 1},
+    "event_time_min_ns": {"type": "integer", "minimum": 1},
+    "manifest_id": {"type": "string", "pattern": "^gdelt-[0-9a-f]{64}$"},
+    "manifest_sha256": {"$ref": "#/$defs/sha256"},
+    "object_sha256": {"$ref": "#/$defs/sha256"},
+    "plan_id": {"type": "string", "pattern": "^gdelt-query-[0-9a-f]{64}$"},
+    "processing_time_utc_ns": {"type": "integer", "minimum": 1},
+    "publication_time_reason": {"const": "PRECISE_TIME_NOT_ASSERTED_BY_ADAPTER"},
+    "receipt_time_utc_ns": {"type": "integer", "minimum": 1},
+    "record_count": {"type": "integer", "minimum": 1, "maximum": 25000},
+    "schema_name": {"const": "gdelt-metadata-record"},
+    "schema_version": {"const": "1.0.0"},
+    "size_bytes_decimal": {"type": "integer", "minimum": 1, "maximum": 5000000000},
+    "source_revision": {"const": "gdelt-gkg-bigquery-reviewed-2026-09-11"},
+    "storage_path": {"type": "string", "pattern": "^raw/gdelt/query-results/[0-9a-f]{64}\\.jsonl$"},
+    "universe_snapshot_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

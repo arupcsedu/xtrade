@@ -148,6 +148,13 @@ endpoint, or a prior provider approval cannot substitute for exact authorization
 SEC, GDELT, FRED/ALFRED series, Nasdaq Trader, and market data are assessed and
 enabled independently.
 
+The only current exception to the checked-in deny-all state is an external,
+owner-only, expiring policy for Alpaca Basic IEX `1Min` data. Its pilot must be
+accepted before backfill, and every real run records the approval and policy
+hashes, exact dates, universe hash, quota evidence, request/retry counts,
+coverage outcomes, and deterministic verification hash. This exception does
+not authorize another source or any order operation.
+
 ## Storage admission gate
 
 All byte policy uses decimal GB. Reports may add binary GiB only with explicit
@@ -165,7 +172,7 @@ current data-root bytes
 
 The operation is rejected if the data root would exceed 100 GB, temporary work
 would exceed 20 GB, post-operation filesystem reserve would fall below 50 GB,
-or the authoritative 250 GB administrative quota and current quota usage are
+or the authoritative 10 TiB scratch soft quota and current quota usage are
 unknown. The 80 GB target triggers an operator-visible stop-and-review before
 additional scope. Shared filesystem free space alone is insufficient. Symlinks,
 hard links where accounting is ambiguous, sparse files, concurrent admissions,

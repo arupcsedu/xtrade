@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/instrument-reference-snapshot-v1.schema.json",
+  "title": "Aegis-MX immutable point-in-time instrument reference snapshot v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "as_of_ns",
+    "calendar_days",
+    "corporate_actions",
+    "document_sha256",
+    "halt_coverage_complete",
+    "halts",
+    "instruments",
+    "live_trading_capable",
+    "mappings",
+    "schema_version",
+    "source_report_sha256",
+    "universe_source_sha256"
+  ],
+  "properties": {
+    "as_of_ns": {"$ref": "#/$defs/positiveInt64"},
+    "calendar_days": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3660,
+      "items": {"$ref": "#/$defs/calendarDay"}
+    },
+    "corporate_actions": {
+      "type": "array",
+      "maxItems": 100000,
+      "items": {"$ref": "#/$defs/action"}
+    },
+    "document_sha256": {"$ref": "#/$defs/sha256"},
+    "halt_coverage_complete": {"type": "boolean"},
+    "halts": {
+      "type": "array",
+      "maxItems": 1000000,
+      "items": {"$ref": "#/$defs/halt"}
+    },
+    "instruments": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {"$ref": "#/$defs/instrument"}
+    },
+    "live_trading_capable": {"const": false},
+    "mappings": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10000,
+      "items": {"$ref": "#/$defs/mapping"}
+    },
+    "schema_version": {"const": "1.0.0"},
+    "source_report_sha256": {"$ref": "#/$defs/sha256"},
+    "universe_source_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "positiveInt64": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9223372036854775807
+    },
+    "nullablePositiveInt64": {
+      "oneOf": [{"$ref": "#/$defs/positiveInt64"}, {"type": "null"}]
+    },
+    "sha256": {"type": "string", "pattern": "^(?!0{64}$)[a-f0-9]{64}$"},
+    "instrumentId": {"type": "string", "pattern": "^(?!0{32}$)[a-f0-9]{32}$"},
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[^\\u0000]+$"
+    },
+    "symbol": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*(?:[.-][A-Z0-9]+)?$",
+      "maxLength": 16
+    },
+    "date": {"type": "string", "format": "date"},
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "available_at_ns",
+        "content_sha256",
+        "dataset",
+        "document_id",
+        "historical_completeness",
+        "limitation",
+        "observed_at_ns",
+        "processed_at_ns",
+        "provider",
+        "revision_at_ns",
+        "source_publication_time_ns"
+      ],
+      "properties": {
+        "available_at_ns": {"$ref": "#/$defs/positiveInt64"},
+        "content_sha256": {"$ref": "#/$defs/sha256"},
+        "dataset": {"$ref": "#/$defs/identifier"},
+        "document_id": {"$ref": "#/$defs/identifier"},
+        "historical_completeness": {"type": "boolean"},
+        "limitation": {"$ref": "#/$defs/identifier"},
+        "observed_at_ns": {"$ref": "#/$defs/positiveInt64"},
+        "processed_at_ns": {"$ref": "#/$defs/positiveInt64"},
+        "provider": {"$ref": "#/$defs/identifier"},
+        "revision_at_ns": {"$ref": "#/$defs/positiveInt64"},
+        "source_publication_time_ns": {"$ref": "#/$defs/nullablePositiveInt64"}
+      }
+    },
+    "instrument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "delisting_date",
+        "effective_from_ns",
+        "effective_to_ns",
+        "instrument_id",
+        "listing_date",
+        "listing_venue",
+        "primary_symbol",
+        "provenance",
+        "revision_id",
+        "security_type",
+        "unresolved_fields",
+        "version"
+      ],
+      "properties": {
+        "delisting_date": {"oneOf": [{"$ref": "#/$defs/date"}, {"type": "null"}]},
+        "effective_from_ns": {"$ref": "#/$defs/positiveInt64"},
+        "effective_to_ns": {"$ref": "#/$defs/nullablePositiveInt64"},
+        "instrument_id": {"$ref": "#/$defs/instrumentId"},
+        "listing_date": {"oneOf": [{"$ref": "#/$defs/date"}, {"type": "null"}]},
+        "listing_venue": {"enum": ["NASDAQ", "NYSE", "NYSE_AMERICAN", "OTC", "UNKNOWN"]},
+        "primary_symbol": {"$ref": "#/$defs/symbol"},
+        "provenance": {"$ref": "#/$defs/provenance"},
+        "revision_id": {"$ref": "#/$defs/identifier"},
+        "security_type": {"enum": ["COMMON_STOCK", "ADR", "ETF", "PREFERRED_STOCK", "UNIT", "WARRANT", "US_EQUITY_UNSPECIFIED", "UNKNOWN"]},
+        "unresolved_fields": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/identifier"}},
+        "version": {"type": "integer", "minimum": 1}
+      }
+    },
+    "mapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["effective_from_ns", "effective_to_ns", "instrument_id", "listing_venue", "mapping_id", "provenance", "status", "symbol", "version"],
+      "properties": {
+        "effective_from_ns": {"$ref": "#/$defs/positiveInt64"},
+        "effective_to_ns": {"$ref": "#/$defs/nullablePositiveInt64"},
+        "instrument_id": {"oneOf": [{"$ref": "#/$defs/instrumentId"}, {"type": "null"}]},
+        "listing_venue": {"enum": ["NASDAQ", "NYSE", "NYSE_AMERICAN", "OTC", "UNKNOWN"]},
+        "mapping_id": {"$ref": "#/$defs/identifier"},
+        "provenance": {"$ref": "#/$defs/provenance"},
+        "status": {"enum": ["RESOLVED_CURRENT_ONLY", "RECENTLY_LISTED", "DELISTED", "UNSUPPORTED_VENUE", "AMBIGUOUS", "MISSING_REFERENCE"]},
+        "symbol": {"$ref": "#/$defs/symbol"},
+        "version": {"type": "integer", "minimum": 1}
+      }
+    },
+    "calendarDay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["calendar_id", "close_exchange_time_ns", "kind", "open_exchange_time_ns", "provenance", "session_date", "version"],
+      "properties": {
+        "calendar_id": {"$ref": "#/$defs/identifier"},
+        "close_exchange_time_ns": {"$ref": "#/$defs/nullablePositiveInt64"},
+        "kind": {"enum": ["REGULAR_SESSION", "EARLY_CLOSE_SESSION", "WEEKEND", "HOLIDAY", "UNCLASSIFIED_CLOSURE"]},
+        "open_exchange_time_ns": {"$ref": "#/$defs/nullablePositiveInt64"},
+        "provenance": {"$ref": "#/$defs/provenance"},
+        "session_date": {"$ref": "#/$defs/date"},
+        "version": {"type": "integer", "minimum": 1}
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action_id", "cash_dividend_currency_nanos", "currency", "effective_time_ns", "instrument_id", "kind", "provenance", "split_denominator", "split_numerator", "version"],
+      "properties": {
+        "action_id": {"$ref": "#/$defs/identifier"},
+        "cash_dividend_currency_nanos": {"oneOf": [{"type": "integer", "minimum": 0, "maximum": 9223372036854775807}, {"type": "null"}]},
+        "currency": {"oneOf": [{"type": "string", "pattern": "^[A-Z]{3}$"}, {"type": "null"}]},
+        "effective_time_ns": {"$ref": "#/$defs/positiveInt64"},
+        "instrument_id": {"$ref": "#/$defs/instrumentId"},
+        "kind": {"enum": ["SPLIT", "CASH_DIVIDEND"]},
+        "provenance": {"$ref": "#/$defs/provenance"},
+        "split_denominator": {"$ref": "#/$defs/nullablePositiveInt64"},
+        "split_numerator": {"$ref": "#/$defs/nullablePositiveInt64"},
+        "version": {"type": "integer", "minimum": 1}
+      }
+    },
+    "halt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["end_exchange_time_ns", "halt_id", "instrument_id", "provenance", "start_exchange_time_ns", "version"],
+      "properties": {
+        "end_exchange_time_ns": {"$ref": "#/$defs/positiveInt64"},
+        "halt_id": {"$ref": "#/$defs/identifier"},
+        "instrument_id": {"$ref": "#/$defs/instrumentId"},
+        "provenance": {"$ref": "#/$defs/provenance"},
+        "start_exchange_time_ns": {"$ref": "#/$defs/positiveInt64"},
+        "version": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

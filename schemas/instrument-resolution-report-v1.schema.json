@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/instrument-resolution-report-v1.schema.json",
+  "title": "Aegis-MX Prompt 52 instrument-resolution coverage report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "as_of_ns",
+    "calendar",
+    "counts",
+    "document_sha256",
+    "economic_value_claimed",
+    "entries",
+    "live_trading_capable",
+    "reference_snapshot_document_sha256",
+    "safe_for_historical_training",
+    "schema_version",
+    "status",
+    "unresolved_source_boundaries",
+    "universe_source_sha256"
+  ],
+  "properties": {
+    "as_of_ns": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+    "calendar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["calendar_days", "early_close_sessions", "halt_coverage_complete", "sessions", "weekday_closures_unclassified"],
+      "properties": {
+        "calendar_days": {"type": "integer", "minimum": 1},
+        "early_close_sessions": {"type": "integer", "minimum": 0},
+        "halt_coverage_complete": {"type": "boolean"},
+        "sessions": {"type": "integer", "minimum": 1},
+        "weekday_closures_unclassified": {"type": "integer", "minimum": 0}
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["current_only_resolved", "historically_complete", "requested", "stable_instrument_ids", "unsupported_venue"],
+      "properties": {
+        "current_only_resolved": {"type": "integer", "minimum": 0},
+        "historically_complete": {"const": 0},
+        "requested": {"type": "integer", "minimum": 1, "maximum": 10000},
+        "stable_instrument_ids": {"type": "integer", "minimum": 0},
+        "unsupported_venue": {"type": "integer", "minimum": 0}
+      }
+    },
+    "document_sha256": {"$ref": "#/$defs/sha256"},
+    "economic_value_claimed": {"const": false},
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["current_mapping_status", "historical_mapping_status", "instrument_id", "listing_venue", "symbol", "unresolved_fields"],
+        "properties": {
+          "current_mapping_status": {"enum": ["RESOLVED_CURRENT_ONLY", "RECENTLY_LISTED", "DELISTED", "UNSUPPORTED_VENUE", "AMBIGUOUS", "MISSING_REFERENCE"]},
+          "historical_mapping_status": {"const": "UNRESOLVED"},
+          "instrument_id": {"oneOf": [{"type": "string", "pattern": "^(?!0{32}$)[a-f0-9]{32}$"}, {"type": "null"}]},
+          "listing_venue": {"enum": ["NASDAQ", "NYSE", "NYSE_AMERICAN", "OTC", "UNKNOWN"]},
+          "symbol": {"type": "string", "pattern": "^[A-Z][A-Z0-9]*(?:[.-][A-Z0-9]+)?$", "maxLength": 16},
+          "unresolved_fields": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 256}}
+        }
+      }
+    },
+    "live_trading_capable": {"const": false},
+    "reference_snapshot_document_sha256": {"$ref": "#/$defs/sha256"},
+    "safe_for_historical_training": {"const": false},
+    "schema_version": {"const": "1.0.0"},
+    "status": {"const": "PARTIAL_REFERENCE_COVERAGE"},
+    "unresolved_source_boundaries": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 512}},
+    "universe_source_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^(?!0{64}$)[a-f0-9]{64}$"}
+  }
+}

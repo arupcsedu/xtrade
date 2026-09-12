@@ -163,7 +163,8 @@ lint_sources() {
   if command -v shellcheck >/dev/null 2>&1; then
     shellcheck \
       tools/run.sh tools/toolchain.sh tools/slurm/paper-integration.sbatch \
-      tools/slurm/paper-soak.sbatch
+      tools/slurm/paper-soak.sbatch \
+      tools/slurm/alpaca-paper-certification.sbatch
   else
     printf 'NOTE: shellcheck unavailable; CI installs and enforces it.\n'
   fi
@@ -298,6 +299,10 @@ run_benchmark() {
     --iterations="${AEGIS_DATA_REPOSITORY_BENCHMARK_ITERATIONS:-25}" \
     --file-count="${AEGIS_DATA_REPOSITORY_BENCHMARK_FILES:-64}" \
     --output=build/reports/benchmarks/data-repository.json
+  "$python_bin" tools/benchmark_ingestion.py \
+    --iterations="${AEGIS_INGESTION_BENCHMARK_ITERATIONS:-25}" \
+    --object-bytes="${AEGIS_INGESTION_BENCHMARK_OBJECT_BYTES:-65536}" \
+    --output=build/reports/benchmarks/ingestion.json
   (
     cd control
     go test -run '^$' \

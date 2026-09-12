@@ -1,5 +1,6 @@
 add_library(
   aegis_paper_integration STATIC
+  src/alpaca_paper_path.cpp
   src/paper_acceptance.cpp
 )
 add_library(aegis::paper_integration ALIAS aegis_paper_integration)
@@ -56,6 +57,13 @@ set_target_properties(
   aegis_paper_acceptance PROPERTIES OUTPUT_NAME aegis-paper-acceptance
 )
 
+add_executable(aegis_alpaca_paper_path tools/alpaca_paper_path_main.cpp)
+target_link_libraries(aegis_alpaca_paper_path PRIVATE aegis::paper_integration)
+aegis_apply_project_options(aegis_alpaca_paper_path)
+set_target_properties(
+  aegis_alpaca_paper_path PROPERTIES OUTPUT_NAME aegis-alpaca-paper-path
+)
+
 add_executable(aegis_paper_soak_load tools/paper_soak_load.cpp)
 target_link_libraries(
   aegis_paper_soak_load
@@ -82,7 +90,11 @@ install(
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
 )
 install(
-  TARGETS aegis_operator_simulation aegis_paper_acceptance aegis_paper_soak_load
+  TARGETS
+    aegis_alpaca_paper_path
+    aegis_operator_simulation
+    aegis_paper_acceptance
+    aegis_paper_soak_load
   RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
 )
 install(
@@ -94,11 +106,15 @@ install(
 if(AEGIS_BUILD_TESTS)
   add_executable(
     aegis_operator_simulation_tests
+    tests/alpaca_paper_path_test.cpp
     tests/operator_simulation_test.cpp
   )
   target_link_libraries(
     aegis_operator_simulation_tests
-    PRIVATE aegis::operator_simulation_core GTest::gtest_main
+    PRIVATE
+      aegis::operator_simulation_core
+      aegis::paper_integration
+      GTest::gtest_main
   )
   aegis_apply_project_options(aegis_operator_simulation_tests)
   add_test(

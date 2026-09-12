@@ -12,12 +12,14 @@
 ## Safety scope
 
 The implemented market-data behavior is limited to the repository-owned SMX/1
-synthetic fixture protocol. It has no network listener, provider endpoint,
-licensed exchange protocol, real order-entry transport, credential, or live
-gateway. The local synthetic/paper gateway consumes only normalized in-memory
-commands and synthetic market events. The default build omits its live-only
-adapter boundary and reports no live capability. Enabling the compile boundary
-does not add a transmitter or authorize live operation.
+synthetic fixture protocol. The core has no network listener, licensed exchange
+protocol, real order-entry transport, credential, or live gateway. The local
+synthetic/paper gateway consumes only normalized in-memory commands and
+synthetic market events. A separately invoked fixed-host Alpaca PAPER operator
+utility can test broker connectivity but cannot accept system commands. The
+default build omits its live-only adapter boundary and reports no live
+capability. Enabling the compile boundary does not add a transmitter or
+authorize live operation.
 
 The [engineering contract](../architecture/engineering-contract.md) and
 [quality gates](quality-gates.md) are normative.
@@ -142,6 +144,38 @@ The fast profile executes every single fault. The nightly profile repeats those
 faults and adds simultaneous combinations without consuming unbounded host
 resources. Contracts, result hashes, and report locations are documented in
 [Chaos Testing](chaos-testing.md).
+
+Focused provider-neutral ingestion checks and the socket-free benchmark are:
+
+```bash
+export AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts
+$AEGIS_PYTHON_ENV/bin/python -m pytest -q \
+  python/tests/test_ingestion.py python/tests/test_ingestion_cli.py
+$AEGIS_PYTHON_ENV/bin/python tools/benchmark_ingestion.py \
+  --iterations 25 --object-bytes 65536 \
+  --output build/reports/benchmarks/ingestion.json
+```
+
+The CLI, fault coverage, deterministic seed, and non-network limitation are
+documented in [Provider-neutral Ingestion Testing](provider-neutral-ingestion-testing.md).
+
+Focused Alpaca source-adapter tests remain socket-free and use an injected
+transport:
+
+```bash
+export PYTHONPATH=python/research:.
+$AEGIS_PYTHON_ENV/bin/python -m ruff check \
+  python/research/aegis_mx_research/alpaca_historical.py \
+  python/tests/test_alpaca_historical.py
+$AEGIS_PYTHON_ENV/bin/python -m mypy --strict \
+  python/research/aegis_mx_research/alpaca_historical.py
+$AEGIS_PYTHON_ENV/bin/python -m pytest -q \
+  python/tests/test_alpaca_historical.py --no-cov
+bash -n tools/slurm/alpaca-iex-minute-backfill.sbatch
+```
+
+Remote pilot and backfill runs are separate, explicitly authorized operator
+actions. See [Alpaca IEX Minute Ingestion Testing](alpaca-iex-minute-ingestion-testing.md).
 
 ASan and TSan also require very large virtual-address shadow mappings. A host
 with a restrictive hard `ulimit -v` can compile the instrumented binaries but

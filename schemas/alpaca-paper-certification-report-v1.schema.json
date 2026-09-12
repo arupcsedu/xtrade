@@ -1,0 +1,176 @@
+{
+  "$id": "https://aegis-mx.invalid/schemas/alpaca-paper-certification-report-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "account_reset_performed": {"const": false},
+    "authorization_sha256": {"$ref": "#/$defs/sha256"},
+    "broker_response_roundtrip_certified": {"const": false},
+    "build_version": {"const": "0.1.0"},
+    "cancel_request_count": {"maximum": 1, "minimum": 0, "type": "integer"},
+    "cancel_confirmed": {"const": true},
+    "certification_kind": {
+      "enum": [
+        "alpaca-paper-connectivity",
+        "alpaca-paper-system-command-path"
+      ]
+    },
+    "client_order_id_sha256": {"$ref": "#/$defs/sha256"},
+    "configuration_sha256": {"$ref": "#/$defs/sha256"},
+    "credential_file_validated": {"const": true},
+    "endpoint": {"const": "https://paper-api.alpaca.markets"},
+    "existing_state_preserved": {"const": true},
+    "filled_quantity": {"const": "0"},
+    "health_state": {"const": "HEALTHY"},
+    "live_trading_enabled": {"const": false},
+    "mode": {"const": "PAPER"},
+    "mutation_count": {"maximum": 2, "minimum": 0, "type": "integer"},
+    "observed_at_utc": {"format": "date-time", "type": "string"},
+    "order_limit_price": {"const": "0.01"},
+    "order_quantity": {"const": 1},
+    "order_submission_count": {"maximum": 1, "minimum": 0, "type": "integer"},
+    "phase": {"enum": ["PREFLIGHT", "CERTIFICATION"]},
+    "provider": {"const": "alpaca"},
+    "readiness_state": {"enum": ["READ_ONLY_READY", "COMPLETE"]},
+    "report_sha256": {"$ref": "#/$defs/sha256"},
+    "request_count": {"minimum": 1, "type": "integer"},
+    "schema_version": {"const": "1.0.0"},
+    "selected_symbol": {
+      "maxLength": 16,
+      "pattern": "^[A-Z][A-Z0-9]*(?:[.-][A-Z0-9]+)?$",
+      "type": "string"
+    },
+    "state": {"$ref": "#/$defs/preflightState"},
+    "status": {"enum": ["READY", "PASSED"]},
+    "system_order_path_certified": {"type": "boolean"},
+    "system_path_source_sha256": {"$ref": "#/$defs/sha256"},
+    "system_path_binary_sha256": {
+      "oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]
+    },
+    "system_path_evidence_sha256": {
+      "oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]
+    },
+    "ticker_count": {"minimum": 1, "type": "integer"},
+    "ticker_universe_path": {"const": "/scratch/djy8hg/xtrade/ticker.txt"},
+    "tool_source_sha256": {"$ref": "#/$defs/sha256"},
+    "universe_snapshot_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "required": [
+    "account_reset_performed",
+    "build_version",
+    "cancel_request_count",
+    "certification_kind",
+    "configuration_sha256",
+    "credential_file_validated",
+    "endpoint",
+    "health_state",
+    "live_trading_enabled",
+    "mode",
+    "mutation_count",
+    "observed_at_utc",
+    "order_submission_count",
+    "phase",
+    "provider",
+    "readiness_state",
+    "report_sha256",
+    "request_count",
+    "schema_version",
+    "selected_symbol",
+    "status",
+    "system_order_path_certified",
+    "ticker_count",
+    "tool_source_sha256",
+    "universe_snapshot_sha256"
+  ],
+  "allOf": [
+    {
+      "if": {"properties": {"phase": {"const": "PREFLIGHT"}}},
+      "then": {
+        "properties": {
+          "mutation_count": {"const": 0},
+          "cancel_request_count": {"const": 0},
+          "order_submission_count": {"const": 0},
+          "readiness_state": {"const": "READ_ONLY_READY"},
+          "status": {"const": "READY"}
+        },
+        "required": [
+          "configuration_sha256",
+          "credential_file_validated",
+          "state",
+          "ticker_universe_path"
+        ]
+      }
+    },
+    {
+      "if": {"properties": {"phase": {"const": "CERTIFICATION"}}},
+      "then": {
+        "properties": {
+          "mutation_count": {"const": 2},
+          "cancel_request_count": {"const": 1},
+          "order_submission_count": {"const": 1},
+          "readiness_state": {"const": "COMPLETE"},
+          "status": {"const": "PASSED"}
+        },
+        "required": [
+          "authorization_sha256",
+          "broker_response_roundtrip_certified",
+          "cancel_confirmed",
+          "client_order_id_sha256",
+          "existing_state_preserved",
+          "filled_quantity",
+          "order_limit_price",
+          "order_quantity",
+          "system_path_binary_sha256",
+          "system_path_evidence_sha256",
+          "system_path_source_sha256"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {"system_order_path_certified": {"const": true}},
+        "required": ["system_order_path_certified"]
+      },
+      "then": {
+        "properties": {
+          "certification_kind": {"const": "alpaca-paper-system-command-path"},
+          "system_path_binary_sha256": {"$ref": "#/$defs/sha256"},
+          "system_path_evidence_sha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    }
+  ],
+  "title": "Aegis-MX Alpaca PAPER connectivity certification report v1",
+  "type": "object",
+  "$defs": {
+    "preflightState": {
+      "additionalProperties": false,
+      "properties": {
+        "account_reference_sha256": {"$ref": "#/$defs/sha256"},
+        "asset_eligible": {"const": true},
+        "clock_is_open": {"type": "boolean"},
+        "clock_timestamp": {"format": "date-time", "type": "string"},
+        "next_close": {"format": "date-time", "type": "string"},
+        "next_open": {"format": "date-time", "type": "string"},
+        "open_orders_count": {"minimum": 0, "type": "integer"},
+        "open_orders_sha256": {"$ref": "#/$defs/sha256"},
+        "positions_count": {"minimum": 0, "type": "integer"},
+        "positions_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "required": [
+        "account_reference_sha256",
+        "asset_eligible",
+        "clock_is_open",
+        "clock_timestamp",
+        "next_close",
+        "next_open",
+        "open_orders_count",
+        "open_orders_sha256",
+        "positions_count",
+        "positions_sha256"
+      ],
+      "type": "object"
+    },
+    "sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"}
+  }
+}

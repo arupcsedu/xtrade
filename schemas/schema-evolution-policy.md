@@ -22,13 +22,43 @@ uses FlatBuffers unknown-field behavior for additive minor data. New behavior
 must not rely on an additive field until every safety-relevant consumer has
 been upgraded and its readiness is auditable.
 
-The bounded forecasting data repository uses separate canonical JSON contracts
-with semantic version `1.0.0`: `data-storage-policy-v1`, `data-manifest-v1`, and
-`data-storage-audit-v1`. Their object fields are closed and exact. An additive
-field therefore requires a new side-by-side schema and reader-first rollout;
-removal, renaming, unit changes, canonicalization changes, or hash-framing
-changes require a new major schema filename. Existing manifests and audit
-records remain immutable and are never rewritten during migration.
+The bounded forecasting data repository uses separate canonical JSON contracts.
+`data-storage-policy-v2` corrects the authoritative scratch allocation; the
+immutable `data-storage-policy-v1` remains available for legacy evidence.
+`data-manifest-v1`, `data-storage-audit-v1`, and `data-source-policy-v1` retain
+semantic version `1.0.0`. Their object fields are
+closed and exact. An additive field therefore requires a new side-by-side schema
+and reader-first rollout; removal, renaming, unit changes, canonicalization
+changes, or hash-framing changes require a new major schema filename. Existing
+manifests, policies, and audit records remain immutable and are never rewritten
+during migration.
+
+Storage-policy v1 roots are migrated by verified copy into a newly initialized
+v2 root. Readers must validate the original with its v1 release; neither the v1
+marker nor its manifests are rewritten. An empty v1 root may be archived and a
+v2 root initialized at the operational path, as recorded in ADR 0050.
+
+Provider-neutral ingestion checkpoints use a closed internal JSON contract at
+`1.0.0`. A reader rejects any other version or field set. Additive fields need a
+new reader-first minor contract; identity, canonicalization, range-prefix,
+source-version, or hash-framing changes require a new major checkpoint version.
+Existing checkpoint bytes are retained as recovery evidence and never silently
+rewritten into a new meaning. Accepted object provenance continues to use
+`data-manifest-v1`.
+
+Instrument reference snapshot v1 and instrument resolution report v1 are
+side-by-side closed JSON contracts. Unknown fields, enum values, schemas,
+noncanonical bytes, and digest mismatches reject. Additive fields require new
+reader support before publication; changed identity derivation, temporal
+semantics, rational units, or hash framing require a new major filename.
+Existing reference artifacts remain immutable. See
+[ADR 0054](../docs/adr/0054-bitemporal-reference-data-with-current-only-source-evidence.md).
+
+SEC coverage report v1.1 is a side-by-side closed JSON contract. It preserves
+v1.0 files unchanged and adds an explicit filing-date window plus per-issuer
+and aggregate historical-shard counts. Writers publish v1.1 only after readers
+support it; v1.0 evidence remains verified against the original schema and is
+never rewritten. See [ADR 0055](../docs/adr/0055-bounded-sec-edgar-ingestion.md).
 
 Version 1.1 appends fixed-point distribution and provenance fields to
 `ModelForecast` and adds the reader-first `RETURN_PPM` enum. Its deployment and
@@ -82,6 +112,14 @@ timestamp to `ModelForecast`. Existing `horizon_ns` remains actual elapsed
 nanoseconds and existing v1.8 bytes remain valid. V1.9 readers deploy before
 calendar-aware writers; rollback stops those writers first. See
 [ADR 0046](../docs/adr/0046-exchange-calendar-forecast-horizons.md).
+
+The Prompt 54 GDELT JSON contracts are independent offline schema version
+`1.0.0`; they do not change the FlatBuffers event envelope. A future precise
+publication time, historical entity mapping, additional source collection, or
+classifier output requires additive fields plus a new schema version. Existing
+null publication values may never be reinterpreted, and existing metadata
+records remain immutable. See
+[ADR 0056](../docs/adr/0056-bounded-gdelt-gkg-query-and-advisory-events.md).
 
 ## Compatible changes
 

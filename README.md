@@ -8,8 +8,13 @@ feature engines, model contracts, infrastructure-only microstructure models,
 an off-hot-path time-series forecast service, deterministic risk and OMS
 kernels, a signed append-only model registry, a shadow/canary deployment
 coordinator, and a repository-owned synthetic/paper gateway. It contains no real
-feed adapter, strategy, proprietary order-entry protocol, network transmitter,
-broker connection, credential, or live-trading behavior.
+feed adapter, strategy, proprietary order-entry protocol, live network
+transmitter, committed credential, or live-trading behavior. A separate
+[fixed-host Alpaca PAPER certification tool](docs/architecture/alpaca-paper-certification.md)
+can perform a tightly bounded operator-authorized broker connectivity check. A
+separate mode binds one outbound request to deterministic router, risk, OMS,
+and final paper-gate evidence; HTTPS remains outside the hot path and broker
+responses are not yet applied back through OMS.
 
 The [edge high-availability layer](docs/architecture/high-availability.md)
 provides process/session fencing, bounded recovery replication, explicit
@@ -118,6 +123,14 @@ SHA-256. Go foundation code uses the standard library only.
 All commands run from the repository root. Detailed outputs and direct commands
 are documented in
 [Local Development](docs/testing/local-development.md).
+
+The credentialed `aegis-alpaca-paper` command is intentionally excluded from
+`make fast`, `make full`, and CI. Its read-only preflight and separately
+authorized one-order/cancel workflow are documented in the
+[Alpaca PAPER runbook](docs/operations/alpaca-paper-certification-runbook.md).
+It never uses a live hostname. Only `certify-system-path` may certify the
+deterministic outbound path; no command certifies the broker-response/OMS
+round trip.
 
 Full-system PAPER acceptance, report paths, and the optional `parallel`-partition
 Slurm launcher are documented in
@@ -269,6 +282,94 @@ without deleting anything:
 The [storage architecture](docs/architecture/poc-data-repository.md) and
 [operations runbook](docs/operations/poc-data-storage.md) document quota input,
 admission estimates, recovery, and the exact non-network/non-deletion boundary.
+
+Provider-neutral ingestion remains local-only from the installed CLI. Planning
+is the default; object writes require `--execute`. This example generates a
+deterministic one-day fixture for an in-universe symbol and does not contact a
+provider:
+
+```bash
+/scratch/djy8hg/env/aegis_mx_contracts/bin/aegis-data \
+  --data-root /scratch/djy8hg/aegis_mx_poc_data plan-fetch \
+  --provider synthetic --dataset synthetic-minute-bars \
+  --start 2026-09-08 --end 2026-09-08 --ticker AAPL \
+  --quota-limit-bytes 10995116277760 --quota-used-bytes CURRENT_DECIMAL_BYTES \
+  --quota-source AUTHORITATIVE_SOURCE \
+  --quota-observed-at-utc CURRENT_UTC_TIMESTAMP --quota-authoritative
+```
+
+See the [ingestion architecture](docs/architecture/provider-neutral-ingestion.md),
+[operator runbook](docs/operations/offline-ingestion-runbook.md), and
+[focused tests](docs/testing/provider-neutral-ingestion-testing.md).
+
+The source-specific `aegis-alpaca-data` command implements GET-only Alpaca
+Basic IEX `1Min` acquisition. It is dry-run by default and cannot submit an
+order. Real retrieval requires an unexpired owner-only policy and approval
+outside Git, a `0600` secret file, exact universe hash, authoritative quota,
+and `--execute`:
+
+```bash
+export PYTHONPATH=python/research:.
+/scratch/djy8hg/env/aegis_mx_contracts/bin/aegis-alpaca-data \
+  --data-root /scratch/djy8hg/aegis_mx_poc_data pilot
+bash -n tools/slurm/alpaca-iex-minute-backfill.sbatch
+```
+
+The checked-in source-policy example remains fully disabled. Current scope,
+commands, recovery, and evidence are in the
+[Alpaca ingestion runbook](docs/operations/alpaca-iex-minute-ingestion.md),
+[architecture](docs/architecture/alpaca-iex-minute-ingestion.md), and
+[focused tests](docs/testing/alpaca-iex-minute-ingestion-testing.md).
+
+The offline `aegis-reference` command builds bitemporal current-only instrument
+and retrospective calendar evidence from the verified backfill report. It
+performs no network access and marks unavailable historical mappings, actions,
+delistings, and halts unresolved:
+
+```bash
+/scratch/djy8hg/env/aegis_mx_contracts/bin/aegis-reference build
+/scratch/djy8hg/env/aegis_mx_contracts/bin/aegis-reference verify \
+  /scratch/djy8hg/aegis_mx_poc_data/reports/reference-data/prompt-52/reference-snapshot-v1.json
+```
+
+See the [reference-data architecture](docs/architecture/point-in-time-instrument-reference.md),
+[operations runbook](docs/operations/point-in-time-reference-data.md), and
+[resolution report index](docs/reviews/instrument-resolution-report.md).
+
+The read-only `aegis-sec-edgar` command resolves the exact `ticker.txt`
+universe against the SEC's current ticker association and ingests bounded
+Submissions JSON and Company Facts. It defaults to a no-network dry run;
+execution requires an expiring owner-only approval, an identifying User-Agent,
+current storage admission, and `--execute`:
+
+```bash
+export AEGIS_SEC_USER_AGENT='Aegis-MX academic-research/0.1 contact@example.edu'
+/scratch/djy8hg/env/aegis_mx_contracts/bin/aegis-sec-edgar coverage \
+  --approval /scratch/djy8hg/aegis_mx_poc_data/manifests/approvals/sec-edgar-academic-approval-v1.json
+```
+
+Primary filing documents are independently disabled unless explicitly enabled;
+arbitrary attachments are never fetched. See the
+[SEC architecture](docs/architecture/sec-edgar-poc-ingestion.md),
+[runbook](docs/operations/sec-edgar-ingestion.md), and
+[test contract](docs/testing/sec-edgar-ingestion-testing.md).
+
+The `aegis-gdelt` command creates a network-free, partition-pruned plan for
+bounded GDELT GKG metadata. Remote ingestion requires a separate owner-only
+approval, current quota evidence, a Google Cloud billing project, a short-lived
+OAuth token in `AEGIS_GCP_ACCESS_TOKEN`, and explicit `--execute`:
+
+```bash
+/scratch/djy8hg/env/aegis_mx_contracts/bin/aegis-gdelt plan \
+  --start-date 2024-09-11 --end-date 2026-09-10
+```
+
+Only GDELT metadata relevant to exact normalized issuer names is retained;
+linked publisher pages are never fetched. All classifier output is advisory and
+has no risk, OMS, router, or gateway connection. See the
+[GDELT architecture](docs/architecture/gdelt-poc-ingestion.md),
+[runbook](docs/operations/gdelt-poc-ingestion.md), and
+[test contract](docs/testing/gdelt-poc-ingestion-testing.md).
 
 ## Durable journal tools
 

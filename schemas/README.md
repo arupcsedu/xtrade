@@ -22,6 +22,18 @@ coverage totals, resource/latency observations, limitations, and SHA-256 worker
 evidence references. It is an offline evidence contract and carries no trading
 authority.
 
+The
+[`alpaca-paper-certification-authorization-v1.schema.json`](alpaca-paper-certification-authorization-v1.schema.json)
+and
+[`alpaca-paper-certification-report-v1.schema.json`](alpaca-paper-certification-report-v1.schema.json)
+contracts bind one off-hot-path, fixed-host broker PAPER connectivity check.
+The additive
+[`alpaca-paper-system-path-evidence-v1.schema.json`](alpaca-paper-system-path-evidence-v1.schema.json)
+contract binds one fixed outbound order to deterministic router, risk, OMS, and
+final paper-gateway evidence. These schemas explicitly disable live trading,
+extended hours, short selling, and account reset; they do not certify broker
+responses returning through the OMS.
+
 ## Canonical format
 
 Version 1 uses FlatBuffers 25.12.19, pinned by release archive SHA-256 in the
@@ -207,8 +219,10 @@ record means the inspected state is non-live while `production_ready` remains
 false and activation remains `PROHIBITED`.
 
 The bounded forecasting POC uses three off-hot-path JSON contracts. The
-[storage policy v1](data-storage-policy-v1.schema.json) fixes the five decimal-
-byte limits. The [data manifest v1](data-manifest-v1.schema.json) describes
+[storage policy v2](data-storage-policy-v2.schema.json) fixes the verified
+10 TiB scratch allocation while retaining the decimal 80/100/20/50 GB POC
+limits. [Storage policy v1](data-storage-policy-v1.schema.json) remains for
+immutable legacy evidence. The [data manifest v1](data-manifest-v1.schema.json) describes
 content-addressed source and partition envelopes, explicit timestamp domains,
 and correction/replacement lineage. The
 [storage audit v1](data-storage-audit-v1.schema.json) binds each administrative
@@ -216,6 +230,56 @@ result to the root, policy, evidence, reason codes, and the invariant that no
 network access occurred. Runtime decoders additionally verify canonical bytes,
 semantic time ordering, object size and SHA-256, references, and manifest
 identity. These contracts do not enter a trading path.
+
+Provider-neutral ingestion reuses `data-manifest-v1` for accepted and
+quarantined source provenance. Its closed, authenticated `DownloadCheckpoint`
+JSON is an internal recovery record rather than a cross-component event schema;
+its semantics and migration boundary are documented in
+[ADR 0049](../docs/adr/0049-provider-neutral-bounded-ingestion.md). It contains
+no credential or signed locator.
+
+The [data source policy v1](data-source-policy-v1.schema.json) is a separate,
+closed administrative authorization contract. It fixes deny-by-default remote
+access, contains no secret-bearing fields, inventories the independently gated
+provider datasets and rights, and requires an approval hash, expiry, declared
+use class, and resolved rights before any source may request adapter or network
+authority. The checked-in example remains entirely disabled.
+
+The
+[instrument reference snapshot v1](instrument-reference-snapshot-v1.schema.json)
+is a closed offline bitemporal contract for immutable instrument revisions,
+symbol mappings, exact corporate actions, calendar days, and known halt
+intervals. It fixes `live_trading_capable` to false and carries explicit
+historical and halt completeness. The
+[instrument resolution report v1](instrument-resolution-report-v1.schema.json)
+records complete ticker-universe coverage without representing current mappings
+as historical truth. Provider-derived instances remain owner-only outside Git.
+See [ADR 0054](../docs/adr/0054-bitemporal-reference-data-with-current-only-source-evidence.md).
+
+The [SEC EDGAR approval v1](sec-edgar-approval-v1.schema.json) is an external,
+self-hashed authorization contract for individually allowed content classes;
+the repository does not contain an enabled instance. The
+[SEC artifact manifest v1](sec-edgar-artifact-manifest-v1.schema.json) binds a
+content-addressed official-source object to exact local receipt/processing
+times, nullable source publication time, selected acceptance-time range, and
+optional correction lineage. The
+[SEC coverage report v1](sec-edgar-coverage-report-v1.schema.json) records every
+requested ticker, including unresolved current SEC associations, without
+filing text. The side-by-side
+[v1.1 contract](sec-edgar-coverage-report-v1_1.schema.json) adds the closed
+filing-date window and per-issuer and aggregate historical-shard counts. All
+three are offline
+research contracts and convey no order-entry
+authority. See [ADR 0055](../docs/adr/0055-bounded-sec-edgar-ingestion.md).
+
+Prompt 54 adds four closed, offline GDELT JSON contracts: the external
+[approval](gdelt-approval-v1.schema.json), immutable
+[artifact manifest](gdelt-artifact-manifest-v1.schema.json), metadata-only
+[record](gdelt-metadata-record-v1.schema.json), and combined
+[run report](gdelt-run-report-v1.schema.json). Publication time is explicitly
+null in v1 while GKG observation time and local receipt/processing time remain
+separate. Records and reports are advisory-only and carry no order-entry
+authority. See [ADR 0056](../docs/adr/0056-bounded-gdelt-gkg-query-and-advisory-events.md).
 
 ## Identifiers
 

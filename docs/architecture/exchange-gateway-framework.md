@@ -15,6 +15,12 @@ encoder, or venue dictionary. Native and FIX-compatible APIs are opaque adapter
 boundaries only. See [ADR 0025](../adr/0025-default-off-synthetic-paper-gateway.md)
 and the [licensed integration boundaries](licensed-integration-boundaries.md).
 
+The off-hot-path
+[Alpaca PAPER certification utility](alpaca-paper-certification.md) is a separate
+operator tool, not an `IExchangeGateway`. Its system-path mode binds one fixed
+outbound request to deterministic router, risk, OMS, and final paper-gate
+evidence. Alpaca responses are not yet applied back through the OMS.
+
 The deterministic [smart order router](smart-order-router.md) produces only a
 proposed paper/synthetic child. It cannot call this gateway. Each child requires
 a fresh venue-specific risk approval and normal OMS transition before reaching

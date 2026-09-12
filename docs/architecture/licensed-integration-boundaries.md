@@ -27,6 +27,13 @@ This document refines the [engineering contract](engineering-contract.md),
 [live-trading safety policy](../operations/live-trading-safety.md). It does not
 authorize any integration.
 
+A narrowly scoped public-API Alpaca PAPER connectivity utility is governed by
+[ADR 0051](../adr/0051-fixed-host-alpaca-paper-connectivity-certification.md)
+and its deterministic outbound extension by
+[ADR 0052](../adr/0052-bounded-alpaca-paper-command-bridge.md). It is an operator
+certification fixture, not a continuous exchange gateway, market-data
+entitlement, broker drop-copy integration, or live-capable implementation.
+
 ## Completion classes
 
 | Class | Meaning | Permitted claim |

@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/gdelt-run-report-v1.schema.json",
+  "title": "Aegis-MX bounded GDELT run report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["attribution", "coverage", "data_quality", "end_date", "generated_at_utc_ns", "live_trading_capable", "network_access_performed", "query", "rejections", "report_sha256", "run_id", "schema_version", "start_date", "storage", "universe_sha256"],
+  "properties": {
+    "attribution": {"const": "Data source: The GDELT Project (https://www.gdeltproject.org/)"},
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accepted_records", "advisory_records", "by_ticker", "unresolved_tickers"],
+      "properties": {
+        "accepted_records": {"type": "integer", "minimum": 0},
+        "advisory_records": {"type": "integer", "minimum": 0},
+        "by_ticker": {"type": "object", "propertyNames": {"pattern": "^[A-Z][A-Z0-9]*(?:[.-][A-Z0-9]+)?$"}, "additionalProperties": {"type": "integer", "minimum": 0}},
+        "unresolved_tickers": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9]*(?:[.-][A-Z0-9]+)?$"}}
+      }
+    },
+    "data_quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contradictory_records", "duplicate_content_keys", "duplicate_provider_ids", "missing_precise_publication_time", "provider_id_conflicts", "state"],
+      "properties": {
+        "contradictory_records": {"type": "integer", "minimum": 0},
+        "duplicate_content_keys": {"type": "integer", "minimum": 0},
+        "duplicate_provider_ids": {"type": "integer", "minimum": 0},
+        "missing_precise_publication_time": {"type": "integer", "minimum": 0},
+        "provider_id_conflicts": {"type": "integer", "minimum": 0},
+        "state": {"enum": ["VALID", "DEGRADED", "INVALID"]}
+      }
+    },
+    "end_date": {"type": "string", "format": "date"},
+    "generated_at_utc_ns": {"type": "integer", "minimum": 1},
+    "live_trading_capable": {"const": false},
+    "network_access_performed": {"type": "boolean"},
+    "query": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bytes_processed", "plan_count", "request_count", "table"],
+      "properties": {
+        "bytes_processed": {"type": "integer", "minimum": 0},
+        "plan_count": {"type": "integer", "minimum": 1, "maximum": 2000},
+        "request_count": {"type": "integer", "minimum": 1},
+        "table": {"const": "gdelt-bq.gdeltv2.gkg_partitioned"}
+      }
+    },
+    "rejections": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["counts", "examples"],
+      "properties": {
+        "counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 1}},
+        "examples": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["reason", "row_sha256"],
+            "properties": {
+              "reason": {"type": "string", "minLength": 1, "maxLength": 64},
+              "row_sha256": {"$ref": "#/$defs/sha256"}
+            }
+          }
+        }
+      }
+    },
+    "report_sha256": {"$ref": "#/$defs/sha256"},
+    "run_id": {"type": "string", "pattern": "^gdelt-run-[0-9a-f]{64}$"},
+    "schema_version": {"const": "1.0.0"},
+    "start_date": {"type": "string", "format": "date"},
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cap_bytes_decimal", "manifest_ids", "stored_bytes_decimal", "usage_after_bytes_decimal", "usage_before_bytes_decimal"],
+      "properties": {
+        "cap_bytes_decimal": {"type": "integer", "minimum": 1, "maximum": 5000000000},
+        "manifest_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^gdelt-[0-9a-f]{64}$"}},
+        "stored_bytes_decimal": {"type": "integer", "minimum": 0, "maximum": 5000000000},
+        "usage_after_bytes_decimal": {"type": "integer", "minimum": 0, "maximum": 5000000000},
+        "usage_before_bytes_decimal": {"type": "integer", "minimum": 0, "maximum": 5000000000}
+      }
+    },
+    "universe_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

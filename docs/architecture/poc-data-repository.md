@@ -5,31 +5,33 @@
 | Status | Implemented for offline POC use |
 | Schema version | `1.0.0` |
 | Default root | `/scratch/djy8hg/aegis_mx_poc_data` |
-| Network behavior | None |
+| Network behavior | Repository methods perform none; provider-neutral ingestion is a separate caller |
 | Deletion behavior | Operator plan only; never automatic |
 | Decision | [ADR 0047](../adr/0047-bounded-data-repository-admission.md) |
 
 ## Boundary and invariants
 
-The data repository is an offline storage-control boundary for future ingestion,
+The data repository is an offline storage-control boundary for ingestion,
 canonicalization, dataset construction, model artifacts, and reports. It does
 not fetch data, train a model, publish a forecast, or call any trading component.
 The implementation is in
 `python/research/aegis_mx_research/data_repository.py`; the read-only
 administrative CLI is `aegis-data`.
 
-All policy quantities use decimal bytes. Reports also show binary GiB as a
-separately named string and never use it in admission calculations.
+All policy quantities are exact integer bytes. POC-root limits use decimal GB;
+the scratch soft quota preserves the authoritative binary value. Reports show
+binary GiB separately and never substitute rounded display values in admission
+calculations.
 
 | Control | Decimal-byte value | Admission rule |
 | --- | ---: | --- |
-| Administrative allocation | 250,000,000,000 | Effective quota is the smaller of this value and authoritative quota evidence |
+| Administrative scratch allocation | 10,995,116,277,760 | Fixed to the verified 10 TiB `hdquota -s` soft limit; effective quota is the smaller of policy and current evidence |
 | Target root | 80,000,000,000 | Crossing requires review and is denied |
 | Hard root | 100,000,000,000 | Crossing is denied |
 | Minimum filesystem reserve | 50,000,000,000 | Projected free space below this value is denied |
 | Temporary workspace | 20,000,000,000 | Existing plus projected temporary and retry bytes may not cross it |
 
-The administrative allocation is fixed. A reviewed runtime policy may lower
+The administrative scratch allocation is fixed. A reviewed runtime policy may lower
 the target, hard, or temporary limits or increase the reserve, but validation
 rejects any change that weakens this envelope or makes its limits inconsistent.
 
@@ -38,6 +40,12 @@ successful `statvfs` probe establishes only the physical reserve. Admission
 also requires complete, explicitly authoritative quota evidence containing a
 limit, current use, source, and UTC observation time. Unknown projections,
 quota, or filesystem capacity fail closed.
+
+Storage policy v2 corrects the original 250 GB assumption, which described the
+home allocation rather than personal scratch. Existing v1 roots remain bound
+to their immutable v1 marker and require the copy migration in
+[ADR 0050](../adr/0050-authoritative-scratch-quota-correction.md); policy
+markers are never edited in place.
 
 ## Storage layout
 
@@ -122,6 +130,9 @@ writes. No method deletes data, invokes a shell, opens a socket, or reads a
 credential. Recovery after a visible partial publication is an operator action
 described in the [recovery runbook](../operations/poc-data-recovery.md).
 
-The bounded-storage implementation is not a remote-source authorization. Later
-download work remains blocked by the [licensed integration boundaries](licensed-integration-boundaries.md)
-and Prompt 48 approval contract.
+The bounded-storage implementation is not a remote-source authorization. The
+separate [provider-neutral ingestion boundary](provider-neutral-ingestion.md)
+currently exposes only local providers and a socket-free test double. Real
+download work remains blocked by the
+[licensed integration boundaries](licensed-integration-boundaries.md) and the
+Prompt 48 approval contract.

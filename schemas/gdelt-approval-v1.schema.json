@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/gdelt-approval-v1.schema.json",
+  "title": "Aegis-MX owner-only GDELT approval v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["approval_id", "approval_sha256", "attribution", "bigquery_execution_authorized", "contains_secrets", "dataset", "derived_data_authorized", "distribution", "expires_at_utc", "metadata_storage_authorized", "publisher_full_text_authorized", "schema_version", "source_id", "storage_limit_bytes_decimal", "universe_snapshot_sha256", "use_classification", "valid_from", "valid_through"],
+  "properties": {
+    "approval_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "approval_sha256": {"$ref": "#/$defs/sha256"},
+    "attribution": {"const": "Data source: The GDELT Project (https://www.gdeltproject.org/)"},
+    "bigquery_execution_authorized": {"type": "boolean"},
+    "contains_secrets": {"const": false},
+    "dataset": {"const": "gdelt-bq.gdeltv2.gkg_partitioned"},
+    "derived_data_authorized": {"const": true},
+    "distribution": {"const": "OWNER_ONLY_INTERNAL"},
+    "expires_at_utc": {"type": "string", "format": "date-time"},
+    "metadata_storage_authorized": {"const": true},
+    "publisher_full_text_authorized": {"const": false},
+    "schema_version": {"const": "1.0.0"},
+    "source_id": {"const": "gdelt_2_metadata"},
+    "storage_limit_bytes_decimal": {"type": "integer", "minimum": 1, "maximum": 5000000000},
+    "universe_snapshot_sha256": {"$ref": "#/$defs/sha256"},
+    "use_classification": {"const": "ACADEMIC_NON_COMMERCIAL"},
+    "valid_from": {"type": "string", "format": "date"},
+    "valid_through": {"type": "string", "format": "date"}
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

@@ -11,6 +11,10 @@ mode is unsafe.
 [gateway architecture](../architecture/exchange-gateway-framework.md); it does
 not mean a broker connection.
 
+The separately authorized Alpaca account connectivity check has its own
+[runbook](alpaca-paper-certification-runbook.md) and must not be represented as
+this gateway or as end-to-end OMS/risk certification.
+
 ## Start
 
 1. Verify the default-off build manifest and absence of endpoints, credentials,

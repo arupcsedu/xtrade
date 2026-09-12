@@ -132,12 +132,13 @@ provenance or ambiguous temporal semantics rejects the affected sample.
 
 ## Storage and resource envelope
 
-All policy quantities in this table use decimal bytes. Reports may also show
-binary GiB, but must label it separately.
+All policy quantities are serialized as exact integer bytes. POC-root limits
+use decimal GB; the externally imposed scratch quota retains its authoritative
+binary value. Reports label decimal and binary presentations separately.
 
 | Control | Limit | Failure behavior |
 | --- | ---: | --- |
-| Administrative user allocation | 250 GB | Treat as an external ceiling, not discovered filesystem capacity |
+| Administrative scratch allocation | 10,995,116,277,760 bytes (10 TiB) | Treat the `hdquota -s` soft limit as an external ceiling |
 | Target POC data-root footprint | 80 GB | Stop expansion and produce a cleanup plan before exceeding target |
 | Hard POC data-root footprint | 100 GB | Refuse new writes or downloads |
 | Minimum filesystem reserve | 50 GB | Refuse admission if projected peak would cross the reserve |
@@ -151,10 +152,11 @@ space is not proof of a per-user quota. Unknown quota, current usage, object
 size, or projected peak state blocks remote mutation. No component may delete
 data automatically to make an operation fit.
 
-The 2026-09-09 audit found the recommended data root absent and the repository
-using approximately 2.56 GB. The shared filesystem showed approximately
-12.58 TB free, but this does not verify the stated 250 GB user allocation and
-therefore does not authorize a download.
+The authoritative 2026-09-11 audit used `/opt/rci/bin/hdquota -s` and the
+cluster's matching `statvfs` calculation. It reported a 10 TiB soft scratch
+quota, 608,990,093,312 bytes used, and 10,386,126,184,448 bytes available at
+`2026-09-11T00:12:13.122793Z`. This quota evidence establishes capacity only;
+it does not authorize a data source or download.
 
 ## Source authorization and licensed boundaries
 

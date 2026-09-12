@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/sec-edgar-approval-v1.schema.json",
+  "title": "Aegis-MX SEC EDGAR bounded approval v1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "allowed_datasets",
+    "allowed_forms",
+    "approval_id",
+    "approval_sha256",
+    "distribution",
+    "expires_at_utc",
+    "model_training_on_documents"
+  ],
+  "properties": {
+    "allowed_datasets": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "COMPANY_TICKERS",
+          "SUBMISSIONS",
+          "COMPANY_FACTS",
+          "PRIMARY_FILING_DOCUMENT"
+        ]
+      }
+    },
+    "allowed_forms": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"enum": ["8-K", "10-Q", "10-K", "6-K", "20-F"]}
+    },
+    "approval_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{3,128}$"},
+    "approval_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "distribution": {"const": "OWNER_ONLY_INTERNAL"},
+    "expires_at_utc": {"type": "string", "format": "date-time"},
+    "model_training_on_documents": {"const": false}
+  }
+}
