@@ -1,7 +1,7 @@
 SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
 
-.PHONY: help bootstrap format format-check lint test test-sanitizers test-fuzz benchmark benchmark-platform benchmark-platform-smoke benchmark-regression paper-integration paper-soak paper-soak-smoke operator-simulation package docs-check schemas-check schemas-generate dependency-scan security-test chaos-fast chaos-nightly edge-validate edge-package regional-validate reproducibility-check fast full
+.PHONY: help bootstrap format format-check lint test test-sanitizers test-fuzz benchmark benchmark-canonical-minute benchmark-feature-dataset training-readiness benchmark-platform benchmark-platform-smoke benchmark-regression paper-integration paper-soak paper-soak-smoke operator-simulation package docs-check schemas-check schemas-generate dependency-scan security-test chaos-fast chaos-nightly edge-validate edge-package regional-validate reproducibility-check fast full
 
 help:
 	@tools/run.sh help
@@ -29,6 +29,15 @@ test-fuzz:
 
 benchmark:
 	@tools/run.sh benchmark
+
+benchmark-canonical-minute:
+	@tools/run.sh benchmark-canonical-minute
+
+benchmark-feature-dataset:
+	@tools/run.sh benchmark-feature-dataset
+
+training-readiness:
+	@tools/run.sh training-readiness
 
 benchmark-platform:
 	@tools/run.sh benchmark-platform

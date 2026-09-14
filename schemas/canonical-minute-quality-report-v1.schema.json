@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/canonical-minute-quality-report-v1.schema.json",
+  "title": "Aegis-MX canonical-minute partition quality report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["accepted", "conflicting_duplicates", "data_quality_reason_counts", "degraded_records", "economic_value_claimed", "expected_regular_session_minutes", "filled_missing_minutes", "identical_duplicates", "instrument_bucket", "instrument_count", "live_trading_capable", "missing_minutes", "quality_report_sha256", "record_count", "record_sequence_sha256", "schema_version", "source_manifest_ids", "status", "trading_date"],
+  "properties": {
+    "accepted": {"type": "boolean"},
+    "conflicting_duplicates": {"$ref": "#/$defs/count"},
+    "data_quality_reason_counts": {"type": "object", "additionalProperties": {"$ref": "#/$defs/count"}, "propertyNames": {"pattern": "^[A-Z][A-Z0-9_]{0,127}$"}},
+    "degraded_records": {"$ref": "#/$defs/count"},
+    "economic_value_claimed": {"const": false},
+    "expected_regular_session_minutes": {"$ref": "#/$defs/count"},
+    "filled_missing_minutes": {"const": 0},
+    "identical_duplicates": {"$ref": "#/$defs/count"},
+    "instrument_bucket": {"type": "integer", "minimum": 0, "maximum": 255},
+    "instrument_count": {"$ref": "#/$defs/count"},
+    "live_trading_capable": {"const": false},
+    "missing_minutes": {"$ref": "#/$defs/count"},
+    "quality_report_sha256": {"$ref": "#/$defs/sha256"},
+    "record_count": {"$ref": "#/$defs/count"},
+    "record_sequence_sha256": {"$ref": "#/$defs/sha256"},
+    "schema_version": {"const": "1.0.0"},
+    "source_manifest_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^source-[0-9a-f]{64}$"}},
+    "status": {"enum": ["VALID", "DEGRADED", "REJECTED"]},
+    "trading_date": {"type": "string", "format": "date"}
+  },
+  "$defs": {
+    "count": {"type": "integer", "minimum": 0, "maximum": 9223372036854775807},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "schema_version": "1.0.0",
+  "policy_id": "aegis-mx-alfred-reviewed-series-example",
+  "review_date": "2026-09-11",
+  "source_id": "fred_alfred_selected_series",
+  "provider": "Federal Reserve Bank of St. Louis",
+  "policy_mode": "DENY_BY_DEFAULT",
+  "adapter_available": true,
+  "remote_enabled": false,
+  "api_execution_authorized": false,
+  "contains_secrets": false,
+  "live_trading_capable": false,
+  "use_classification": "ACADEMIC_NON_COMMERCIAL",
+  "distribution": "OWNER_ONLY_INTERNAL",
+  "storage_limit_bytes_decimal": 999000000,
+  "canonical_transformation": {
+    "provider_units": "lin",
+    "frequency_aggregation": "none",
+    "value_representation": "signed integer microunits",
+    "value_scale": 1000000,
+    "missing_value": "explicit MISSING; never imputed"
+  },
+  "approved_series": [
+    {
+      "series_id": "CPIAUCSL",
+      "event_type": "CPI",
+      "source_owner": "U.S. Bureau of Labor Statistics",
+      "units": "Index 1982-1984=100",
+      "frequency": "Monthly",
+      "seasonal_adjustment": "Seasonally Adjusted",
+      "rights_status": "APPROVED_PUBLIC_DOMAIN",
+      "rights_evidence": "https://www.bls.gov/bls/linksite.htm"
+    },
+    {
+      "series_id": "DFEDTARL",
+      "event_type": "FOMC_DECISION",
+      "source_owner": "Board of Governors of the Federal Reserve System (US)",
+      "units": "Percent",
+      "frequency": "Daily, 7-Day",
+      "seasonal_adjustment": "Not Seasonally Adjusted",
+      "rights_status": "APPROVED_PUBLIC_DOMAIN",
+      "rights_evidence": "https://www.federalreserve.gov/disclaimer.htm"
+    },
+    {
+      "series_id": "DFEDTARU",
+      "event_type": "FOMC_DECISION",
+      "source_owner": "Board of Governors of the Federal Reserve System (US)",
+      "units": "Percent",
+      "frequency": "Daily, 7-Day",
+      "seasonal_adjustment": "Not Seasonally Adjusted",
+      "rights_status": "APPROVED_PUBLIC_DOMAIN",
+      "rights_evidence": "https://www.federalreserve.gov/disclaimer.htm"
+    },
+    {
+      "series_id": "GDP",
+      "event_type": "GDP",
+      "source_owner": "U.S. Bureau of Economic Analysis",
+      "units": "Billions of Dollars",
+      "frequency": "Quarterly",
+      "seasonal_adjustment": "Seasonally Adjusted Annual Rate",
+      "rights_status": "APPROVED_PUBLIC_DOMAIN",
+      "rights_evidence": "https://www.bea.gov/help/faq/147"
+    },
+    {
+      "series_id": "PAYEMS",
+      "event_type": "EMPLOYMENT_REPORT",
+      "source_owner": "U.S. Bureau of Labor Statistics",
+      "units": "Thousands of Persons",
+      "frequency": "Monthly",
+      "seasonal_adjustment": "Seasonally Adjusted",
+      "rights_status": "APPROVED_PUBLIC_DOMAIN",
+      "rights_evidence": "https://www.bls.gov/bls/linksite.htm"
+    },
+    {
+      "series_id": "PPIACO",
+      "event_type": "PPI",
+      "source_owner": "U.S. Bureau of Labor Statistics",
+      "units": "Index 1982=100",
+      "frequency": "Monthly",
+      "seasonal_adjustment": "Not Seasonally Adjusted",
+      "rights_status": "APPROVED_PUBLIC_DOMAIN",
+      "rights_evidence": "https://www.bls.gov/bls/linksite.htm"
+    },
+    {
+      "series_id": "RSAFS",
+      "event_type": "RETAIL_SALES",
+      "source_owner": "U.S. Census Bureau",
+      "units": "Millions of Dollars",
+      "frequency": "Monthly",
+      "seasonal_adjustment": "Seasonally Adjusted",
+      "rights_status": "APPROVED_PUBLIC_DOMAIN",
+      "rights_evidence": "https://www2.census.gov/foia/ds_policies/ds027.pdf"
+    }
+  ],
+  "rejected_series": [
+    {
+      "series_id": "NAPM",
+      "event_type": "PMI",
+      "source_owner": "Institute for Supply Management",
+      "rights_status": "DENIED_COPYRIGHTED",
+      "reason": "ISM terms restrict copying, archiving, and derivative time-series use; no written POC permission is present.",
+      "rights_evidence": "https://www.ismworld.org/footer/terms-of-use/"
+    }
+  ]
+}

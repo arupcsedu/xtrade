@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/feature-label-coverage-v1.schema.json",
+  "title": "Aegis-MX per-ticker and horizon label coverage v1",
+  "type": "array",
+  "minItems": 1,
+  "maxItems": 120000,
+  "items": {
+    "type": "object", "additionalProperties": false,
+    "required": ["symbol", "instrument_id", "resolution_code", "horizon", "samples", "valid", "missing", "invalid", "reason_counts"],
+    "properties": {
+      "symbol": {"type": "string", "minLength": 1, "maxLength": 16},
+      "instrument_id": {"type": ["string", "null"], "pattern": "^[0-9a-f]{32}$"},
+      "resolution_code": {"enum": ["RESOLVED", "UNSUPPORTED", "RECENTLY_LISTED", "AMBIGUOUS_REFERENCE", "MISSING_REFERENCE_DATA", "DELISTED"]},
+      "horizon": {"enum": ["5m", "10m", "15m", "30m", "60m", "2h", "5h", "1d", "1w", "2w", "1mo", "2mo"]},
+      "samples": {"type": "integer", "minimum": 0},
+      "valid": {"type": "integer", "minimum": 0},
+      "missing": {"type": "integer", "minimum": 0},
+      "invalid": {"type": "integer", "minimum": 0},
+      "reason_counts": {"type": "object", "maxProperties": 128, "additionalProperties": {"type": "integer", "minimum": 1}}
+    }
+  }
+}

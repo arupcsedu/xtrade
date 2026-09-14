@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/feature-label-row-v1.schema.json",
+  "title": "Aegis-MX leakage-safe feature and label row v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "sample_id", "split", "instrument_id", "source_ticker",
+    "session_id", "trading_date", "as_of_exchange_time_ns",
+    "knowledge_cutoff_time_ns", "feature_start_exchange_time_ns",
+    "feature_end_exchange_time_ns", "raw_features", "normalized_features_ppm",
+    "feature_validity", "feature_reason_codes", "advisory_event_ids",
+    "max_event_availability_time_ns", "source_record_sha256", "labels"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "sample_id": {"$ref": "#/$defs/sha256"},
+    "split": {"enum": ["TRAIN", "VALIDATION", "TEST"]},
+    "instrument_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "source_ticker": {"type": "string", "pattern": "^[A-Z][A-Z0-9]*(?:[.-][A-Z0-9]+)?$", "maxLength": 16},
+    "session_id": {"type": "string", "minLength": 1, "maxLength": 64},
+    "trading_date": {"type": "string", "format": "date"},
+    "as_of_exchange_time_ns": {"$ref": "#/$defs/ns"},
+    "knowledge_cutoff_time_ns": {"$ref": "#/$defs/ns"},
+    "feature_start_exchange_time_ns": {"$ref": "#/$defs/ns"},
+    "feature_end_exchange_time_ns": {"$ref": "#/$defs/ns"},
+    "raw_features": {"$ref": "#/$defs/features"},
+    "normalized_features_ppm": {"$ref": "#/$defs/features"},
+    "feature_validity": {"enum": ["VALID", "DEGRADED", "WARMUP"]},
+    "feature_reason_codes": {"$ref": "#/$defs/textArray"},
+    "advisory_event_ids": {"$ref": "#/$defs/textArray"},
+    "max_event_availability_time_ns": {"type": "integer", "minimum": 0, "maximum": 9223372036854775807},
+    "source_record_sha256": {"$ref": "#/$defs/sha256"},
+    "labels": {
+      "type": "array", "minItems": 12, "maxItems": 12,
+      "items": {"$ref": "#/$defs/label"}
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "ns": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+    "features": {
+      "type": "array", "minItems": 22, "maxItems": 22,
+      "items": {"type": ["integer", "null"], "minimum": -9223372036854775807, "maximum": 9223372036854775807}
+    },
+    "textArray": {
+      "type": "array", "maxItems": 1000,
+      "items": {"type": "string", "minLength": 1, "maxLength": 256}
+    },
+    "label": {
+      "type": "object", "additionalProperties": false,
+      "required": ["horizon", "target_exchange_time_ns", "return_ppm", "direction", "future_price_ticks", "corporate_action_version", "validity", "missing_reason"],
+      "properties": {
+        "horizon": {"enum": ["5m", "10m", "15m", "30m", "60m", "2h", "5h", "1d", "1w", "2w", "1mo", "2mo"]},
+        "target_exchange_time_ns": {"type": ["integer", "null"], "minimum": 1, "maximum": 9223372036854775807},
+        "return_ppm": {"type": ["integer", "null"], "minimum": -9223372036854775807, "maximum": 9223372036854775807},
+        "direction": {"type": ["integer", "null"], "enum": [-1, 0, 1, null]},
+        "future_price_ticks": {"type": ["integer", "null"], "minimum": 1, "maximum": 9223372036854775807},
+        "corporate_action_version": {"$ref": "#/$defs/sha256"},
+        "validity": {"enum": ["VALID", "MISSING", "INVALID"]},
+        "missing_reason": {"type": ["string", "null"], "maxLength": 256}
+      }
+    }
+  }
+}

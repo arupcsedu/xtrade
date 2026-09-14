@@ -223,16 +223,16 @@ FRED API access and rights in each underlying series are separate questions.
 
 | Topic | Assessment |
 | --- | --- |
-| Exact dataset | FRED API v1 `fred/series/observations` with ALFRED `realtime_start`, `realtime_end`, `vintage_dates`, and `output_type`, plus `fred/series/vintagedates` and series metadata. The series allowlist is intentionally empty in this phase. |
+| Exact dataset | FRED API v1 `fred/series/observations` using `output_type=1`, `units=lin`, explicit observation and real-time windows; `fred/series`, `fred/series/release`, and `fred/release/dates`. The reviewed allowlist is `CPIAUCSL`, `PPIACO`, `PAYEMS`, `GDP`, `RSAFS`, `DFEDTARU`, and `DFEDTARL`. |
 | History and coverage | Series-specific. FRED/ALFRED covers economic series from many original sources; start date, frequency, vintages, units, seasonal adjustment, and update behavior must be captured per series. It is not an equity ticker source. |
 | Mechanism | Authenticated HTTPS REST returning XML or JSON; observations can also return XLSX or compressed CSV. The POC should use bounded JSON and persist original source/series metadata. |
 | Adjustment/revision behavior | FRED can transform units (`lin`, changes, percent changes, logs) and aggregate frequency. ALFRED real-time periods/vintage dates represent when values were released or revised. Raw source units and untransformed values must be canonical; transforms are versioned derived data. |
 | Published limits | Up to 120 requests per minute before HTTP 429; repeated noncompliance can cause a temporary block. |
 | Timestamp semantics | Observation `date`, `realtime_start`, `realtime_end`, series `last_updated`, release dates, and vintage dates are distinct. A vintage date records the date on which a series changed, not necessarily the official intraday publication timestamp or this system's receive time. It cannot alone timestamp an intraday macro surprise. |
 | Credentials | A registered application API key is required. It must be injected externally and never written to policy, manifests, URLs, logs, or reports. |
-| Storage rights | **Series-specific/unresolved.** The API terms warn that series may be owned by third parties and subject to copyright restrictions. |
-| Model-training/derived rights | **Series-specific/unresolved.** For anything beyond personal use of a third-party-owned series, the terms direct the user to obtain permission from the data owner. Model training is not separately granted by API access. |
-| Retention/deletion | **Series-specific/unresolved.** The API license can terminate, and underlying-owner conditions remain controlling. The POC needs an owner/series-specific retention and deletion record. |
+| Storage rights | **Approved for the seven-series allowlist.** BLS, BEA, Census, and the Federal Reserve Board document public-domain treatment for the selected federal-source series. This approval does not extend to other FRED-hosted series. |
+| Model-training/derived rights | **Approved for internal academic POC use for the seven-series allowlist.** Public-domain source data permits internal analysis and derived artifacts; attribution and provenance remain mandatory. No third-party redistribution grant is inferred. |
+| Retention/deletion | The seven selected federal-source series have no source-specific deletion mandate identified. A disabled/expired runtime approval stops new retrieval but does not trigger automatic deletion. FRED API termination and any later owner-specific restrictions remain controlling. |
 | User classes | The API terms bind all users. They specifically distinguish personal use from other use for third-party-owned series and provide no blanket academic, professional, or commercial grant. |
 | Unsupported risks | Copyrighted series, incompatible units, seasonal-adjustment changes, release revisions, unavailable vintage history, and date-only vintage semantics can cause leakage or false release timing. |
 
@@ -243,11 +243,20 @@ Primary evidence:
 - [ALFRED series vintage dates](https://fred.stlouisfed.org/docs/api/fred/series_vintagedates.html)
 - [FRED API errors and 120-request limit](https://fred.stlouisfed.org/docs/api/fred/errors.html)
 - [FRED API terms and third-party series restrictions](https://fred.stlouisfed.org/docs/api/terms_of_use.html)
+- [BLS copyright and link policy](https://www.bls.gov/bls/linksite.htm)
+- [BEA copyright FAQ](https://www.bea.gov/help/faq/147)
+- [Census data stewardship policy](https://www2.census.gov/foia/ds_policies/ds027.pdf)
+- [Federal Reserve Board disclaimer](https://www.federalreserve.gov/disclaimer.htm)
+- [ISM terms of use](https://www.ismworld.org/footer/terms-of-use/)
 
-**Required evidence to unblock:** a finite series allowlist recording original
-owner, copyright flag and notes, observation/vintage coverage, units,
-publication-time source, storage, training, derivative, attribution,
-retention/deletion, and the user's permitted classification for every series.
+**Disposition:** implementation is approved only for the seven federal-source
+series recorded in
+[`alfred-series-policy.example.json`](../../infra/data_poc/alfred-series-policy.example.json).
+The checked-in policy remains remote-disabled. Execution additionally requires
+a registered API key and an owner-only, unexpired, self-hashed approval for the
+exact series and time window. `NAPM`/ISM PMI is denied because ISM's terms
+restrict copying, archiving, and derivative time-series use; no written
+permission is present.
 
 ## Nasdaq Trader symbol directories
 

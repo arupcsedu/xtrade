@@ -476,7 +476,10 @@ class FixedHostHttpsTransport:
         maximum_response_bytes: int,
     ) -> HttpResponse:
         """Issue one bounded GET to an allowlisted Alpaca host."""
-        if host not in {DATA_HOST, PAPER_HOST} or not path.startswith("/v2/"):
+        if host not in {DATA_HOST, PAPER_HOST} or not (
+            path.startswith("/v2/")
+            or (host == DATA_HOST and path == "/v1/corporate-actions")
+        ):
             raise AlpacaDataError(
                 AlpacaDataErrorCode.NETWORK_FAILURE,
                 "request target is outside the fixed Alpaca host allowlist",
@@ -656,6 +659,35 @@ class AlpacaApiClient:
                 )
             parameters.append(("page_token", page_token))
         return self._get(DATA_HOST, "/v2/stocks/bars", tuple(parameters))
+
+    def corporate_actions(
+        self,
+        symbols: Sequence[str],
+        start: date,
+        end: date,
+        page_token: str | None,
+    ) -> ApiResult:
+        """Read one bounded standard-API page of issuer corporate actions."""
+        if not symbols or end < start:
+            raise AlpacaDataError(
+                AlpacaDataErrorCode.DATA_INVALID,
+                "corporate-action symbols or date interval are invalid",
+            )
+        parameters = [
+            ("symbols", ",".join(symbols)),
+            ("start", start.isoformat()),
+            ("end", end.isoformat()),
+            ("limit", "1000"),
+            ("sort", "asc"),
+        ]
+        if page_token is not None:
+            if not page_token or len(page_token) > 4096:
+                raise AlpacaDataError(
+                    AlpacaDataErrorCode.RESPONSE_MALFORMED,
+                    "Alpaca corporate-action page token is empty or oversized",
+                )
+            parameters.append(("page_token", page_token))
+        return self._get(DATA_HOST, "/v1/corporate-actions", tuple(parameters))
 
 
 @dataclass(frozen=True, slots=True)

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import sqlite3
 from dataclasses import replace
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import pytest
 from aegis_mx_research import (
@@ -24,6 +26,8 @@ from aegis_mx_research import (
     LeakageValidator,
     MacroVintage,
     NewsRevision,
+    PersistentPointInTimeStore,
+    PersistentStoreError,
     PointInTimeRecord,
     PointInTimeStore,
     RecordKind,
@@ -32,9 +36,11 @@ from aegis_mx_research import (
     SymbolMapping,
     ValidityInterval,
 )
+from aegis_mx_research import store as store_module
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
     from aegis_mx_research.types import RecordPayload
 
@@ -484,6 +490,356 @@ def test_as_known_at_latest_before_and_revisions_preserve_vintages() -> None:
         store.as_known_at(0)
     with pytest.raises(ValueError, match="positive"):
         store.revisions_after(0)
+
+
+def test_persistent_store_matches_reference_queries_and_reopen(tmp_path: Path) -> None:
+    records = (
+        _record(CorporateAction("split-1", "A-ID", CorporateActionType.SPLIT, 2, 1)),
+        _record(SymbolMapping("A", "A-ID", "XNAS")),
+        _record(Delisting("D-ID", "MERGER")),
+        _record(IndexMembership("IDX", "A-ID", True)),
+        _record(AnalystEstimateVintage("A-ID", "EPS", "2026-Q3", 10, "USD_NANOS")),
+        _record(MacroVintage("CPI", "2026-07", 300_000, "PPM")),
+        _record(NewsRevision("news-1", None)),
+        _record(FilingRevision("filing-1", "10-Q", None)),
+    )
+    reference = PointInTimeStore()
+    reference.extend(records)
+    path = tmp_path / "pit.sqlite3"
+    with PersistentPointInTimeStore(path, capacity=32) as persistent:
+        persistent.extend(records)
+        assert len(persistent) == len(records)
+        assert persistent.as_known_at(120) == reference.as_known_at(120)
+        assert persistent.latest_available_before(121) == (
+            reference.latest_available_before(121)
+        )
+        assert persistent.revisions_after(99) == reference.revisions_after(99)
+        assert persistent.membership_at(500, index_id="IDX", known_at_ns=120) == (
+            reference.membership_at(500, index_id="IDX", known_at_ns=120)
+        )
+        assert persistent.symbol_mapping_at(
+            500, symbol="A", known_at_ns=120
+        ) == reference.symbol_mapping_at(500, symbol="A", known_at_ns=120)
+        assert persistent.corporate_action_history(
+            "A-ID", known_at_ns=120
+        ) == reference.corporate_action_history("A-ID", known_at_ns=120)
+        expected_hash = persistent.deterministic_hash()
+    with PersistentPointInTimeStore(path, capacity=32) as reopened:
+        assert reopened.record_by_id(records[0].record_id) == records[0]
+        assert reopened.deterministic_hash() == expected_hash
+
+
+def test_persistent_store_rolls_back_fault_and_enforces_capacity(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "pit.sqlite3"
+    first = _record(SymbolMapping("A", "A-ID", "XNAS"))
+    with PersistentPointInTimeStore(path, capacity=1) as store:
+        with pytest.raises(RuntimeError, match="injected"):
+            store.append(
+                first,
+                fault_injector=lambda stage: (_ for _ in ()).throw(
+                    RuntimeError(f"injected at {stage}")
+                ),
+            )
+        assert len(store) == 0
+        store.append(first)
+        with pytest.raises(OverflowError, match="capacity"):
+            store.append(_record(SymbolMapping("B", "B-ID", "XNYS")))
+
+
+def test_persistent_store_rejects_symlink_and_record_corruption(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "target.sqlite3"
+    target.touch()
+    link = tmp_path / "link.sqlite3"
+    link.symlink_to(target)
+    with pytest.raises(PersistentStoreError, match="symlink"):
+        PersistentPointInTimeStore(link)
+
+    path = tmp_path / "pit.sqlite3"
+    first = _record(SymbolMapping("A", "A-ID", "XNAS"))
+    with PersistentPointInTimeStore(path) as store:
+        store.append(first)
+    connection = sqlite3.connect(path)
+    connection.execute(
+        "UPDATE records SET record_sha256=? WHERE record_id=?",
+        (b"0" * 32, first.record_id),
+    )
+    connection.commit()
+    connection.close()
+    with (
+        PersistentPointInTimeStore(path) as store,
+        pytest.raises(PersistentStoreError, match="hash"),
+    ):
+        store.record_by_id(first.record_id)
+
+
+def test_persistent_decoder_rejects_malformed_binary_records() -> None:
+    records = (
+        _record(IndexMembership("IDX", "A-ID", True)),
+        _record(NewsRevision("news", None)),
+        _record(FilingRevision("filing", "10-Q", None)),
+        _record(SymbolMapping("A", "A-ID", "XNAS"), valid_to_ns=800),
+    )
+    documents = [store_module._payload_document(record) for record in records]
+    mutations: list[object] = [[], {"kind": 1}, b"not-json"]
+
+    malformed = json.loads(json.dumps(documents[0]))
+    malformed["payload"]["included"] = 1
+    mutations.append(malformed)
+    malformed = json.loads(json.dumps(documents[1]))
+    malformed["payload"]["correction_of_record_id"] = 1
+    mutations.append(malformed)
+    malformed = json.loads(json.dumps(documents[2]))
+    malformed["payload"]["amendment_of_record_id"] = 1
+    mutations.append(malformed)
+    malformed = json.loads(json.dumps(documents[3]))
+    malformed["validity"]["valid_to_ns"] = "800"
+    mutations.append(malformed)
+    malformed = json.loads(json.dumps(documents[3]))
+    malformed["source"]["authenticated"] = 1
+    mutations.append(malformed)
+    malformed = json.loads(json.dumps(documents[3]))
+    malformed["record_id"] = 1
+    mutations.append(malformed)
+    malformed = json.loads(json.dumps(documents[3]))
+    malformed["event_time_ns"] = "500"
+    mutations.append(malformed)
+    malformed = json.loads(json.dumps(documents[3]))
+    malformed["source"]["content_sha256"] = "not-hex"
+    mutations.append(malformed)
+    malformed = json.loads(json.dumps(documents[3]))
+    malformed["kind"] = 999
+    mutations.append(malformed)
+
+    for mutation in mutations:
+        encoded = (
+            mutation if isinstance(mutation, bytes) else json.dumps(mutation).encode()
+        )
+        with pytest.raises(PersistentStoreError):
+            store_module._record_from_bytes(encoded)
+
+
+def test_persistent_store_validates_paths_headers_and_metadata(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with pytest.raises(ValueError, match="capacity"):
+        PersistentPointInTimeStore(tmp_path / "capacity.sqlite3", capacity=0)
+    with pytest.raises(ValueError, match="maximum_bytes"):
+        PersistentPointInTimeStore(tmp_path / "small.sqlite3", maximum_bytes=1)
+
+    real_parent = tmp_path / "real-parent"
+    real_parent.mkdir()
+    parent_link = tmp_path / "parent-link"
+    parent_link.symlink_to(real_parent, target_is_directory=True)
+    with pytest.raises(PersistentStoreError, match="parent"):
+        PersistentPointInTimeStore(parent_link / "pit.sqlite3")
+    directory_path = tmp_path / "directory.sqlite3"
+    directory_path.mkdir()
+    with pytest.raises(PersistentStoreError, match="regular"):
+        PersistentPointInTimeStore(directory_path)
+
+    corrupt = tmp_path / "corrupt.sqlite3"
+    corrupt.write_bytes(b"not sqlite")
+    with pytest.raises(PersistentStoreError, match="opened safely"):
+        PersistentPointInTimeStore(corrupt)
+
+    bad_application = tmp_path / "bad-application.sqlite3"
+    connection = sqlite3.connect(bad_application)
+    connection.execute("PRAGMA application_id=7")
+    connection.close()
+    with pytest.raises(PersistentStoreError, match="application"):
+        PersistentPointInTimeStore(bad_application)
+
+    bad_version = tmp_path / "bad-version.sqlite3"
+    connection = sqlite3.connect(bad_version)
+    connection.execute(f"PRAGMA application_id={store_module._SQLITE_APPLICATION_ID}")
+    connection.execute("PRAGMA user_version=2")
+    connection.close()
+    with pytest.raises(PersistentStoreError, match="schema version"):
+        PersistentPointInTimeStore(bad_version)
+
+    bad_metadata = tmp_path / "bad-metadata.sqlite3"
+    PersistentPointInTimeStore(bad_metadata).close()
+    connection = sqlite3.connect(bad_metadata)
+    connection.execute("UPDATE metadata SET value='bad'")
+    connection.commit()
+    connection.close()
+    with pytest.raises(PersistentStoreError, match="metadata"):
+        PersistentPointInTimeStore(bad_metadata)
+
+    real_connect = sqlite3.connect
+
+    class _Cursor:
+        def fetchone(self) -> tuple[str]:
+            return ("failed",)
+
+    class _ConnectionProxy:
+        def __init__(self, connection: sqlite3.Connection) -> None:
+            self.connection = connection
+            self.closed = False
+
+        def execute(self, statement: str) -> object:
+            if statement == "PRAGMA quick_check":
+                return _Cursor()
+            return self.connection.execute(statement)
+
+        def __getattr__(self, name: str) -> object:
+            return getattr(self.connection, name)
+
+        def close(self) -> None:
+            self.connection.close()
+            self.closed = True
+
+    holder: dict[str, _ConnectionProxy] = {}
+
+    def connect_with_bad_check(
+        database: Path,
+        *,
+        isolation_level: Literal["DEFERRED", "EXCLUSIVE", "IMMEDIATE"] | None = None,
+    ) -> _ConnectionProxy:
+        proxy = _ConnectionProxy(
+            real_connect(database, isolation_level=isolation_level)
+        )
+        holder["proxy"] = proxy
+        return proxy
+
+    monkeypatch.setattr(sqlite3, "connect", connect_with_bad_check)
+    with pytest.raises(PersistentStoreError, match="integrity"):
+        PersistentPointInTimeStore(tmp_path / "bad-check.sqlite3")
+    assert holder["proxy"].closed
+
+    monkeypatch.setattr(
+        sqlite3,
+        "connect",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            sqlite3.DatabaseError("connect failure")
+        ),
+    )
+    with pytest.raises(PersistentStoreError, match="opened safely"):
+        PersistentPointInTimeStore(tmp_path / "connect-failure.sqlite3")
+
+
+def test_persistent_store_rejects_page_size_larger_than_budget(tmp_path: Path) -> None:
+    path = tmp_path / "large-page.sqlite3"
+    connection = sqlite3.connect(path)
+    connection.execute("PRAGMA page_size=65536")
+    connection.execute("VACUUM")
+    connection.close()
+    with pytest.raises(PersistentStoreError, match="page budget"):
+        PersistentPointInTimeStore(path, maximum_bytes=32_768)
+
+
+def test_persistent_store_append_failures_and_queries(tmp_path: Path) -> None:
+    first = _record(SymbolMapping("A", "A-ID", "XNAS"), record_id="mapping-v1")
+    path = tmp_path / "pit.sqlite3"
+    with PersistentPointInTimeStore(path, capacity=20) as store:
+        store.append(first)
+        assert store.records_for(RecordKind.SYMBOL_MAPPING, "A") == (first,)
+        assert store.records_for(RecordKind.SYMBOL_MAPPING, "missing") == ()
+        assert store.symbol_mapping_at(500, symbol="missing", known_at_ns=120) is None
+        with pytest.raises(ValueError, match="duplicate"):
+            store.append(first)
+
+    with (
+        PersistentPointInTimeStore(tmp_path / "first-version.sqlite3") as store,
+        pytest.raises(ValueError, match="version must be one"),
+    ):
+        store.append(replace(first, record_id="mapping-v2", version=2))
+
+    with PersistentPointInTimeStore(tmp_path / "lineage.sqlite3") as store:
+        store.append(first)
+        with pytest.raises(ValueError, match="contiguous"):
+            store.append(
+                replace(
+                    first,
+                    record_id="mapping-v3",
+                    version=3,
+                    publication_time_ns=190,
+                    receive_time_ns=195,
+                    processing_time_ns=210,
+                    revision_time_ns=200,
+                )
+            )
+        with pytest.raises(ValueError, match="increase"):
+            store.append(replace(first, record_id="mapping-v2", version=2))
+        store.append(
+            replace(
+                first,
+                record_id="mapping-v2-valid",
+                version=2,
+                publication_time_ns=190,
+                receive_time_ns=195,
+                processing_time_ns=210,
+                revision_time_ns=200,
+            )
+        )
+
+    for payload, message in (
+        (NewsRevision("orphan-news", "missing"), "initial news"),
+        (FilingRevision("orphan-filing", "10-Q/A", "missing"), "initial filing"),
+    ):
+        with (
+            PersistentPointInTimeStore(tmp_path / f"{message}.sqlite3") as store,
+            pytest.raises(ValueError, match=message),
+        ):
+            store.append(_record(payload))
+
+    with PersistentPointInTimeStore(tmp_path / "after-insert.sqlite3") as store:
+        with pytest.raises(RuntimeError, match="after insert"):
+            store.append(
+                first,
+                fault_injector=lambda stage: (
+                    (_ for _ in ()).throw(RuntimeError("after insert"))
+                    if stage == "AFTER_INSERT_BEFORE_COMMIT"
+                    else None
+                ),
+            )
+        assert len(store) == 0
+        store._rollback()
+
+    broken = PersistentPointInTimeStore(tmp_path / "broken.sqlite3")
+    broken._connection.execute("DROP TABLE records")
+    with pytest.raises(PersistentStoreError, match="append failed"):
+        broken.append(first)
+    broken.close()
+    broken.close()
+    with pytest.raises(PersistentStoreError, match="closed"):
+        len(broken)
+
+
+def test_persistent_store_exclusion_and_binary_corruption(tmp_path: Path) -> None:
+    excluded = _record(IndexMembership("IDX", "A-ID", False))
+    with PersistentPointInTimeStore(tmp_path / "pit.sqlite3") as store:
+        store.append(excluded)
+        assert store.membership_at(500, index_id="IDX", known_at_ns=120) == ()
+        store._connection.execute(
+            "UPDATE records SET record_json='text' WHERE record_id=?",
+            (excluded.record_id,),
+        )
+        with pytest.raises(PersistentStoreError, match="binary"):
+            store.record_by_id(excluded.record_id)
+
+
+def test_persistent_store_enforces_byte_budget(tmp_path: Path) -> None:
+    def fill(store: PersistentPointInTimeStore) -> None:
+        for index in range(1_000):
+            store.append(
+                _record(
+                    SymbolMapping(f"S{index}", f"ID{index}", "XNAS"),
+                    record_id=f"mapping-{index}",
+                )
+            )
+
+    with (
+        PersistentPointInTimeStore(
+            tmp_path / "bounded.sqlite3", capacity=1_000, maximum_bytes=65_536
+        ) as store,
+        pytest.raises(OverflowError, match="byte limit"),
+    ):
+        fill(store)
 
 
 def test_membership_symbol_changes_and_corporate_action_history_are_temporal() -> None:

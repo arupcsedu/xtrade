@@ -336,6 +336,44 @@ See the [reference-data architecture](docs/architecture/point-in-time-instrument
 [operations runbook](docs/operations/point-in-time-reference-data.md), and
 [resolution report index](docs/reviews/instrument-resolution-report.md).
 
+Verified Alpaca raw objects are promoted into accepted, partitioned canonical
+Parquet before model training. Both commands below are offline and dry-run by
+default; the first validates/publishes canonical minute partitions and the
+second builds leakage-checked features, labels, and derived session summaries:
+
+```bash
+export PYTHONPATH=python/research:python/intelligence:.
+/scratch/djy8hg/env/aegis_mx_contracts/bin/python \
+  -m aegis_mx_research.real_minute_pipeline \
+  --data-root /scratch/djy8hg/aegis_mx_poc_data promote --execute
+/scratch/djy8hg/env/aegis_mx_contracts/bin/python \
+  tools/build_real_feature_dataset.py \
+  --data-root /scratch/djy8hg/aegis_mx_poc_data --execute
+```
+
+The fixed current-cohort/reference limitation remains explicit under
+[ADR 0060](docs/adr/0060-now-known-reference-evidence-for-the-bounded-poc.md);
+these artifacts support infrastructure validation, not profitability claims.
+See the [canonical recovery runbook](docs/operations/canonical-minute-recovery.md)
+and [feature recovery runbook](docs/operations/feature-dataset-recovery.md).
+
+Before any Prompt 58 training, authenticate every dataset object, canonical
+lineage, leakage result, coverage row, feature mask, dependency lock, and the
+clean source commit. This command is offline and dry-run by default:
+
+```bash
+AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts \
+  make training-readiness
+
+# Publish only an admitted immutable report.
+AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts \
+  tools/run.sh training-readiness --execute
+```
+
+Current limitations and the exact allowable 16-feature training subset are in
+the [training-readiness contract](docs/architecture/training-readiness.md) and
+[ADR 0061](docs/adr/0061-training-admission-with-degraded-source-evidence.md).
+
 The read-only `aegis-sec-edgar` command resolves the exact `ticker.txt`
 universe against the SEC's current ticker association and ingests bounded
 Submissions JSON and Company Facts. It defaults to a no-network dry run;

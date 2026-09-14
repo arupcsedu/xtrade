@@ -28,7 +28,7 @@ def _sources(policy: dict[str, object]) -> list[dict[str, object]]:
 def test_example_policy_is_complete_secret_free_and_default_disabled() -> None:
     policy = _policy()
 
-    assert validate_policy(policy, require_default_disabled=True) == 7
+    assert validate_policy(policy, require_default_disabled=True) == 8
     assert policy["network_downloads_authorized"] is False
     assert policy["model_training_authorized"] is False
     assert all(source["enabled"] is False for source in _sources(policy))

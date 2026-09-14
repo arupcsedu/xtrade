@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/alfred-artifact-manifest-v1.schema.json",
+  "title": "Aegis-MX ALFRED immutable artifact manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["approval_id", "attribution", "event_time_max_ns", "event_time_min_ns", "live_trading_capable", "manifest_id", "manifest_sha256", "object_kind", "object_sha256", "plan_id", "processing_time_utc_ns", "receipt_time_utc_ns", "record_count", "revision_time_max_ns", "revision_time_min_ns", "schema_version", "series_id", "series_universe_sha256", "size_bytes_decimal", "source_revision", "storage_path"],
+  "properties": {
+    "approval_id": {"type": "string", "minLength": 3, "maxLength": 128},
+    "attribution": {"const": "Federal Reserve Bank of St. Louis; underlying federal source cited per series"},
+    "event_time_max_ns": {"type": "integer", "minimum": 1},
+    "event_time_min_ns": {"type": "integer", "minimum": 1},
+    "live_trading_capable": {"const": false},
+    "manifest_id": {"type": "string", "pattern": "^alfred-[0-9a-f]{64}$"},
+    "manifest_sha256": {"$ref": "#/$defs/sha256"},
+    "object_kind": {"enum": ["SERIES_METADATA", "SERIES_RELEASE", "RELEASE_DATES", "OBSERVATIONS", "CANONICAL_SNAPSHOT", "RUN_REPORT_JSON", "RUN_REPORT_MARKDOWN"]},
+    "object_sha256": {"$ref": "#/$defs/sha256"},
+    "plan_id": {"type": "string", "pattern": "^alfred-(?:plan|run)-[0-9a-f]{64}$"},
+    "processing_time_utc_ns": {"type": "integer", "minimum": 1},
+    "receipt_time_utc_ns": {"type": "integer", "minimum": 1},
+    "record_count": {"type": "integer", "minimum": 1, "maximum": 100000},
+    "revision_time_max_ns": {"type": "integer", "minimum": 1},
+    "revision_time_min_ns": {"type": "integer", "minimum": 1},
+    "schema_version": {"const": "1.0.0"},
+    "series_id": {"type": "string", "pattern": "^(?:_[A-Z]+|[A-Z][A-Z0-9]{1,31})$"},
+    "series_universe_sha256": {"$ref": "#/$defs/sha256"},
+    "size_bytes_decimal": {"type": "integer", "minimum": 1, "maximum": 8000000},
+    "source_revision": {"const": "fred-api-v1-reviewed-2026-09-11"},
+    "storage_path": {"type": "string", "pattern": "^(?:raw|canonical|reports)/alfred/[a-z0-9_]+/[a-z_]+/[0-9a-f]{64}\\.(?:json|md)$"}
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

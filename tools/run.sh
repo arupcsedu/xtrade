@@ -21,6 +21,9 @@ print_help() {
     '  make test-sanitizers  Run ASan/UBSan, TSan, and the Go race detector.' \
     '  make test-fuzz        Run deterministic deserialization fuzz smoke tests.' \
     '  make benchmark        Run the C++ benchmark smoke workload.' \
+    '  make benchmark-canonical-minute Run the Prompt 56 storage benchmark.' \
+    '  make benchmark-feature-dataset Run the Prompt 57 feature benchmark.' \
+    '  make training-readiness Authenticate the Prompt 57 training inputs.' \
     '  make benchmark-platform Run the qualified full-platform benchmark suite.' \
     '  make benchmark-platform-smoke Run the bounded full-platform smoke suite.' \
     '  make benchmark-regression Compare a platform report with an approved baseline.' \
@@ -303,6 +306,10 @@ run_benchmark() {
     --iterations="${AEGIS_INGESTION_BENCHMARK_ITERATIONS:-25}" \
     --object-bytes="${AEGIS_INGESTION_BENCHMARK_OBJECT_BYTES:-65536}" \
     --output=build/reports/benchmarks/ingestion.json
+  "$python_bin" tools/benchmark_alfred.py \
+    --iterations="${AEGIS_ALFRED_BENCHMARK_ITERATIONS:-100}" \
+    --observations="${AEGIS_ALFRED_BENCHMARK_OBSERVATIONS:-256}" \
+    --output=build/reports/benchmarks/alfred.json
   (
     cd control
     go test -run '^$' \
@@ -455,20 +462,12 @@ scan_dependencies() {
     go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
   )
 
+  # Match the actual commit surface: tracked files and non-ignored untracked
+  # files. Operational artifacts such as ignored Slurm logs are not candidates
+  # for a commit and may legitimately contain record hashes.
   mapfile -d '' -t scan_files < <(
-    find . \
-      -path './.git' -prune -o \
-      -path './.venv' -prune -o \
-      -path './.mypy_cache' -prune -o \
-      -path './.pytest_cache' -prune -o \
-      -path './.ruff_cache' -prune -o \
-      -path './.coverage' -prune -o \
-      -path './_CPack_Packages' -prune -o \
-      -path './build' -prune -o \
-      -path './dist' -prune -o \
-      -path './.secrets.baseline' -prune -o \
-      -name '__pycache__' -prune -o \
-      -type f -printf '%P\0'
+    git ls-files --cached --others --exclude-standard -z \
+      -- . ':(exclude).secrets.baseline'
   )
   "$venv_dir/bin/detect-secrets-hook" \
     --baseline .secrets.baseline \
@@ -646,6 +645,31 @@ run_fast() {
   "$0" benchmark
 }
 
+run_canonical_minute_benchmark() {
+  require_environment
+  mkdir -p build/reports/canonical-minute
+  "$python_bin" tools/benchmark_canonical_minute.py \
+    --rows "${AEGIS_CANONICAL_MINUTE_BENCHMARK_ROWS:-12480}" \
+    --pit-records "${AEGIS_PIT_BENCHMARK_RECORDS:-1000}" \
+    --pit-queries "${AEGIS_PIT_BENCHMARK_QUERIES:-100}" |
+    tee build/reports/canonical-minute/benchmark.json
+}
+
+run_feature_dataset_benchmark() {
+  require_environment
+  mkdir -p build/reports/feature-dataset
+  "$python_bin" tools/benchmark_feature_dataset.py \
+    --sessions "${AEGIS_FEATURE_BENCHMARK_SESSIONS:-90}" \
+    --minutes "${AEGIS_FEATURE_BENCHMARK_MINUTES:-61}" |
+    tee build/reports/feature-dataset/benchmark.json
+}
+
+run_training_readiness() {
+  require_environment
+  export PYTHONPATH="python/research:python/contracts:python/intelligence:python/training:python/model_serving:."
+  "$python_bin" tools/check_training_readiness.py "$@"
+}
+
 run_full() {
   "$0" fast
   "$0" chaos-nightly
@@ -666,6 +690,9 @@ case "$command_name" in
   test-sanitizers) run_sanitizers ;;
   test-fuzz) run_fuzz ;;
   benchmark) run_benchmark ;;
+  benchmark-canonical-minute) run_canonical_minute_benchmark ;;
+  benchmark-feature-dataset) run_feature_dataset_benchmark ;;
+  training-readiness) run_training_readiness "${@:2}" ;;
   benchmark-platform) run_platform_benchmark ;;
   benchmark-platform-smoke)
     run_platform_benchmark \

@@ -2,8 +2,8 @@
 
 | Field | Value |
 | --- | --- |
-| Status | Prompts 45–53 complete and verified; Prompts 54 and 55 are the next independent data dependencies |
-| Audit date | 2026-09-11 |
+| Status | Prompts 45–57 complete; training inputs admitted for bounded Prompt 58 infrastructure validation |
+| Audit date | 2026-09-13 |
 | Scope | Current repository plus Prompts 46 through 65 |
 | Contract | [Bounded forecasting POC contract](forecasting-poc-contract.md) |
 | Data flow | [Mermaid source](forecasting-poc-data-flow.mmd) |
@@ -54,13 +54,13 @@ must not be used as the current implementation inventory.
 | Backtesting/evaluation | Offline deterministic event-level C++ simulator with synthetic order/price events and execution/cost reports; basic time-series walk-forward MAE/RMSE comparator | Minute-bar forecasting evaluator, per-ticker/horizon/sector/regime reports, required calibration/directional/quantile metrics, and explicit insufficient-data output |
 | Security | Zero-trust service identities, TLS 1.3 mTLS, secret-mount abstraction, bounded parsers, document sandbox, secret/dependency scans, signed artifacts/configurations | Source-specific credential bindings, downloader SSRF/path controls, data-license enforcement, restricted source retention, and POC no-trading dependency proof |
 | Deployment | Non-hot-path TimesFM Docker/Kubernetes skeleton and isolated regional manifests with fail-closed image placeholders | Data/training batch execution profiles, POC Slurm jobs, storage mounts/quotas, backup policy, and approved immutable images |
-| Historical data | No data is committed to Git; the owner-only external root contains an accepted five-session pilot and verified 501-session Alpaca IEX minute backfill with 9,462,709 canonical records | Event-source data, derived datasets, trained POC models, and evaluation reports |
+| Historical data | No data is committed to Git; the owner-only external root contains an accepted five-session pilot, a verified 501-session Alpaca IEX minute backfill with 9,462,709 canonical records, and a 7,684,385-row leakage-checked feature dataset | Optional event/sector inputs, trained POC models, and evaluation reports |
 
-The declared Python runtime currently depends only on FlatBuffers; no Parquet,
-dataframe, exchange-calendar, gradient-boosting, ONNX, or deep-learning package
-is part of the service lock. Adding any such dependency requires exact pinning,
-license/security review, SBOM regeneration, and installation only in
-`/scratch/djy8hg/env/aegis_mx_contracts`.
+The declared Python runtime now pins FlatBuffers and PyArrow for the accepted
+canonical and feature Parquet path. No gradient-boosting, ONNX, or
+deep-learning package is yet part of the lock. Adding any such dependency
+requires exact pinning, license/security review, SBOM regeneration, and
+installation only in `/scratch/djy8hg/env/aegis_mx_contracts`.
 
 ## Audit observations and gaps
 
@@ -70,9 +70,9 @@ license/security review, SBOM regeneration, and installation only in
 | FPOC-002 | Closed by Prompt 47 | The bounded external-root layout, fail-closed quota admission, immutable manifests, verification, cleanup planner, audits, CLI, schemas, and benchmarks are implemented | Future writers must retain the admission lease and Prompt 48 source authorization remains mandatory before any download |
 | FPOC-003 | Closed for the Prompt 50 Alpaca scope | A private, expiring, owner-only academic policy authorizes Basic IEX one-minute bars; the checked-in policy remains deny-by-default and no other source is enabled | Reassess on expiry or any account, terms, purpose, universe, or distribution change; authorize every future source independently |
 | FPOC-004 | Closed for minute and SEC data by Prompts 49–53 | Provider-neutral bounded ingestion and the authorized Alpaca IEX minute adapter produced a verified two-year dataset; SEC report v1.1 binds the same closed date window, retrieves only intersecting historical submission shards, and provides current associations, submissions, company facts, immutable manifests, and complete-universe coverage with one unresolved symbol | Build only separately authorized GDELT and FRED/ALFRED adapters in Prompts 54–55; do not infer historical ticker truth, publication time, or amendment parents from absent SEC fields |
-| FPOC-005 | Blocking Prompt 56 | Point-in-time storage is in-memory, allocating, and linearly scanned; there is no minute schema or Parquet path | Implement streaming canonicalization and persistent query-parity storage |
-| FPOC-006 | Blocking Prompt 57 | There is no multi-instrument minute feature/label builder or twelve-horizon dataset manifest | Build it only after canonical data, reference data, and calendar contracts pass |
-| FPOC-007 | Blocking Prompt 58 | Existing training is synthetic microstructure infrastructure and unrelated to minute return forecasting | Train baseline-first pooled POC models and export signed artifacts |
+| FPOC-005 | Closed for the bounded POC | The published corpus has 4,000 verified Zstandard Parquet partitions and 9,462,709 canonical records. Records remain degraded for now-known/current-cohort mappings and incomplete historical halt coverage under ADR 0060. | Retain the degraded-evidence restrictions; never interpret the research quantum as a venue tick or claim consolidated-market coverage. |
+| FPOC-006 | Closed and admitted | The real Prompt 57 build published 7,684,385 feature rows, 36,520 session summaries, all 948 coverage dispositions, and leakage `PASS`. Every resolved symbol/horizon pair exceeds 100 labels; the model-ready intersection retains more than 1.75 million TRAIN rows and at least 71 contributors per horizon; `KRKNF` abstains. | Prompt 58 must consume the immutable training-readiness feature mask, split counts, and exact dataset identity. Optional event/sector inputs require a new dataset build. |
+| FPOC-007 | Ready to begin Prompt 58 | Existing training is synthetic microstructure infrastructure and unrelated to minute return forecasting; the authenticated minute dataset is now admitted only for infrastructure validation. | Train baseline-first pooled POC models and export signed artifacts without economic-value claims. |
 | FPOC-008 | Blocking Prompts 59–60 | Existing service accepts already built contexts; evaluation covers four targets with MAE/RMSE only | Add ticker/universe inference, explicit abstention, implied-price derivation, and complete walk-forward evaluation |
 | FPOC-009 | Blocking Prompts 61–65 | No POC resource suite, acceptance schema/report, independent POC review, or handoff exists | Qualify resources, validate end to end, audit, remediate, and publish final evidence |
 
@@ -336,6 +336,11 @@ implementation.
 
 ### Prompt 55 — Bounded FRED/ALFRED vintages
 
+Status: implemented and locally verified with deterministic mock transports;
+no remote series was downloaded. Real execution remains gated by a registered
+FRED API key, an unexpired owner-only approval, and current authoritative quota
+evidence.
+
 - Inputs: approved series-by-series policy, macro contracts, bounded ingestion,
   point-in-time store, and external API key.
 - Outputs: selected immutable vintages, source/unit/transformation catalog,
@@ -373,6 +378,11 @@ implementation.
   bytes.
 - Storage/licensing gate: projected raw plus canonical plus temporary peak must
   remain below hard/root/reserve limits; source retention terms govern raw data.
+- Implementation status (2026-09-13): complete for the bounded POC. The
+  verified real promotion contains 4,000 partitions and 9,462,709 records. The
+  deliberately degraded now-known reference semantics are governed by ADR
+  0060 and cannot support survivorship-bias-free or venue-tick claims. See
+  [canonical minute storage](canonical-minute-storage.md).
 
 ### Prompt 57 — Leakage-safe features and labels
 
@@ -394,6 +404,14 @@ implementation.
   peak RSS/temp/final size, and dataset verification.
 - Storage/licensing gate: derived dataset plus projected training outputs must
   fit the remaining target; derived/model rights must be approved.
+- Implementation status (2026-09-13): complete for the bounded POC. The real
+  build contains 7,684,385 feature rows, 36,520 session summaries, 306 output
+  objects, leakage `PASS`, and 79,065,673 valid labels across the twelve
+  horizons. All 78 resolved symbols clear the per-horizon minimum; unsupported
+  `KRKNF` remains an explicit abstention. See
+  [feature datasets](leakage-safe-feature-datasets.md), the
+  [coverage report](../testing/forecasting-poc-label-coverage.md), and the
+  [training-readiness contract](training-readiness.md).
 
 ### Prompt 58 — Pooled multi-horizon training
 
@@ -402,8 +420,9 @@ implementation.
 - Outputs: baseline and learned-model comparisons, exported runtime artifacts,
   parity evidence, signed manifests, model cards, and offline/replay registry
   states.
-- Dependencies: Prompt 57. No training begins on a rejected or unverified
-  dataset.
+- Dependencies: Prompt 57 plus a published
+  `READY_FOR_INFRASTRUCTURE_VALIDATION` training-readiness report. No training
+  begins on a rejected, dirty-source, or unverified dataset.
 - Acceptance: all horizons covered; pooled instrument/horizon features; fixed
   ordering and training-only normalization; deterministic seeds; calibration,
   confidence, OOD, expiry, provenance, and signature present; parity within a

@@ -103,7 +103,7 @@ restricted provider fields must not enter evidence artifacts.
 | 55 | FRED/ALFRED vintages | Format/lint/types; mock integration; series-rights, unit, release/revision/conflict/time/leakage/throttle tests; deterministic PIT replay; query/storage benchmarks; credential scan |
 | 56 | Schema/storage migration | Format/lint/types; schema/golden/compatibility if affected; streaming normalization and persistent-store parity; corruption/crash/atomic-recovery tests; deterministic rebuild; memory/compression/query benchmarks |
 | 57 | Dataset/features/labels | Format/lint/types; hand fixtures; property/reference comparisons; all-horizon calendar cases; deliberate leakage and embargo negatives; deterministic rebuild; coverage schema; rows/RSS/storage benchmarks |
-| 58 | Model/training/artifact | Dependency lock/audit/SBOM; format/lint/types; deterministic train/retrain; dataset/leakage revalidation; runtime parity; calibration/OOD/expiry; signature/tamper/schema tests; CPU and optional GPU resource benchmarks |
+| 58 | Model/training/artifact | Published training-readiness admission; dependency lock/audit/SBOM; format/lint/types; deterministic train/retrain; dataset/leakage revalidation; runtime parity; calibration/OOD/expiry; signature/tamper/schema tests; CPU and optional GPU resource benchmarks |
 | 59 | CLI/model service | Format/lint/types; single/universe/all-horizon unit/integration; abstention/stale/deadline/fallback/overflow/artifact/output tests; service contract/security; no-network/no-trading dependency; CPU/GPU inference benchmarks |
 | 60 | Evaluation/reporting | Format/lint/types; metric goldens; walk-forward/embargo/leakage/insufficiency/calibration/quantile/report-schema tests; repeat hash; report throughput/RSS; unsupported-claim checks |
 | 61 | Slurm performance | Harness unit/schema tests; benchmark smoke; approved parallel/GPU jobs; raw samples and hardware metadata; threshold/regression check; storage/RSS/VRAM/queue/network invariants |
@@ -227,6 +227,11 @@ embargo is calculated from the versioned calendar, not an approximate duration.
 
 ## Model, inference, and evaluation gates
 
+Training requires an immutable readiness report that authenticates an
+unexpired private source approval against its backfill hash, data root,
+universe, source/feed/timeframe, academic purpose, internal-only distribution,
+and explicit training authorization at a recorded UTC assessment time.
+
 Training starts with zero-return, last-value, seasonal-naive, and moving-average
 baselines. Learned models use fixed ordered features, training-only
 normalization, deterministic seeds, bounded missing-value behavior, and exact
@@ -299,3 +304,36 @@ Prompt 45 is documentation-only. Its applicable completion checks are:
 
 Unit, integration, sanitizer, and performance tests are not applicable because
 Prompt 45 changes no executable code, schema, build, runtime, or data artifact.
+
+## Prompt 57 executable gates
+
+Run from the repository root with the required environment:
+
+```bash
+AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts make format-check
+AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts make lint
+AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts make test
+AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts make docs-check
+AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts make schemas-check
+AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts make benchmark-feature-dataset
+```
+
+The targeted suite must cover every horizon, exact purge membership,
+TRAIN-only normalization, future event/action and interval-overlap attacks,
+missing/unresolved coverage, source hash/schema corruption, bounded Parquet,
+manifest-last interruption recovery, and idempotent replay. JSON schemas are
+validated against emitted Arrow rows and the accepted manifest. The benchmark
+must label itself synthetic infrastructure validation, report rows and labels
+per second, elapsed time, peak RSS, output bytes, object count, and hardware,
+and must not claim economic value.
+
+The accepted real-data execution is a separate acceptance gate. Its immutable
+manifest and all 306 data objects must be rehashed by
+`make training-readiness`; the report must be
+`READY_FOR_INFRASTRUCTURE_VALIDATION` before Prompt 58 loads a row. The gate
+binds a clean source commit, dependency lock, exact canonical lineage, leakage
+`PASS`, complete 948-row coverage, and the deterministic 16-feature mask. A
+streaming pass must then prove at least 100,000 complete TRAIN rows and 50
+contributing symbols per horizon, nonzero VALIDATION/TEST rows, canonical label
+order, and no degradation reason outside the reviewed allowlist. Synthetic
+observations can never clear this gate.

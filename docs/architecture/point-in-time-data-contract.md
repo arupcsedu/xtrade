@@ -114,10 +114,14 @@ families require a schema-version review, ADR update, compatibility tests, and
 explicit leakage policy. Existing meanings and query boundary inclusivity may
 not change in place.
 
-The store is bounded but uses Python allocation and linear reference scans. It
-does not provide a database, licensed provider connector, distributed snapshot,
-retention enforcement, or hot-path cache. Production analytical storage must
-preserve these semantics and prove query parity before replacing it.
+`PersistentPointInTimeStore` now provides a bounded SQLite-backed offline
+implementation with parity tests for all query methods, cutoff boundaries,
+validity, revision order, and correction/amendment lineage. It uses atomic
+appends, application/schema identifiers, SQLite integrity checks, and
+per-record hashes. SQLite remains an offline analytical implementation and is
+not a hot-path cache, provider connector, distributed snapshot, or retention
+authority. See [canonical minute storage](canonical-minute-storage.md) and
+[ADR 0058](../adr/0058-sqlite-spool-and-parquet-minute-partitions.md).
 
 Prompt 52 adds a side-by-side closed JSON v1 instrument-reference contract. It
 does not change this v1 record family or query boundary. The sidecar adds
@@ -125,3 +129,11 @@ detailed instrument revisions, explicit calendar closures, halt-coverage state,
 and checked rational actions while preserving the same effective-time and
 known-time rule. See
 [point-in-time instrument reference data](point-in-time-instrument-reference.md).
+
+Prompt 55 realizes the macro-vintage family as a closed offline ALFRED
+snapshot. ALFRED real-time dates remain date-precision source facts: the
+adapter makes each revision queryable only at 00:00 UTC on the following day,
+never invents an intraday release time, and preserves actual local receipt and
+processing times separately. See
+[bounded ALFRED macro-vintage ingestion](alfred-macro-vintage-ingestion.md) and
+[ADR 0057](../adr/0057-bounded-alfred-vintage-and-date-only-availability.md).

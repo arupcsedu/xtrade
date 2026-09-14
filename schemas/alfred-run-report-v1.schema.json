@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/alfred-run-report-v1.schema.json",
+  "title": "Aegis-MX bounded ALFRED run report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["attribution", "coverage", "data_quality", "generated_at_utc_ns", "live_trading_capable", "manifest_ids", "network_access_performed", "observation_end", "observation_start", "report_sha256", "requests", "run_id", "schema_version", "series_universe_sha256", "snapshot_sha256s", "storage", "vintage_end", "vintage_start"],
+  "properties": {
+    "attribution": {"const": "Federal Reserve Bank of St. Louis; underlying federal source cited per series"},
+    "coverage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["initial_release_records", "missing_release_dates", "missing_value_records", "revision_records", "series", "series_count"],
+      "properties": {
+        "initial_release_records": {"type": "integer", "minimum": 0},
+        "missing_release_dates": {"type": "integer", "minimum": 0},
+        "missing_value_records": {"type": "integer", "minimum": 0},
+        "revision_records": {"type": "integer", "minimum": 0},
+        "series": {"type": "object", "propertyNames": {"pattern": "^[A-Z][A-Z0-9]{1,31}$"}, "additionalProperties": {"type": "integer", "minimum": 1}},
+        "series_count": {"type": "integer", "minimum": 1, "maximum": 7}
+      }
+    },
+    "data_quality": {
+      "type": "object", "additionalProperties": false,
+      "required": ["precise_intraday_release_times", "release_time_precision", "state"],
+      "properties": {
+        "precise_intraday_release_times": {"const": 0},
+        "release_time_precision": {"const": "DATE_ONLY_OR_NOT_AVAILABLE"},
+        "state": {"enum": ["VALID", "DEGRADED"]}
+      }
+    },
+    "generated_at_utc_ns": {"type": "integer", "minimum": 1},
+    "live_trading_capable": {"const": false},
+    "manifest_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^alfred-[0-9a-f]{64}$"}},
+    "network_access_performed": {"type": "boolean"},
+    "observation_end": {"type": "string", "format": "date"},
+    "observation_start": {"type": "string", "format": "date"},
+    "report_sha256": {"$ref": "#/$defs/sha256"},
+    "requests": {
+      "type": "object", "additionalProperties": false,
+      "required": ["request_count", "retry_count"],
+      "properties": {
+        "request_count": {"type": "integer", "minimum": 1, "maximum": 1000},
+        "retry_count": {"type": "integer", "minimum": 0, "maximum": 1000}
+      }
+    },
+    "run_id": {"type": "string", "pattern": "^alfred-run-[0-9a-f]{64}$"},
+    "schema_version": {"const": "1.0.0"},
+    "series_universe_sha256": {"$ref": "#/$defs/sha256"},
+    "snapshot_sha256s": {"type": "array", "minItems": 1, "maxItems": 7, "uniqueItems": true, "items": {"$ref": "#/$defs/sha256"}},
+    "storage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["limit_bytes_decimal", "usage_after_bytes_decimal", "usage_before_bytes_decimal"],
+      "properties": {
+        "limit_bytes_decimal": {"type": "integer", "minimum": 1, "maximum": 999000000},
+        "usage_after_bytes_decimal": {"type": "integer", "minimum": 0, "maximum": 999000000},
+        "usage_before_bytes_decimal": {"type": "integer", "minimum": 0, "maximum": 999000000}
+      }
+    },
+    "vintage_end": {"type": "string", "format": "date"},
+    "vintage_start": {"type": "string", "format": "date"}
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

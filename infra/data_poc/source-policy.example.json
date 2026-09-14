@@ -93,6 +93,42 @@
       }
     },
     {
+      "source_id": "alpaca_corporate_actions",
+      "provider": "AlpacaDB, Inc.",
+      "dataset": "Market Data API v1 Corporate Actions",
+      "specification_revision": "Standard corporate-actions endpoint reviewed 2026-09-12",
+      "history_coverage": "Requested two-year POC window only; provider correction and creation-time completeness are not guaranteed",
+      "market_coverage": "Corporate actions involving the ticker.txt universe",
+      "delivery_mechanism": "Authenticated bounded HTTPS GET with pagination",
+      "adjustment_revision_semantics": "Raw action records retained; structural actions invalidate crossing labels",
+      "published_rate_limit": "Bound by the parent Alpaca Basic API policy",
+      "source_timestamp_semantics": "Action dates and process dates are date-only; original publication time is unavailable",
+      "unsupported_scope_risks": [
+        "Historical provider publication time is unavailable",
+        "The current-universe query is not a complete historical membership archive"
+      ],
+      "evidence_urls": [
+        "https://docs.alpaca.markets/us/reference/corporateactions-1",
+        "https://files.alpaca.markets/disclosures/library/TermsAndConditions.pdf"
+      ],
+      "remote": true,
+      "enabled": false,
+      "adapter_implementation_authorized": false,
+      "network_download_authorized": false,
+      "authorization_status": "BLOCKED",
+      "authentication_method": "EXTERNAL_KEY_SECRET_PAIR",
+      "approval_record_sha256": null,
+      "approval_expires_at_utc": null,
+      "rights": {
+        "access": "DOCUMENTED",
+        "persistent_storage": "UNRESOLVED",
+        "model_training": "UNRESOLVED",
+        "derived_data": "UNRESOLVED",
+        "redistribution": "UNRESOLVED",
+        "retention_deletion": "UNRESOLVED"
+      }
+    },
+    {
       "source_id": "sec_edgar_structured_data",
       "provider": "U.S. Securities and Exchange Commission",
       "dataset": "EDGAR Submissions JSON and Company Facts XBRL",
@@ -206,8 +242,8 @@
     {
       "source_id": "fred_alfred_selected_series",
       "provider": "Federal Reserve Bank of St. Louis and original series owners",
-      "dataset": "FRED API observations and ALFRED vintages; empty series allowlist",
-      "specification_revision": "FRED API v1 public documentation and terms reviewed 2026-09-09",
+      "dataset": "FRED API observations and ALFRED vintages for CPIAUCSL, PPIACO, PAYEMS, GDP, RSAFS, DFEDTARU, and DFEDTARL",
+      "specification_revision": "FRED API v1 documentation, federal-source rights, and ISM restrictions reviewed 2026-09-11",
       "history_coverage": "Series-specific observation and vintage history",
       "market_coverage": "Selected economic series only; no equity ticker coverage",
       "delivery_mechanism": "Authenticated HTTPS REST returning bounded JSON",
@@ -215,29 +251,34 @@
       "published_rate_limit": "Up to 120 requests per minute before HTTP 429",
       "source_timestamp_semantics": "Observation date, real-time interval, vintage date, release date, last update, and local receipt differ",
       "unsupported_scope_risks": [
-        "Original-owner copyright and use restrictions vary per series",
+        "Unreviewed and copyrighted series remain denied; ISM PMI/NAPM is excluded",
         "Vintage dates do not prove an intraday official publication time"
       ],
       "evidence_urls": [
         "https://fred.stlouisfed.org/docs/api/fred/series_observations.html",
         "https://fred.stlouisfed.org/docs/api/fred/series_vintagedates.html",
-        "https://fred.stlouisfed.org/docs/api/terms_of_use.html"
+        "https://fred.stlouisfed.org/docs/api/terms_of_use.html",
+        "https://www.bls.gov/bls/linksite.htm",
+        "https://www.bea.gov/help/faq/147",
+        "https://www2.census.gov/foia/ds_policies/ds027.pdf",
+        "https://www.federalreserve.gov/disclaimer.htm",
+        "https://www.ismworld.org/footer/terms-of-use/"
       ],
       "remote": true,
       "enabled": false,
       "adapter_implementation_authorized": false,
       "network_download_authorized": false,
-      "authorization_status": "BLOCKED",
+      "authorization_status": "REVIEW_REQUIRED",
       "authentication_method": "EXTERNAL_API_KEY",
       "approval_record_sha256": null,
       "approval_expires_at_utc": null,
       "rights": {
         "access": "DOCUMENTED",
-        "persistent_storage": "UNRESOLVED",
-        "model_training": "UNRESOLVED",
-        "derived_data": "UNRESOLVED",
-        "redistribution": "UNRESOLVED",
-        "retention_deletion": "UNRESOLVED"
+        "persistent_storage": "DOCUMENTED",
+        "model_training": "DOCUMENTED",
+        "derived_data": "DOCUMENTED",
+        "redistribution": "PROHIBITED",
+        "retention_deletion": "DOCUMENTED"
       }
     },
     {

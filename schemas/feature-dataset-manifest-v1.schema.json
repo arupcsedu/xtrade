@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/feature-dataset-manifest-v1.schema.json",
+  "title": "Aegis-MX leakage-safe feature dataset manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "build_key", "dataset_id", "dataset_identity", "manifest_sha256", "sample_count", "session_summary_count", "objects", "coverage", "leakage", "storage_admission", "label_unit", "derived_daily_bars_downloaded", "economic_value_claimed", "live_trading_capable"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "build_key": {"$ref": "#/$defs/sha256"},
+    "dataset_id": {"$ref": "#/$defs/sha256"},
+    "dataset_identity": {"type": "object", "minProperties": 1},
+    "manifest_sha256": {"$ref": "#/$defs/sha256"},
+    "sample_count": {"type": "integer", "minimum": 1},
+    "session_summary_count": {"type": "integer", "minimum": 1},
+    "objects": {"type": "array", "minItems": 2, "maxItems": 40000, "items": {"$ref": "#/$defs/object"}},
+    "coverage": {"$ref": "feature-label-coverage-v1.schema.json"},
+    "leakage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "checked_samples", "status", "violations"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "checked_samples": {"type": "integer", "minimum": 1},
+        "status": {"enum": ["PASS", "REJECTED"]},
+        "violations": {"type": "array", "maxItems": 64, "items": {"type": "string"}}
+      }
+    },
+    "storage_admission": {
+      "type": "object", "additionalProperties": false,
+      "required": ["admitted_output_bytes_decimal", "actual_output_bytes_decimal", "hard_data_root_limit_bytes_decimal"],
+      "properties": {
+        "admitted_output_bytes_decimal": {"type": "integer", "minimum": 1, "maximum": 100000000000},
+        "actual_output_bytes_decimal": {"type": "integer", "minimum": 1, "maximum": 100000000000},
+        "hard_data_root_limit_bytes_decimal": {"const": 100000000000}
+      }
+    },
+    "label_unit": {"const": "RETURN_PPM_AND_INTEGER_PRICE_TICKS"},
+    "derived_daily_bars_downloaded": {"const": false},
+    "economic_value_claimed": {"const": false},
+    "live_trading_capable": {"const": false}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "object": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "instrument_id", "split", "storage_path", "object_sha256", "size_bytes_decimal", "record_count"],
+      "properties": {
+        "kind": {"enum": ["FEATURE_LABEL", "SESSION_SUMMARY"]},
+        "instrument_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+        "split": {"type": ["string", "null"], "enum": ["TRAIN", "VALIDATION", "TEST", null]},
+        "storage_path": {"type": "string", "pattern": "^(datasets|derived)/", "maxLength": 512},
+        "object_sha256": {"$ref": "#/$defs/sha256"},
+        "size_bytes_decimal": {"type": "integer", "minimum": 1},
+        "record_count": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

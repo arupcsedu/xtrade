@@ -671,6 +671,24 @@ def test_api_client_retries_rejects_and_validates_tokens() -> None:
     bar_client.bars(("AAPL",), now, now + timedelta(minutes=1), "next")
     assert ("page_token", "next") in bar_transport.parameters[0]
 
+    action_transport = ScriptedTransport(
+        [HttpResponse(200, b'{"corporate_actions":{}}', now)]
+    )
+    action_client = AlpacaApiClient(
+        AlpacaCredentials("fixture", "fixture"),
+        transport=action_transport,
+        sleep=lambda _delay: None,
+        monotonic=lambda: 0,
+    )
+    action_client.corporate_actions(("AAPL",), now.date(), now.date(), "next-action")
+    assert ("page_token", "next-action") in action_transport.parameters[0]
+    assert ("limit", "1000") in action_transport.parameters[0]
+    with pytest.raises(AlpacaDataError, match="date interval"):
+        action_client.corporate_actions((), now.date(), now.date(), None)
+    for token in ("", "x" * 4097):
+        with pytest.raises(AlpacaDataError, match="page token"):
+            action_client.corporate_actions(("AAPL",), now.date(), now.date(), token)
+
 
 def test_authorization_is_exact_content_bound_and_tamper_detected(
     tmp_path: Path,

@@ -56,6 +56,17 @@ remains deny-by-default.
 - Model training is limited to this internal academic POC and cannot imply
   economic value, production readiness, or permission for commercial use.
 
+### Corporate-action reference extension
+
+On 2026-09-12 the operator explicitly authorized a GET-only standard Alpaca
+corporate-action query for the same internal academic, owner-only POC. The
+extension is content-bound to the existing approval and policy, expires no
+later than its parent, and permits only
+`GET https://data.alpaca.markets/v1/corporate-actions`. It exists solely to
+invalidate unsafe historical labels. It does not authorize redistribution or
+trading. The private authorization record is stored under the data root and is
+not committed because it contains operator identity metadata.
+
 ## Pilot evidence
 
 The five-session pilot ran for `2026-09-03` through `2026-09-10` and completed
@@ -152,10 +163,45 @@ See the [architecture](../architecture/gdelt-poc-ingestion.md),
 [ADR](../adr/0056-bounded-gdelt-gkg-query-and-advisory-events.md), and
 [runbook](../operations/gdelt-poc-ingestion.md).
 
+## FRED/ALFRED selected federal series
+
+Application approval is limited to `CPIAUCSL`, `PPIACO`, `PAYEMS`, `GDP`,
+`RSAFS`, `DFEDTARU`, and `DFEDTARL`. Their original owners are BLS, BEA, the
+U.S. Census Bureau, and the Federal Reserve Board, whose cited policies permit
+reuse of the selected public-domain federal data. Persistent storage, internal
+academic research/model training, and internal derived artifacts are approved
+for this finite allowlist. Attribution and immutable source provenance are
+required. Redistribution is outside this approval.
+
+`NAPM`/ISM PMI is explicitly denied pending separate written permission. No
+other FRED-hosted series inherits approval by association with FRED.
+
+The adapter, schemas, tests, and documentation may be implemented. Network
+retrieval remains disabled by default and requires all of the following at run
+time:
+
+- a registered FRED API key supplied externally;
+- a `0600`, non-symlink approval record conforming to
+  `schemas/alfred-approval-v1.schema.json`;
+- exact sorted series and date-window authorization;
+- an unexpired approval and a cap no greater than 999,000,000 bytes;
+- authoritative current quota evidence and the global repository admission
+  gates;
+- explicit `--execute`.
+
+The source provides release and vintage dates, not authoritative intraday
+availability timestamps. Canonical records therefore retain null intraday
+release time and become queryable only at the conservative next-day UTC
+boundary. They must not drive same-day intraday macro surprise decisions.
+
+See the [architecture](../architecture/alfred-macro-vintage-ingestion.md),
+[ADR](../adr/0057-bounded-alfred-vintage-and-date-only-availability.md), and
+[runbook](../operations/alfred-macro-vintage-ingestion.md).
+
 ## Other sources
 
-FRED/ALFRED, Nasdaq Trader, and Massive/Polygon retain their independent
-dispositions in the [source assessment](forecasting-poc-source-assessment.md).
+Nasdaq Trader and Massive/Polygon retain their independent dispositions in the
+[source assessment](forecasting-poc-source-assessment.md).
 Paper-account order authorization remains separate from every data-source
 authorization.
 

@@ -18,6 +18,7 @@ MAX_LIST_ITEMS = 64
 EXPECTED_SOURCE_IDS = frozenset(
     {
         "alpaca_iex_historical_bars",
+        "alpaca_corporate_actions",
         "fred_alfred_selected_series",
         "gdelt_2_metadata",
         "massive_stocks_minute_aggregates",

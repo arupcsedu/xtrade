@@ -4,6 +4,19 @@ This directory owns the immutable, cross-component wire contracts for Aegis-MX.
 It does not contain venue protocols, order routing, credentials, or live-trading
 capability.
 
+## Bounded forecasting POC minute storage
+
+[`canonical-minute-record-v1.schema.json`](canonical-minute-record-v1.schema.json)
+defines the JSON-equivalent logical schema written to Parquet. Prices are
+integer ticks with an explicit currency-nanosecond tick value; quantities are
+integer shares. Exchange, source-availability, receipt, and processing times
+remain distinct.
+
+[`canonical-minute-quality-report-v1.schema.json`](canonical-minute-quality-report-v1.schema.json)
+defines the report published before a Parquet partition can gain an immutable
+partition manifest. Missing minutes remain missing, conflicting duplicates
+reject ingestion, and neither schema is trading-capable.
+
 Operational evidence schemas also live here. The
 [`performance-benchmark-report-v1.schema.json`](performance-benchmark-report-v1.schema.json)
 contract identifies hardware, pinning, methodology, simulated versus real-NIC
@@ -280,6 +293,52 @@ Prompt 54 adds four closed, offline GDELT JSON contracts: the external
 null in v1 while GKG observation time and local receipt/processing time remain
 separate. Records and reports are advisory-only and carry no order-entry
 authority. See [ADR 0056](../docs/adr/0056-bounded-gdelt-gkg-query-and-advisory-events.md).
+
+Prompt 55 adds four closed, offline ALFRED JSON contracts: the external,
+self-hashed [approval](alfred-approval-v1.schema.json), immutable
+[artifact manifest](alfred-artifact-manifest-v1.schema.json), complete
+[series snapshot](alfred-series-snapshot-v1.schema.json), and bounded
+[run report](alfred-run-report-v1.schema.json). The snapshot separates the
+economic observation date, ALFRED vintage date, conservative knowledge
+boundary, date-only release fact, actual local receipt time, and processing
+time. Values are exact integer microunits or explicitly missing; no schema
+field can carry an API key or order-entry authority. See
+[ADR 0057](../docs/adr/0057-bounded-alfred-vintage-and-date-only-availability.md).
+
+Prompt 56 adds the closed
+[canonical minute record](canonical-minute-record-v1.schema.json) and
+[partition quality report](canonical-minute-quality-report-v1.schema.json).
+Prices are integer ticks with an explicit currency-nanos-per-tick grid; volume
+is integer shares. Exchange event, source availability, local receipt, and
+local processing timestamps remain distinct. A partition is not accepted
+until its quality report is published and its immutable data manifest is the
+final acceptance marker. See
+[ADR 0058](../docs/adr/0058-sqlite-spool-and-parquet-minute-partitions.md).
+
+Prompt 57 adds the closed
+[feature/label row](feature-label-row-v1.schema.json), minute-derived
+[session summary](derived-session-summary-v1.schema.json), complete
+[ticker/horizon coverage](feature-label-coverage-v1.schema.json), and immutable
+[dataset manifest](feature-dataset-manifest-v1.schema.json). Each feature row
+has an exchange-event cutoff and a separate point-in-time knowledge cutoff;
+every valid label has an explicit future exchange timestamp, return in PPM,
+direction, future integer price ticks, and corporate-action version. The
+manifest fixes seed `20260831`, the chronological split and two 42-session
+purges, TRAIN-only normalization statistics, input/output hashes, and the
+100 GB storage ceiling. These are offline research contracts and grant no
+trading authority. See
+[ADR 0059](../docs/adr/0059-multi-pass-leakage-safe-feature-datasets.md).
+
+The Prompt 57-to-58 boundary is the closed
+[training-readiness report](training-readiness-report-v1.schema.json). It binds
+the accepted dataset, verified object bytes, exact source/dependency hashes,
+per-horizon label and model-ready split coverage, deterministic feature mask,
+known degraded-input policy, approval validity and expiry evidence, and
+unsupported-symbol abstentions. Blocked reports retain schema-valid nullable
+authorization evidence; ready reports require complete valid authorization.
+`READY_FOR_INFRASTRUCTURE_VALIDATION` does not authorize economic claims or
+trading. See
+[ADR 0061](../docs/adr/0061-training-admission-with-degraded-source-evidence.md).
 
 ## Identifiers
 

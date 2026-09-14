@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/alfred-series-snapshot-v1.schema.json",
+  "title": "Aegis-MX point-in-time ALFRED series snapshot v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["attribution", "live_trading_capable", "metadata", "plan_id", "releases", "schema_version", "series_contract", "snapshot_sha256", "source_request_ids", "vintages"],
+  "properties": {
+    "attribution": {"type": "string", "minLength": 1, "maxLength": 512},
+    "live_trading_capable": {"const": false},
+    "metadata": {"$ref": "#/$defs/metadata"},
+    "plan_id": {"type": "string", "pattern": "^alfred-plan-[0-9a-f]{64}$"},
+    "releases": {"type": "array", "items": {"$ref": "#/$defs/release"}},
+    "schema_version": {"const": "1.0.0"},
+    "series_contract": {"$ref": "#/$defs/series"},
+    "snapshot_sha256": {"$ref": "#/$defs/sha256"},
+    "source_request_ids": {"type": "array", "minItems": 4, "uniqueItems": true, "items": {"type": "string", "pattern": "^alfred-request-[0-9a-f]{64}$"}},
+    "vintages": {"type": "array", "minItems": 1, "maxItems": 100000, "items": {"$ref": "#/$defs/vintage"}}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "series_id": {"type": "string", "pattern": "^[A-Z][A-Z0-9]{1,31}$"},
+    "metadata": {
+      "type": "object", "additionalProperties": false,
+      "required": ["frequency", "last_updated_utc_ns", "notes_sha256", "release_id", "release_name", "seasonal_adjustment", "series_id", "title", "units"],
+      "properties": {
+        "frequency": {"type": "string", "minLength": 1, "maxLength": 512},
+        "last_updated_utc_ns": {"type": "integer", "minimum": 1},
+        "notes_sha256": {"$ref": "#/$defs/sha256"},
+        "release_id": {"type": "integer", "minimum": 1},
+        "release_name": {"type": "string", "minLength": 1, "maxLength": 512},
+        "seasonal_adjustment": {"type": "string", "minLength": 1, "maxLength": 512},
+        "series_id": {"$ref": "#/$defs/series_id"},
+        "title": {"type": "string", "minLength": 1, "maxLength": 512},
+        "units": {"type": "string", "minLength": 1, "maxLength": 512}
+      }
+    },
+    "release": {
+      "type": "object", "additionalProperties": false,
+      "required": ["known_at_utc_ns", "record_sha256", "release_date", "release_id", "release_name", "release_time_precision", "release_time_utc_ns", "series_id"],
+      "properties": {
+        "known_at_utc_ns": {"type": "integer", "minimum": 1},
+        "record_sha256": {"$ref": "#/$defs/sha256"},
+        "release_date": {"type": "string", "format": "date"},
+        "release_id": {"type": "integer", "minimum": 1},
+        "release_name": {"type": "string", "minLength": 1, "maxLength": 512},
+        "release_time_precision": {"const": "DATE_ONLY"},
+        "release_time_utc_ns": {"type": "null"},
+        "series_id": {"$ref": "#/$defs/series_id"}
+      }
+    },
+    "series": {
+      "type": "object", "additionalProperties": false,
+      "required": ["attribution", "frequency", "macro_event_type", "release_name", "rights_evidence_url", "rights_status", "seasonal_adjustment", "series_id", "series_url", "source_owner", "title", "units"],
+      "properties": {
+        "attribution": {"type": "string", "minLength": 1, "maxLength": 512},
+        "frequency": {"type": "string", "minLength": 1, "maxLength": 512},
+        "macro_event_type": {"type": "string", "minLength": 1, "maxLength": 512},
+        "release_name": {"type": "string", "minLength": 1, "maxLength": 512},
+        "rights_evidence_url": {"type": "string", "format": "uri"},
+        "rights_status": {"const": "APPROVED_PUBLIC_DOMAIN"},
+        "seasonal_adjustment": {"type": "string", "minLength": 1, "maxLength": 512},
+        "series_id": {"$ref": "#/$defs/series_id"},
+        "series_url": {"type": "string", "format": "uri"},
+        "source_owner": {"type": "string", "minLength": 1, "maxLength": 512},
+        "title": {"type": "string", "minLength": 1, "maxLength": 512},
+        "units": {"type": "string", "minLength": 1, "maxLength": 512}
+      }
+    },
+    "vintage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["known_at_utc_ns", "known_through_utc_ns", "local_receipt_time_utc_ns", "native_units", "observation_date", "observation_time_utc_ns", "processing_time_utc_ns", "record_sha256", "release_date", "release_time_precision", "release_time_utc_ns", "revision_number", "series_id", "source_request_id", "value_microunits", "value_scale", "value_status", "vintage_date", "vintage_kind"],
+      "properties": {
+        "known_at_utc_ns": {"type": "integer", "minimum": 1},
+        "known_through_utc_ns": {"type": ["integer", "null"], "minimum": 1},
+        "local_receipt_time_utc_ns": {"type": "integer", "minimum": 1},
+        "native_units": {"type": "string", "minLength": 1, "maxLength": 512},
+        "observation_date": {"type": "string", "format": "date"},
+        "observation_time_utc_ns": {"type": "integer", "minimum": 1},
+        "processing_time_utc_ns": {"type": "integer", "minimum": 1},
+        "record_sha256": {"$ref": "#/$defs/sha256"},
+        "release_date": {"type": ["string", "null"], "format": "date"},
+        "release_time_precision": {"enum": ["DATE_ONLY", "NOT_AVAILABLE"]},
+        "release_time_utc_ns": {"type": "null"},
+        "revision_number": {"type": "integer", "minimum": 1},
+        "series_id": {"$ref": "#/$defs/series_id"},
+        "source_request_id": {"type": "string", "pattern": "^alfred-request-[0-9a-f]{64}$"},
+        "value_microunits": {"type": ["integer", "null"]},
+        "value_scale": {"const": 1000000},
+        "value_status": {"enum": ["OBSERVED", "MISSING"]},
+        "vintage_date": {"type": "string", "format": "date"},
+        "vintage_kind": {"enum": ["INITIAL_RELEASE", "REVISION"]}
+      }
+    }
+  }
+}
