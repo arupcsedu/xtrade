@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/data-storage-policy-migration-v1.schema.json",
+  "title": "Aegis-MX storage-policy marker migration record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "from_marker_sha256",
+    "from_policy_sha256",
+    "migration_id",
+    "migration_sha256",
+    "network_access_performed",
+    "original_marker_archived",
+    "schema_version",
+    "to_marker_sha256",
+    "to_policy_sha256"
+  ],
+  "properties": {
+    "from_marker_sha256": {"$ref": "#/$defs/sha256"},
+    "from_policy_sha256": {"$ref": "#/$defs/sha256"},
+    "migration_id": {
+      "type": "string",
+      "pattern": "^policy-migration-[0-9a-f]{64}$"
+    },
+    "migration_sha256": {"$ref": "#/$defs/sha256"},
+    "network_access_performed": {"const": false},
+    "original_marker_archived": {"const": true},
+    "schema_version": {"const": "1.0.0"},
+    "to_marker_sha256": {"$ref": "#/$defs/sha256"},
+    "to_policy_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

@@ -4,6 +4,7 @@
 - Date: 2026-09-09
 - Owners: Research data platform and safety engineering
 - Supersedes: None
+- Storage values superseded by: [ADR 0062](0062-expand-bounded-poc-data-root-to-800-gb.md)
 - Related: [Forecasting POC contract](../architecture/forecasting-poc-contract.md),
   [point-in-time data contract](../architecture/point-in-time-data-contract.md),
   and [data repository architecture](../architecture/poc-data-repository.md)

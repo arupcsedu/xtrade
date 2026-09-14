@@ -10,6 +10,10 @@ if TYPE_CHECKING:
 
 from aegis_mx_research import DECIMAL_GB
 from aegis_mx_research.data_cli import main
+from aegis_mx_research.data_repository import (
+    LEGACY_STORAGE_POLICY_V2_SHA256,
+    STORAGE_AREAS,
+)
 
 
 def _base(root: Path) -> list[str]:
@@ -91,3 +95,46 @@ def test_cli_fails_closed_with_structured_error(tmp_path: Path, capsys: object) 
     assert error["command"] == "usage"
     assert error["error"]["code"] == "SYMLINK_DETECTED"
     assert error["audit"]["outcome"] == "REJECTED"
+
+
+def test_policy_migration_cli_is_dry_run_by_default_and_explicit(
+    tmp_path: Path, capsys: object
+) -> None:
+    root = tmp_path / "legacy-data"
+    root.mkdir()
+    for area in STORAGE_AREAS:
+        (root / area).mkdir()
+    (root / ".admission.lock").touch(mode=0o600)
+    marker_path = root / ".aegis-data-root.json"
+    marker_path.write_text(
+        json.dumps(
+            {
+                "data_root_kind": "AEGIS_MX_BOUNDED_FORECASTING_POC",
+                "policy_sha256": LEGACY_STORAGE_POLICY_V2_SHA256,
+                "schema_version": "2.0.0",
+            },
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        + "\n"
+    )
+    marker_path.chmod(0o400)
+    arguments = [
+        *_base(root),
+        "migrate-policy",
+        "--expected-current-policy-sha256",
+        LEGACY_STORAGE_POLICY_V2_SHA256,
+    ]
+    assert main(arguments) == 0
+    planned = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert planned["report"]["execute_requested"] is False
+    assert planned["report"]["migrated"] is False
+
+    assert main([*arguments, "--execute"]) == 0
+    migrated = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert migrated["report"]["execute_requested"] is True
+    assert migrated["report"]["migrated"] is True
+    assert main([*_base(root), "usage"]) == 0
+    usage = json.loads(capsys.readouterr().out)  # type: ignore[attr-defined]
+    assert usage["audit"]["policy_sha256"] == migrated["report"]["to_policy_sha256"]
+    assert json.loads(marker_path.read_text())["schema_version"] == "3.0.0"

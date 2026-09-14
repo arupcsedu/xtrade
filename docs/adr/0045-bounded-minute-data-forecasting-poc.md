@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-09-09
 - Owners: research, intelligence, model-contracts, model-serving, data governance
+- Storage values superseded by: [ADR 0062](0062-expand-bounded-poc-data-root-to-800-gb.md)
 
 ## Context
 

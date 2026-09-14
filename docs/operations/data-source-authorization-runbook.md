@@ -27,7 +27,7 @@ manifest, report, or approval record.
 - The 10 TiB scratch soft quota is confirmed with `/opt/rci/bin/hdquota -s`,
   and current usage can be measured. Unknown or stale quota evidence remains a
   hard stop.
-- The proposed source fits the 80 GB target, 100 GB hard root limit, 20 GB
+- The proposed source fits the 800 GB target and hard root limit, 20 GB
   temporary limit, and 50 GB filesystem reserve.
 - No source adapter or ordinary test can reach the provider before this gate.
 

@@ -1,4 +1,4 @@
-"""Non-destructive administrative CLI for bounded POC data-root controls."""
+"""Administrative CLI for bounded POC data-root controls and explicit migration."""
 
 from __future__ import annotations
 
@@ -94,6 +94,13 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--data-root", type=Path, default=DEFAULT_DATA_ROOT)
     subcommands = parser.add_subparsers(dest="command", required=True)
 
+    migrate = subcommands.add_parser(
+        "migrate-policy",
+        help="Plan by default; explicitly migrate the reviewed v2 marker to v3.",
+    )
+    migrate.add_argument("--expected-current-policy-sha256", required=True)
+    migrate.add_argument("--execute", action="store_true")
+
     subcommands.add_parser("usage", help="Report complete logical usage.")
 
     estimate = subcommands.add_parser(
@@ -176,9 +183,21 @@ def _emit(
     )
 
 
-def _execute(
+def _execute(  # noqa: PLR0911
     parsed: argparse.Namespace, repository: DataRepository, command: str
 ) -> int:
+    if command == "migrate-policy":
+        report = repository.migrate_policy_v2_to_v3(
+            expected_current_policy_sha256=parsed.expected_current_policy_sha256,
+            execute=parsed.execute,
+        )
+        _emit(
+            command=command,
+            report=report,
+            repository=repository,
+            outcome="SUCCEEDED",
+        )
+        return 0
     repository.initialize()
     if command == "usage":
         report = repository.usage().to_dict()
@@ -333,7 +352,7 @@ def _execute_ingestion(
 
 
 def main(arguments: Sequence[str] | None = None) -> int:
-    """Run one bounded, non-networked, non-deleting data-root operation."""
+    """Run one bounded operation; migration requires an explicit execution flag."""
     parsed = _parser().parse_args(arguments)
     repository = DataRepository(parsed.data_root, policy=StoragePolicy())
     command = str(parsed.command)

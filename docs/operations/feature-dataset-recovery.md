@@ -9,7 +9,7 @@
    now-known current-universe cohort; incomplete historical mapping and halt
    history must remain quality reasons and prohibit economic-value claims.
 4. Run `aegis-data usage` and require authoritative quota evidence, at least
-   50 GB filesystem reserve, projected root usage below 100 GB, and temporary
+   50 GB filesystem reserve, projected root usage below 800 GB, and temporary
    usage below 20 GB.
 5. Confirm the build configuration is offline/PAPER-only.
 

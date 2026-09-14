@@ -81,12 +81,13 @@ installation only in `/scratch/djy8hg/env/aegis_mx_contracts`.
 The authoritative 2026-09-11 `/opt/rci/bin/hdquota -s` observation established
 a 10 TiB scratch soft quota, 608,990,093,312 bytes used, and
 10,386,126,184,448 bytes available. The POC root remains independently bounded
-to an 80 GB target and 100 GB hard limit. Every mutation still requires current
+to an 800 GB target and hard limit. Every mutation still requires current
 quota evidence; a historical observation cannot silently authorize a later
 operation.
 
-The following preliminary steady-state envelopes make the 80 GB target visible;
-they are admission ceilings, not size promises or permission to borrow capacity:
+The following preliminary steady-state envelopes preserve the original 80 GB
+POC baseline. The remaining 720 GB is deliberately unallocated headroom, not
+permission for a source adapter to expand its scope:
 
 | Storage family | Planning ceiling |
 | --- | ---: |
@@ -97,9 +98,11 @@ they are admission ceilings, not size promises or permission to borrow capacity:
 | GDELT metadata and derived records | 5 GB |
 | FRED/ALFRED vintages | 1 GB |
 | Reference data, manifests, models, reports, and indexes | 6 GB |
-| Total target | 80 GB |
+| Defined baseline | 80 GB |
+| Unallocated policy headroom | 720 GB |
+| Total target and hard ceiling | 800 GB |
 
-Temporary work is separately bounded to 20 GB and counts toward the 100 GB hard
+Temporary work is separately bounded to 20 GB and counts toward the 800 GB hard
 data-root peak. Each operation recalculates current and projected peak usage;
 actual source estimates may require a smaller date range or representation.
 Automatic deletion is forbidden.

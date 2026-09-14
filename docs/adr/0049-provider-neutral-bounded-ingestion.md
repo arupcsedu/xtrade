@@ -4,6 +4,7 @@
 - Date: 2026-09-09
 - Owners: Research data platform and security engineering
 - Supersedes: None
+- Storage values superseded by: [ADR 0062](0062-expand-bounded-poc-data-root-to-800-gb.md)
 - Related: [Provider-neutral ingestion](../architecture/provider-neutral-ingestion.md),
   [bounded data repository](../architecture/poc-data-repository.md), and
   [source approval](../compliance/forecasting-poc-source-approval.md)

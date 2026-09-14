@@ -43,7 +43,7 @@ at most 100 requests per minute. A run has explicit date windows, at most 1,000
 requests, 100 pages per endpoint, 10,000 rows per page, 100,000 rows per series,
 8 MB per response, three attempts, and a 60-second request timeout. The ALFRED
 subtree must remain strictly below 1 GB; the configured maximum is 999,000,000
-decimal bytes. Global 100 GB data-root, 20 GB temporary-space, authoritative
+decimal bytes. Global 800 GB data-root, 20 GB temporary-space, authoritative
 quota, and 50 GB reserve gates still apply.
 
 Raw responses, canonical snapshots, reports, ALFRED manifests, and

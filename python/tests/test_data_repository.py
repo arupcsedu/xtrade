@@ -46,6 +46,7 @@ from aegis_mx_research import (
     make_audit_record,
 )
 from aegis_mx_research import data_repository as repository_module
+from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
 
 NONZERO_SHA256 = "ab" * 32
 UNIVERSE_SHA256 = "cd" * 32
@@ -152,8 +153,8 @@ def test_policy_defaults_are_decimal_and_deterministic() -> None:
     policy = StoragePolicy()
     assert Path("/scratch/djy8hg/aegis_mx_poc_data") == DEFAULT_DATA_ROOT
     assert policy.administrative_allocation_bytes == 10_995_116_277_760
-    assert policy.target_root_bytes == 80_000_000_000
-    assert policy.hard_root_bytes == 100_000_000_000
+    assert policy.target_root_bytes == 800_000_000_000
+    assert policy.hard_root_bytes == 800_000_000_000
     assert policy.minimum_reserve_bytes == 50_000_000_000
     assert policy.temporary_limit_bytes == 20_000_000_000
     assert policy.sha256 == StoragePolicy().sha256
@@ -166,10 +167,8 @@ def test_policy_defaults_are_decimal_and_deterministic() -> None:
         {"administrative_allocation_bytes": 0},
         {"administrative_allocation_bytes": 250 * DECIMAL_GB},
         {"target_root_bytes": -1},
-        {"target_root_bytes": 81 * DECIMAL_GB},
-        {"target_root_bytes": 101 * DECIMAL_GB},
-        {"hard_root_bytes": 101 * DECIMAL_GB},
-        {"hard_root_bytes": 251 * DECIMAL_GB},
+        {"target_root_bytes": 801 * DECIMAL_GB},
+        {"hard_root_bytes": 801 * DECIMAL_GB},
         {"minimum_reserve_bytes": 0},
         {"minimum_reserve_bytes": 49 * DECIMAL_GB},
         {"temporary_limit_bytes": 21 * DECIMAL_GB},
@@ -183,12 +182,12 @@ def test_policy_rejects_invalid_limits(changes: dict[str, int]) -> None:
 
 def test_policy_allows_only_fail_safer_operational_limits() -> None:
     policy = StoragePolicy(
-        target_root_bytes=70 * DECIMAL_GB,
-        hard_root_bytes=90 * DECIMAL_GB,
+        target_root_bytes=700 * DECIMAL_GB,
+        hard_root_bytes=750 * DECIMAL_GB,
         minimum_reserve_bytes=60 * DECIMAL_GB,
         temporary_limit_bytes=10 * DECIMAL_GB,
     )
-    assert policy.target_root_bytes == 70 * DECIMAL_GB
+    assert policy.target_root_bytes == 700 * DECIMAL_GB
 
 
 def test_initialize_creates_only_the_bounded_layout(tmp_path: Path) -> None:
@@ -257,6 +256,273 @@ def test_initialize_rejects_invalid_existing_area_and_policy_marker(
     marker.write_text("{}")
     with pytest.raises(StorageError, match="marker"):
         repository.initialize()
+
+
+def _legacy_v2_root(tmp_path: Path) -> tuple[Path, bytes]:
+    root = tmp_path / "legacy-data"
+    root.mkdir(parents=True)
+    for area in STORAGE_AREAS:
+        (root / area).mkdir()
+    (root / ".admission.lock").touch(mode=0o600)
+    marker_body = {
+        "data_root_kind": "AEGIS_MX_BOUNDED_FORECASTING_POC",
+        "policy_sha256": repository_module.LEGACY_STORAGE_POLICY_V2_SHA256,
+        "schema_version": "2.0.0",
+    }
+    marker = (
+        json.dumps(
+            marker_body, ensure_ascii=True, separators=(",", ":"), sort_keys=True
+        ).encode("ascii")
+        + b"\n"
+    )
+    marker_path = root / ".aegis-data-root.json"
+    marker_path.write_bytes(marker)
+    marker_path.chmod(0o400)
+    return root, marker
+
+
+def test_policy_v2_to_v3_migration_is_explicit_audited_and_idempotent(
+    tmp_path: Path,
+) -> None:
+    root, legacy_marker = _legacy_v2_root(tmp_path)
+    repository = DataRepository(root, git_worktree=Path.cwd())
+    with pytest.raises(StorageError, match="marker"):
+        repository.initialize()
+
+    planned = repository.migrate_policy_v2_to_v3(
+        expected_current_policy_sha256=(
+            repository_module.LEGACY_STORAGE_POLICY_V2_SHA256
+        )
+    )
+    assert planned["migrated"] is False
+    assert planned["already_current"] is False
+    assert (root / ".aegis-data-root.json").read_bytes() == legacy_marker
+    assert not (root / "manifests/policy-history").exists()
+
+    migrated = repository.migrate_policy_v2_to_v3(
+        expected_current_policy_sha256=(
+            repository_module.LEGACY_STORAGE_POLICY_V2_SHA256
+        ),
+        execute=True,
+    )
+    assert migrated["migrated"] is True
+    history = root / cast("str", migrated["legacy_marker_archive"])
+    record = root / cast("str", migrated["migration_record"])
+    assert history.read_bytes() == legacy_marker
+    assert history.stat().st_mode & 0o777 == 0o400
+    record_body = json.loads(record.read_text())
+    migration_schema = json.loads(
+        Path("schemas/data-storage-policy-migration-v1.schema.json").read_text()
+    )
+    Draft202012Validator(migration_schema).validate(record_body)
+    assert record_body["from_policy_sha256"] == (
+        repository_module.LEGACY_STORAGE_POLICY_V2_SHA256
+    )
+    assert record_body["to_policy_sha256"] == StoragePolicy().sha256
+    assert record_body["network_access_performed"] is False
+    repository.initialize()
+
+    repeated = repository.migrate_policy_v2_to_v3(
+        expected_current_policy_sha256=(
+            repository_module.LEGACY_STORAGE_POLICY_V2_SHA256
+        ),
+        execute=True,
+    )
+    assert repeated["already_current"] is True
+    assert repeated["migrated"] is False
+
+
+def test_policy_migration_rejects_unreviewed_or_unsafe_state(tmp_path: Path) -> None:
+    root, _marker = _legacy_v2_root(tmp_path / "base")
+    repository = DataRepository(root, git_worktree=Path.cwd())
+    with pytest.raises(StorageError, match="nonzero lowercase"):
+        repository.migrate_policy_v2_to_v3(expected_current_policy_sha256="bad")
+    with pytest.raises(StorageError, match="only the reviewed"):
+        repository.migrate_policy_v2_to_v3(expected_current_policy_sha256="1" * 64)
+
+    missing = DataRepository(tmp_path / "missing", git_worktree=Path.cwd())
+    with pytest.raises(StorageError, match="existing non-symlink"):
+        missing.migrate_policy_v2_to_v3(
+            expected_current_policy_sha256=(
+                repository_module.LEGACY_STORAGE_POLICY_V2_SHA256
+            )
+        )
+
+    target, _target_marker = _legacy_v2_root(tmp_path / "symlink-target")
+    linked = tmp_path / "linked"
+    linked.symlink_to(target, target_is_directory=True)
+    with pytest.raises(StorageError, match="existing non-symlink"):
+        DataRepository(linked, git_worktree=Path.cwd()).migrate_policy_v2_to_v3(
+            expected_current_policy_sha256=(
+                repository_module.LEGACY_STORAGE_POLICY_V2_SHA256
+            )
+        )
+
+    absent_area_root, _absent_marker = _legacy_v2_root(tmp_path / "absent-area")
+    (absent_area_root / "tmp").rmdir()
+    with pytest.raises(StorageError, match="existing storage area tmp"):
+        DataRepository(
+            absent_area_root, git_worktree=Path.cwd()
+        ).migrate_policy_v2_to_v3(
+            expected_current_policy_sha256=(
+                repository_module.LEGACY_STORAGE_POLICY_V2_SHA256
+            )
+        )
+
+    linked_area_root, _linked_area_marker = _legacy_v2_root(tmp_path / "linked-area")
+    (linked_area_root / "tmp").rmdir()
+    (linked_area_root / "tmp").symlink_to(
+        linked_area_root / "raw", target_is_directory=True
+    )
+    with pytest.raises(StorageError, match="existing storage area tmp"):
+        DataRepository(
+            linked_area_root, git_worktree=Path.cwd()
+        ).migrate_policy_v2_to_v3(
+            expected_current_policy_sha256=(
+                repository_module.LEGACY_STORAGE_POLICY_V2_SHA256
+            )
+        )
+
+    corrupt_root, _corrupt_marker = _legacy_v2_root(tmp_path / "corrupt")
+    corrupt_marker_path = corrupt_root / ".aegis-data-root.json"
+    corrupt_marker_path.chmod(0o600)
+    corrupt_marker_path.write_text("{}")
+    with pytest.raises(StorageError, match="does not match"):
+        DataRepository(corrupt_root, git_worktree=Path.cwd()).migrate_policy_v2_to_v3(
+            expected_current_policy_sha256=(
+                repository_module.LEGACY_STORAGE_POLICY_V2_SHA256
+            )
+        )
+
+
+def test_policy_migration_rejects_conflicts_and_supports_interrupted_retry(  # noqa: PLR0915
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    expected = repository_module.LEGACY_STORAGE_POLICY_V2_SHA256
+
+    invalid_directory_root, _marker = _legacy_v2_root(tmp_path / "directory")
+    (invalid_directory_root / "manifests/policy-history").write_text("not-dir")
+    with pytest.raises(StorageError, match="history path is not a directory"):
+        DataRepository(
+            invalid_directory_root, git_worktree=Path.cwd()
+        ).migrate_policy_v2_to_v3(expected_current_policy_sha256=expected, execute=True)
+
+    history_conflict_root, _marker = _legacy_v2_root(tmp_path / "history-conflict")
+    history_conflict_repository = DataRepository(
+        history_conflict_root, git_worktree=Path.cwd()
+    )
+    history_plan = history_conflict_repository.migrate_policy_v2_to_v3(
+        expected_current_policy_sha256=expected
+    )
+    history_conflict = history_conflict_root / cast(
+        "str", history_plan["legacy_marker_archive"]
+    )
+    history_conflict.parent.mkdir()
+    history_conflict.write_text("conflict")
+    with pytest.raises(StorageError, match="archive conflicts"):
+        history_conflict_repository.migrate_policy_v2_to_v3(
+            expected_current_policy_sha256=expected, execute=True
+        )
+
+    linked_history_root, _marker = _legacy_v2_root(tmp_path / "linked-history")
+    linked_history_repository = DataRepository(
+        linked_history_root, git_worktree=Path.cwd()
+    )
+    linked_history_plan = linked_history_repository.migrate_policy_v2_to_v3(
+        expected_current_policy_sha256=expected
+    )
+    linked_history = linked_history_root / cast(
+        "str", linked_history_plan["legacy_marker_archive"]
+    )
+    linked_history.parent.mkdir()
+    linked_history.symlink_to(linked_history_root / "missing")
+    with pytest.raises(StorageError, match="cannot be a symlink"):
+        linked_history_repository.migrate_policy_v2_to_v3(
+            expected_current_policy_sha256=expected, execute=True
+        )
+
+    record_conflict_root, record_marker = _legacy_v2_root(tmp_path / "record-conflict")
+    record_conflict_repository = DataRepository(
+        record_conflict_root, git_worktree=Path.cwd()
+    )
+    record_plan = record_conflict_repository.migrate_policy_v2_to_v3(
+        expected_current_policy_sha256=expected
+    )
+    history_path = record_conflict_root / cast(
+        "str", record_plan["legacy_marker_archive"]
+    )
+    history_path.parent.mkdir()
+    history_path.write_bytes(record_marker)
+    record_path = record_conflict_root / cast("str", record_plan["migration_record"])
+    record_path.write_text("conflict")
+    with pytest.raises(StorageError, match="migration record conflicts"):
+        record_conflict_repository.migrate_policy_v2_to_v3(
+            expected_current_policy_sha256=expected, execute=True
+        )
+
+    staged_root, _marker = _legacy_v2_root(tmp_path / "staged")
+    (staged_root / ".aegis-data-root.json.v3.part").write_text("staged")
+    with pytest.raises(StorageError, match="staged policy marker"):
+        DataRepository(staged_root, git_worktree=Path.cwd()).migrate_policy_v2_to_v3(
+            expected_current_policy_sha256=expected, execute=True
+        )
+
+    linked_stage_root, _marker = _legacy_v2_root(tmp_path / "linked-stage")
+    (linked_stage_root / ".aegis-data-root.json.v3.part").symlink_to(
+        linked_stage_root / "missing"
+    )
+    with pytest.raises(StorageError, match="staged policy marker"):
+        DataRepository(
+            linked_stage_root, git_worktree=Path.cwd()
+        ).migrate_policy_v2_to_v3(expected_current_policy_sha256=expected, execute=True)
+
+    retry_root, _marker = _legacy_v2_root(tmp_path / "retry")
+    retry_repository = DataRepository(retry_root, git_worktree=Path.cwd())
+    original_replace = Path.replace
+    replacement_error = "injected replacement failure"
+
+    def fail_replace(_path: Path, _target: Path) -> Path:
+        raise OSError(replacement_error)
+
+    monkeypatch.setattr(Path, "replace", fail_replace)
+    with pytest.raises(StorageError, match="replacement failed"):
+        retry_repository.migrate_policy_v2_to_v3(
+            expected_current_policy_sha256=expected, execute=True
+        )
+    monkeypatch.setattr(Path, "replace", original_replace)
+    (retry_root / ".aegis-data-root.json.v3.part").unlink()
+    retried = retry_repository.migrate_policy_v2_to_v3(
+        expected_current_policy_sha256=expected, execute=True
+    )
+    assert retried["migrated"] is True
+
+
+def test_policy_migration_detects_marker_change_during_execution(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, _marker = _legacy_v2_root(tmp_path)
+    repository = DataRepository(root, git_worktree=Path.cwd())
+    marker_path = root / ".aegis-data-root.json"
+    original_read = repository._read_secure  # noqa: SLF001
+    marker_reads = 0
+
+    def changing_read(path: Path, maximum: int) -> bytes:
+        nonlocal marker_reads
+        if path == marker_path:
+            marker_reads += 1
+            if marker_reads == 2:
+                marker_path.chmod(0o600)
+                marker_path.write_text("{}")
+        return original_read(path, maximum)
+
+    monkeypatch.setattr(repository, "_read_secure", changing_read)
+    with pytest.raises(StorageError, match="changed during migration"):
+        repository.migrate_policy_v2_to_v3(
+            expected_current_policy_sha256=(
+                repository_module.LEGACY_STORAGE_POLICY_V2_SHA256
+            ),
+            execute=True,
+        )
 
 
 def test_usage_accounts_for_committed_partial_temporary_and_sparse_files(
@@ -351,13 +617,13 @@ def test_quota_evidence_requires_complete_authoritative_metadata() -> None:
             AdmissionReason.TEMPORARY_LIMIT,
         ),
         (
-            StorageRequest("hard", 101 * DECIMAL_GB),
+            StorageRequest("hard", 801 * DECIMAL_GB),
             _quota(),
             _filesystem(),
             AdmissionReason.HARD_ROOT_LIMIT,
         ),
         (
-            StorageRequest("target", 81 * DECIMAL_GB),
+            StorageRequest("target", 801 * DECIMAL_GB),
             _quota(),
             _filesystem(),
             AdmissionReason.TARGET_REVIEW_REQUIRED,
@@ -1544,8 +1810,11 @@ def test_storage_json_schemas_match_runtime_contracts() -> None:
     legacy_policy_schema = json.loads(
         (schema_root / "data-storage-policy-v1.schema.json").read_text()
     )
-    policy_schema = json.loads(
+    policy_v2_schema = json.loads(
         (schema_root / "data-storage-policy-v2.schema.json").read_text()
+    )
+    policy_schema = json.loads(
+        (schema_root / "data-storage-policy-v3.schema.json").read_text()
     )
     manifest_schema = json.loads(
         (schema_root / "data-manifest-v1.schema.json").read_text()
@@ -1559,6 +1828,12 @@ def test_storage_json_schemas_match_runtime_contracts() -> None:
             "const"
         ]
         == 250_000_000_000
+    )
+    assert policy_v2_schema["properties"]["hard_root_bytes_decimal"]["maximum"] == (
+        100_000_000_000
+    )
+    assert policy_schema["properties"]["hard_root_bytes_decimal"]["maximum"] == (
+        800_000_000_000
     )
     assert (
         manifest_schema["$defs"]["sourceEnvelope"]["properties"][

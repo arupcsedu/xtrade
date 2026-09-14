@@ -4,6 +4,7 @@
 - Date: 2026-09-10
 - Owners: Research data platform and safety engineering
 - Supersedes: The 250 GB administrative-allocation value in ADRs 0045 and 0047
+- Root target and hard limit superseded by: [ADR 0062](0062-expand-bounded-poc-data-root-to-800-gb.md)
 - Related: [Forecasting POC contract](../architecture/forecasting-poc-contract.md),
   [data repository architecture](../architecture/poc-data-repository.md), and
   [schema evolution policy](../../schemas/schema-evolution-policy.md)

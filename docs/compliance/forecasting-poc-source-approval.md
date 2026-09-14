@@ -47,7 +47,7 @@ remains deny-by-default.
 - Raw market data must not be published, redistributed, sold, or used
   commercially.
 - Missing history is recorded, never synthetically filled.
-- The 80 GB target, 100 GB hard root limit, 20 GB temporary limit, and 50 GB
+- The 800 GB target and hard root limit, 20 GB temporary limit, and 50 GB
   free reserve remain mandatory.
 - A changed account class, plan, provider terms, purpose, user set, data root,
   universe, or dataset immediately suspends new downloads pending review.
@@ -91,8 +91,8 @@ regular sessions, 79 requested symbols, and 1,010 bounded tasks. It retained
 1,438 source objects and published 9,462,709 canonical records in 36,520
 symbol/session partitions. Source payloads occupy 947,534,490 bytes and
 canonical payloads occupy 6,662,713,009 bytes. The complete POC root uses
-7,782,178,266 logical bytes (7.247718 GiB), below both the 80 GB target and
-100 GB hard limit.
+7,782,178,266 logical bytes (7.247718 GiB), below the 800 GB target and hard
+limit. The report itself remains immutable evidence produced under policy v2.
 
 The report records 3,059 explicit missing symbol/session pairs. These include
 all 501 sessions for unsupported OTC symbol `KRKNF`, pre-listing or sparse

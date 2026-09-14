@@ -139,8 +139,8 @@ binary value. Reports label decimal and binary presentations separately.
 | Control | Limit | Failure behavior |
 | --- | ---: | --- |
 | Administrative scratch allocation | 10,995,116,277,760 bytes (10 TiB) | Treat the `hdquota -s` soft limit as an external ceiling |
-| Target POC data-root footprint | 80 GB | Stop expansion and produce a cleanup plan before exceeding target |
-| Hard POC data-root footprint | 100 GB | Refuse new writes or downloads |
+| Target POC data-root footprint | 800 GB | Stop expansion and produce a cleanup plan before exceeding target |
+| Hard POC data-root footprint | 800 GB | Refuse new writes or downloads |
 | Minimum filesystem reserve | 50 GB | Refuse admission if projected peak would cross the reserve |
 | Temporary workspace | 20 GB | Refuse the operation; never spill without a bound |
 

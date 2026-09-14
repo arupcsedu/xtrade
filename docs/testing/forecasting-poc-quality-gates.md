@@ -170,10 +170,10 @@ current data-root bytes
 = projected peak bytes
 ```
 
-The operation is rejected if the data root would exceed 100 GB, temporary work
+The operation is rejected if the data root would exceed 800 GB, temporary work
 would exceed 20 GB, post-operation filesystem reserve would fall below 50 GB,
 or the authoritative 10 TiB scratch soft quota and current quota usage are
-unknown. The 80 GB target triggers an operator-visible stop-and-review before
+unknown. The 800 GB target triggers an operator-visible stop-and-review before
 additional scope. Shared filesystem free space alone is insufficient. Symlinks,
 hard links where accounting is ambiguous, sparse files, concurrent admissions,
 integer overflow, and interrupted publication must not bypass accounting.

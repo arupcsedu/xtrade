@@ -3,7 +3,7 @@
 | Field | Value |
 | --- | --- |
 | Status | Implemented for offline POC use |
-| Schema version | `1.0.0` |
+| Storage policy schema | `3.0.0` |
 | Default root | `/scratch/djy8hg/aegis_mx_poc_data` |
 | Network behavior | Repository methods perform none; provider-neutral ingestion is a separate caller |
 | Deletion behavior | Operator plan only; never automatic |
@@ -26,8 +26,8 @@ calculations.
 | Control | Decimal-byte value | Admission rule |
 | --- | ---: | --- |
 | Administrative scratch allocation | 10,995,116,277,760 | Fixed to the verified 10 TiB `hdquota -s` soft limit; effective quota is the smaller of policy and current evidence |
-| Target root | 80,000,000,000 | Crossing requires review and is denied |
-| Hard root | 100,000,000,000 | Crossing is denied |
+| Target root | 800,000,000,000 | Crossing requires review and is denied |
+| Hard root | 800,000,000,000 | Crossing is denied |
 | Minimum filesystem reserve | 50,000,000,000 | Projected free space below this value is denied |
 | Temporary workspace | 20,000,000,000 | Existing plus projected temporary and retry bytes may not cross it |
 
@@ -41,11 +41,13 @@ also requires complete, explicitly authoritative quota evidence containing a
 limit, current use, source, and UTC observation time. Unknown projections,
 quota, or filesystem capacity fail closed.
 
-Storage policy v2 corrects the original 250 GB assumption, which described the
-home allocation rather than personal scratch. Existing v1 roots remain bound
-to their immutable v1 marker and require the copy migration in
-[ADR 0050](../adr/0050-authoritative-scratch-quota-correction.md); policy
-markers are never edited in place.
+Storage policy v3 expands the project-specific target and hard ceiling to 800
+GB without changing the verified 10 TiB scratch allocation or other safety
+gates. A populated v2 root is upgraded only through the audited, dry-run-first
+migration in [ADR 0062](../adr/0062-expand-bounded-poc-data-root-to-800-gb.md).
+The exact v2 marker is archived read-only before the operational marker is
+atomically replaced. Existing v1 roots remain governed by the copy migration
+in [ADR 0050](../adr/0050-authoritative-scratch-quota-correction.md).
 
 ## Storage layout
 

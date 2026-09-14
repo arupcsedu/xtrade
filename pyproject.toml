@@ -57,6 +57,8 @@ packages = [
 "schemas/data-storage-audit-v1.schema.json" = "schemas/data-storage-audit-v1.schema.json"
 "schemas/data-storage-policy-v1.schema.json" = "schemas/data-storage-policy-v1.schema.json"
 "schemas/data-storage-policy-v2.schema.json" = "schemas/data-storage-policy-v2.schema.json"
+"schemas/data-storage-policy-v3.schema.json" = "schemas/data-storage-policy-v3.schema.json"
+"schemas/data-storage-policy-migration-v1.schema.json" = "schemas/data-storage-policy-migration-v1.schema.json"
 "schemas/data-source-policy-v1.schema.json" = "schemas/data-source-policy-v1.schema.json"
 "schemas/alpaca-paper-certification-authorization-v1.schema.json" = "schemas/alpaca-paper-certification-authorization-v1.schema.json"
 "schemas/alpaca-paper-certification-report-v1.schema.json" = "schemas/alpaca-paper-certification-report-v1.schema.json"
@@ -111,6 +113,8 @@ include = [
   "/schemas/data-storage-audit-v1.schema.json",
   "/schemas/data-storage-policy-v1.schema.json",
   "/schemas/data-storage-policy-v2.schema.json",
+  "/schemas/data-storage-policy-v3.schema.json",
+  "/schemas/data-storage-policy-migration-v1.schema.json",
   "/schemas/data-source-policy-v1.schema.json",
   "/schemas/alpaca-paper-certification-authorization-v1.schema.json",
   "/schemas/alpaca-paper-certification-report-v1.schema.json",

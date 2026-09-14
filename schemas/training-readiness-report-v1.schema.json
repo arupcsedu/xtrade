@@ -82,7 +82,7 @@
         "object_count": {"type": "integer", "minimum": 1, "maximum": 40000},
         "sample_count": {"type": "integer", "minimum": 1},
         "session_summary_count": {"type": "integer", "minimum": 1},
-        "checked_bytes_decimal": {"type": "integer", "minimum": 0, "maximum": 100000000000}
+        "checked_bytes_decimal": {"type": "integer", "minimum": 0, "maximum": 800000000000}
       }
     },
     "coverage": {

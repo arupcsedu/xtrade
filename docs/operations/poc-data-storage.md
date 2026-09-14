@@ -73,7 +73,7 @@ Status `0` means all discovered manifests and referenced objects passed. Status
 ```bash
 /scratch/djy8hg/env/aegis_mx_contracts/bin/aegis-data \
   --data-root /scratch/djy8hg/aegis_mx_poc_data cleanup-plan \
-  --target-bytes 80000000000
+  --target-bytes 800000000000
 ```
 
 The deterministic plan prioritizes temporary, partial, quarantine, and then
@@ -94,3 +94,21 @@ Before each future ingestion or dataset build:
 
 Never manually remove the policy marker or admission lock to bypass a failure.
 Never delete an immutable object simply because it appears in a cleanup plan.
+
+## Migrate a policy-v2 root
+
+Policy migration is dry-run by default. First obtain the exact SHA-256 from the
+existing `.aegis-data-root.json` marker and review the planned transition:
+
+```bash
+/scratch/djy8hg/env/aegis_mx_contracts/bin/aegis-data \
+  --data-root /scratch/djy8hg/aegis_mx_poc_data migrate-policy \
+  --expected-current-policy-sha256 c5ade7ab45d01defbe14c7e24e9addc3e4cc0af0217e05a4a624b60788185093
+```
+
+After preserving the dry-run output, execute the same command with
+`--execute`. It archives the exact v2 marker under
+`manifests/policy-history/`, writes an immutable migration record, rechecks the
+source marker while holding the admission fence, and atomically publishes the
+v3 marker. It does not move, delete, download, or reinterpret dataset objects.
+Run `usage` and `verify` immediately afterward and retain all outputs.

@@ -29,9 +29,9 @@
       "type": "object", "additionalProperties": false,
       "required": ["admitted_output_bytes_decimal", "actual_output_bytes_decimal", "hard_data_root_limit_bytes_decimal"],
       "properties": {
-        "admitted_output_bytes_decimal": {"type": "integer", "minimum": 1, "maximum": 100000000000},
-        "actual_output_bytes_decimal": {"type": "integer", "minimum": 1, "maximum": 100000000000},
-        "hard_data_root_limit_bytes_decimal": {"const": 100000000000}
+        "admitted_output_bytes_decimal": {"type": "integer", "minimum": 1, "maximum": 800000000000},
+        "actual_output_bytes_decimal": {"type": "integer", "minimum": 1, "maximum": 800000000000},
+        "hard_data_root_limit_bytes_decimal": {"enum": [100000000000, 800000000000]}
       }
     },
     "label_unit": {"const": "RETURN_PPM_AND_INTEGER_PRICE_TICKS"},

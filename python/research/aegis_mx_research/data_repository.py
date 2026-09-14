@@ -17,7 +17,8 @@ from typing import TYPE_CHECKING, Final, Self, cast
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Mapping, Sequence
 
-DATA_REPOSITORY_SCHEMA_VERSION: Final = "2.0.0"
+DATA_REPOSITORY_SCHEMA_VERSION: Final = "3.0.0"
+POLICY_MIGRATION_SCHEMA_VERSION: Final = "1.0.0"
 MANIFEST_SCHEMA_VERSION: Final = "1.0.0"
 AUDIT_SCHEMA_VERSION: Final = "1.0.0"
 DECIMAL_GB: Final = 1_000_000_000
@@ -28,6 +29,7 @@ MAX_MANIFEST_BYTES: Final = 1_048_576
 MAX_PATH_BYTES: Final = 512
 SHA256_HEX_BYTES: Final = 64
 DEFAULT_DATA_ROOT: Final = Path("/scratch/djy8hg/aegis_mx_poc_data")
+POC_STORAGE_LIMIT_BYTES: Final = 800 * DECIMAL_GB
 STORAGE_AREAS: Final = (
     "quarantine",
     "raw",
@@ -128,6 +130,19 @@ def _validate_byte_count(value: int, name: str) -> None:
         raise StorageError(StorageErrorCode.INVALID_REQUEST, message)
 
 
+LEGACY_STORAGE_POLICY_V2 = {
+    "administrative_allocation_bytes_decimal": 10 * BINARY_TIB,
+    "hard_root_bytes_decimal": 100 * DECIMAL_GB,
+    "minimum_reserve_bytes_decimal": 50 * DECIMAL_GB,
+    "schema_version": "2.0.0",
+    "target_root_bytes_decimal": 80 * DECIMAL_GB,
+    "temporary_limit_bytes_decimal": 20 * DECIMAL_GB,
+}
+LEGACY_STORAGE_POLICY_V2_SHA256: Final = _sha256_hex(
+    _canonical_bytes(LEGACY_STORAGE_POLICY_V2)
+)
+
+
 def _checked_add(*values: int) -> int:
     total = 0
     for value in values:
@@ -226,8 +241,8 @@ class StoragePolicy:
     """Immutable decimal-byte limits for the bounded POC."""
 
     administrative_allocation_bytes: int = 10 * BINARY_TIB
-    target_root_bytes: int = 80 * DECIMAL_GB
-    hard_root_bytes: int = 100 * DECIMAL_GB
+    target_root_bytes: int = POC_STORAGE_LIMIT_BYTES
+    hard_root_bytes: int = POC_STORAGE_LIMIT_BYTES
     minimum_reserve_bytes: int = 50 * DECIMAL_GB
     temporary_limit_bytes: int = 20 * DECIMAL_GB
     schema_version: str = DATA_REPOSITORY_SCHEMA_VERSION
@@ -251,8 +266,8 @@ class StoragePolicy:
                 raise StorageError(StorageErrorCode.INVALID_POLICY, message) from error
         if (
             self.administrative_allocation_bytes != 10 * BINARY_TIB
-            or self.target_root_bytes > 80 * DECIMAL_GB
-            or self.hard_root_bytes > 100 * DECIMAL_GB
+            or self.target_root_bytes > POC_STORAGE_LIMIT_BYTES
+            or self.hard_root_bytes > POC_STORAGE_LIMIT_BYTES
             or self.minimum_reserve_bytes < 50 * DECIMAL_GB
             or self.temporary_limit_bytes > 20 * DECIMAL_GB
             or self.target_root_bytes > self.hard_root_bytes
@@ -1351,6 +1366,161 @@ class DataRepository:
             self._initialize_area(area)
         self._initialize_marker()
         self._initialize_lock()
+
+    def migrate_policy_v2_to_v3(  # noqa: C901, PLR0912, PLR0915
+        self, *, expected_current_policy_sha256: str, execute: bool = False
+    ) -> dict[str, object]:
+        """Plan or perform the single supported authenticated policy migration."""
+        _validate_sha256(
+            expected_current_policy_sha256, "expected current policy SHA-256"
+        )
+        if expected_current_policy_sha256 != LEGACY_STORAGE_POLICY_V2_SHA256:
+            raise StorageError(
+                StorageErrorCode.INVALID_POLICY,
+                "only the reviewed storage-policy v2 identity can be migrated",
+            )
+        if not self.root.exists() or self.root.is_symlink():
+            raise StorageError(
+                StorageErrorCode.INVALID_PATH,
+                "policy migration requires an existing non-symlink data root",
+            )
+        self._initialize_root()
+        for area in STORAGE_AREAS:
+            path = self.root / area
+            if not path.exists() or path.is_symlink():
+                raise StorageError(
+                    StorageErrorCode.INVALID_PATH,
+                    f"policy migration requires existing storage area {area}",
+                )
+            self._initialize_area(area)
+
+        marker = self.root / ".aegis-data-root.json"
+        legacy_marker = (
+            _canonical_bytes(
+                {
+                    "data_root_kind": "AEGIS_MX_BOUNDED_FORECASTING_POC",
+                    "policy_sha256": LEGACY_STORAGE_POLICY_V2_SHA256,
+                    "schema_version": "2.0.0",
+                }
+            )
+            + b"\n"
+        )
+        current_marker = (
+            _canonical_bytes(
+                {
+                    "data_root_kind": "AEGIS_MX_BOUNDED_FORECASTING_POC",
+                    "policy_sha256": self.policy.sha256,
+                    "schema_version": DATA_REPOSITORY_SCHEMA_VERSION,
+                }
+            )
+            + b"\n"
+        )
+        migration_identity = {
+            "from_marker_sha256": _sha256_hex(legacy_marker),
+            "from_policy_sha256": LEGACY_STORAGE_POLICY_V2_SHA256,
+            "schema_version": POLICY_MIGRATION_SCHEMA_VERSION,
+            "to_marker_sha256": _sha256_hex(current_marker),
+            "to_policy_sha256": self.policy.sha256,
+        }
+        migration_sha256 = _sha256_hex(_canonical_bytes(migration_identity))
+        migration_id = f"policy-migration-{migration_sha256}"
+        history_relative = (
+            f"manifests/policy-history/marker-{LEGACY_STORAGE_POLICY_V2_SHA256}.json"
+        )
+        record_relative = f"manifests/policy-history/{migration_id}.json"
+
+        def result(*, migrated: bool, already_current: bool) -> dict[str, object]:
+            return {
+                "already_current": already_current,
+                "execute_requested": execute,
+                "from_policy_sha256": LEGACY_STORAGE_POLICY_V2_SHA256,
+                "legacy_marker_archive": history_relative,
+                "migrated": migrated,
+                "migration_id": migration_id,
+                "migration_record": record_relative,
+                "schema_version": POLICY_MIGRATION_SCHEMA_VERSION,
+                "to_policy": self.policy.to_dict(),
+                "to_policy_sha256": self.policy.sha256,
+            }
+
+        lock_descriptor = self._acquire_lock()
+        try:
+            observed = self._read_secure(marker, MAX_MANIFEST_BYTES)
+            if observed == current_marker:
+                return result(migrated=False, already_current=True)
+            if observed != legacy_marker:
+                raise StorageError(
+                    StorageErrorCode.INVALID_POLICY,
+                    "data-root marker does not match the reviewed v2 policy",
+                )
+            if not execute:
+                return result(migrated=False, already_current=False)
+
+            history_directory = self.root / "manifests" / "policy-history"
+            self._assert_safe_path(history_directory)
+            if history_directory.exists():
+                if not history_directory.is_dir():
+                    raise StorageError(
+                        StorageErrorCode.INVALID_PATH,
+                        "policy history path is not a directory",
+                    )
+            else:
+                history_directory.mkdir(mode=0o700)
+                self._sync_directory(history_directory.parent)
+
+            history_path = self.root.joinpath(*PurePosixPath(history_relative).parts)
+            if history_path.exists() or history_path.is_symlink():
+                if self._read_secure(history_path, MAX_MANIFEST_BYTES) != legacy_marker:
+                    raise StorageError(
+                        StorageErrorCode.IMMUTABLE_CONFLICT,
+                        "legacy policy-marker archive conflicts",
+                    )
+            else:
+                self._create_exclusive_file(history_path, legacy_marker, 0o400)
+
+            migration_record = {
+                **migration_identity,
+                "migration_id": migration_id,
+                "migration_sha256": migration_sha256,
+                "network_access_performed": False,
+                "original_marker_archived": True,
+            }
+            record_bytes = _canonical_bytes(migration_record) + b"\n"
+            record_path = self.root.joinpath(*PurePosixPath(record_relative).parts)
+            if record_path.exists() or record_path.is_symlink():
+                if self._read_secure(record_path, MAX_MANIFEST_BYTES) != record_bytes:
+                    raise StorageError(
+                        StorageErrorCode.IMMUTABLE_CONFLICT,
+                        "policy migration record conflicts",
+                    )
+            else:
+                self._create_exclusive_file(record_path, record_bytes, 0o400)
+            self._sync_directory(history_directory)
+
+            staged_marker = self.root / ".aegis-data-root.json.v3.part"
+            if staged_marker.exists() or staged_marker.is_symlink():
+                raise StorageError(
+                    StorageErrorCode.INTERRUPTED_PUBLICATION,
+                    "staged policy marker already exists",
+                )
+            self._create_exclusive_file(staged_marker, current_marker, 0o400)
+            if self._read_secure(marker, MAX_MANIFEST_BYTES) != legacy_marker:
+                raise StorageError(
+                    StorageErrorCode.INVALID_POLICY,
+                    "data-root marker changed during migration",
+                )
+            try:
+                staged_marker.replace(marker)
+                self._sync_directory(self.root)
+            except OSError as error:
+                raise StorageError(
+                    StorageErrorCode.IO_FAILURE,
+                    "policy marker replacement failed",
+                ) from error
+            return result(migrated=True, already_current=False)
+        finally:
+            fcntl.flock(lock_descriptor, fcntl.LOCK_UN)
+            os.close(lock_descriptor)
 
     def _initialize_root(self) -> None:
         if self._git_worktree is not None:

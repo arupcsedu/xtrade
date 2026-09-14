@@ -231,11 +231,14 @@ guard, control-plane rejection, and still-open production blockers. A passing
 record means the inspected state is non-live while `production_ready` remains
 false and activation remains `PROHIBITED`.
 
-The bounded forecasting POC uses three off-hot-path JSON contracts. The
-[storage policy v2](data-storage-policy-v2.schema.json) fixes the verified
-10 TiB scratch allocation while retaining the decimal 80/100/20/50 GB POC
-limits. [Storage policy v1](data-storage-policy-v1.schema.json) remains for
-immutable legacy evidence. The [data manifest v1](data-manifest-v1.schema.json) describes
+The bounded forecasting POC uses off-hot-path JSON contracts. The current
+[storage policy v3](data-storage-policy-v3.schema.json) fixes the verified 10
+TiB scratch allocation and decimal 800/800/20/50 GB POC limits. Storage policy
+[v2](data-storage-policy-v2.schema.json) and
+[v1](data-storage-policy-v1.schema.json) remain for immutable legacy evidence.
+The [policy migration record](data-storage-policy-migration-v1.schema.json)
+binds an audited v2-to-v3 marker transition without rewriting historical
+evidence. The [data manifest v1](data-manifest-v1.schema.json) describes
 content-addressed source and partition envelopes, explicit timestamp domains,
 and correction/replacement lineage. The
 [storage audit v1](data-storage-audit-v1.schema.json) binds each administrative
@@ -325,7 +328,8 @@ every valid label has an explicit future exchange timestamp, return in PPM,
 direction, future integer price ticks, and corporate-action version. The
 manifest fixes seed `20260831`, the chronological split and two 42-session
 purges, TRAIN-only normalization statistics, input/output hashes, and the
-100 GB storage ceiling. These are offline research contracts and grant no
+800 GB storage ceiling. Historical manifests may retain their 100 GB evidence
+value. These are offline research contracts and grant no
 trading authority. See
 [ADR 0059](../docs/adr/0059-multi-pass-leakage-safe-feature-datasets.md).
 

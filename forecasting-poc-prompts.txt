@@ -4,7 +4,7 @@ AEGIS-MX BOUNDED FORECASTING POC IMPLEMENTATION PROMPTS
 Run these prompts separately and in numerical order. Prompts 45 through 65
 continue the existing Aegis-MX implementation sequence. The forecasting POC is
 limited to the symbols in /scratch/djy8hg/xtrade/ticker.txt, authorized
-one-minute data, bounded public-event data, and a maximum 100 GB data-root
+one-minute data, bounded public-event data, and a maximum 800 GB data-root
 footprint.
 
 
@@ -50,9 +50,9 @@ Create the binding POC scope:
    claim that raw prices are directly predictable.
 
 6. Storage:
-   - administrative allocation: 250 GB;
-   - target POC data footprint: no more than 80 GB;
-   - project data-root hard limit: 100 GB;
+   - administrative scratch allocation: 10,995,116,277,760 bytes (10 TiB);
+   - target POC data footprint: no more than 800 GB;
+   - project data-root hard limit: 800 GB;
    - required free reserve: at least 50 GB;
    - unknown capacity or quota state blocks remote downloads.
 
@@ -172,9 +172,9 @@ Create logical storage areas:
 
 Requirements:
 
-1. Treat 250 GB as the total administrative allocation.
-2. Target no more than 80 GB of POC data.
-3. Enforce a 100 GB hard data-root limit.
+1. Treat 10,995,116,277,760 bytes as the administrative scratch allocation.
+2. Target no more than 800 GB of POC data.
+3. Enforce an 800 GB hard data-root limit.
 4. Require at least 50 GB filesystem reserve.
 5. Limit temporary workspace to 20 GB.
 6. Account for partially downloaded and temporary files.
@@ -721,7 +721,7 @@ Requirements:
 - deterministic seed 20260831;
 - immutable dataset manifest and SHA-256;
 - bounded streaming construction;
-- peak data-root usage below 100 GB.
+- peak data-root usage below 800 GB.
 
 Add intentionally leaking fixtures and prove rejection.
 
@@ -934,8 +934,8 @@ Scenarios:
 
 Safety gates:
 
-- target data footprint <= 80 GB;
-- hard data-root limit <= 100 GB;
+- target data footprint <= 800 GB;
+- hard data-root limit <= 800 GB;
 - temporary workspace <= 20 GB;
 - filesystem reserve >= 50 GB;
 - no unbounded memory growth;

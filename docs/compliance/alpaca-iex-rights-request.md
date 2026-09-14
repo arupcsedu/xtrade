@@ -31,8 +31,8 @@ Subject: Written data-use confirmation for Alpaca Basic IEX academic POC
 >
 > The initial test is five regular trading sessions. A later phase may cover up
 > to two years. Data would be held under
-> `/scratch/djy8hg/aegis_mx_poc_data`, with an 80 GB target and 100 GB hard
-> limit, and would never be redistributed or used to enable live trading.
+> `/scratch/djy8hg/aegis_mx_poc_data`, with an 800 GB target and hard limit,
+> and would never be redistributed or used to enable live trading.
 >
 > Please answer each item explicitly: (1) automated API retrieval; (2)
 > persistent storage of raw responses; (3) storage of normalized and

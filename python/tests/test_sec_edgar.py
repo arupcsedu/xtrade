@@ -1546,12 +1546,15 @@ def test_adapter_repository_rejections_and_cli_execute(
         "_write_report",
         fake_write,
     )
+    cli_data_root = tmp_path / "cli-data"
     with pytest.raises(sec.SecEdgarError) as missing_window:
         sec.cli_main(
             [
                 "coverage",
                 "--approval",
                 str(tmp_path / "approval.json"),
+                "--data-root",
+                str(cli_data_root),
                 "--report-directory",
                 str(tmp_path),
                 "--execute",
@@ -1564,6 +1567,8 @@ def test_adapter_repository_rejections_and_cli_execute(
                 "coverage",
                 "--approval",
                 str(tmp_path / "approval.json"),
+                "--data-root",
+                str(cli_data_root),
                 "--report-directory",
                 str(tmp_path),
                 "--filing-start-date",
@@ -1580,6 +1585,8 @@ def test_adapter_repository_rejections_and_cli_execute(
                 "coverage",
                 "--approval",
                 str(tmp_path / "approval.json"),
+                "--data-root",
+                str(cli_data_root),
                 "--report-directory",
                 str(tmp_path),
                 "--filing-start-date",

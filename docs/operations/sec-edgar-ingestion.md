@@ -6,7 +6,7 @@
 2. Verify the private approval is mode `0600`, self-hashed, and unexpired.
 3. Set a descriptive contact-bearing User-Agent. It is identification metadata,
    not a credential.
-4. Confirm `/opt/rci/bin/hdquota -s`, the 50 GB reserve, global 100 GB cap, and
+4. Confirm `/opt/rci/bin/hdquota -s`, the 50 GB reserve, global 800 GB cap, and
    SEC 8 GB cap.
 5. Confirm the authoritative `ticker.txt` hash and that the intent is internal
    academic research.

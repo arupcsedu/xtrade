@@ -59,7 +59,8 @@ for partial publication evidence before admitting another writer.
 Do not rewrite `.aegis-data-root.json`. Confirm the intended binary and policy.
 A policy migration requires an ADR, an inventory and integrity snapshot, a
 bounded migration plan, and an immutable audit record. Until then, use is
-blocked.
+blocked. The only approved v2-to-v3 exception is the guarded `migrate-policy`
+operation in ADR 0062; manual marker replacement remains prohibited.
 
 ### Symlink, hard link, special file, or cross-device entry
 

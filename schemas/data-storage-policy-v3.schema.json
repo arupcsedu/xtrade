@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aegis-mx.invalid/schemas/data-storage-policy-v3.schema.json",
+  "title": "Aegis-MX bounded forecasting POC storage policy v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "administrative_allocation_bytes_decimal",
+    "hard_root_bytes_decimal",
+    "minimum_reserve_bytes_decimal",
+    "schema_version",
+    "target_root_bytes_decimal",
+    "temporary_limit_bytes_decimal"
+  ],
+  "properties": {
+    "administrative_allocation_bytes_decimal": {"const": 10995116277760},
+    "hard_root_bytes_decimal": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 800000000000
+    },
+    "minimum_reserve_bytes_decimal": {
+      "type": "integer",
+      "minimum": 50000000000,
+      "maximum": 9223372036854775807
+    },
+    "schema_version": {"const": "3.0.0"},
+    "target_root_bytes_decimal": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 800000000000
+    },
+    "temporary_limit_bytes_decimal": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 20000000000
+    }
+  }
+}

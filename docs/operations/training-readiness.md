@@ -13,7 +13,7 @@
    the machine-readable report as null evidence; it is never treated as valid.
    `/scratch` and its cluster filesystem alias may differ textually; the gate
    accepts them only when both absolute paths resolve to the same target.
-5. Confirm current authoritative quota evidence and the 100 GB root, 20 GB
+5. Confirm current authoritative quota evidence and the 800 GB root, 20 GB
    temporary, and 50 GB reserve gates.
 6. Do not add provider credentials or the private approval to the repository.
 

@@ -23,8 +23,11 @@ must not rely on an additive field until every safety-relevant consumer has
 been upgraded and its readiness is auditable.
 
 The bounded forecasting data repository uses separate canonical JSON contracts.
-`data-storage-policy-v2` corrects the authoritative scratch allocation; the
-immutable `data-storage-policy-v1` remains available for legacy evidence.
+`data-storage-policy-v3` expands only the target and hard root ceiling to 800
+GB. `data-storage-policy-v2` records the authoritative scratch-allocation
+correction and immutable `data-storage-policy-v1` remains available for legacy
+evidence. `data-storage-policy-migration-v1` records the exact v2-to-v3 marker
+transition.
 `data-manifest-v1`, `data-storage-audit-v1`, and `data-source-policy-v1` retain
 semantic version `1.0.0`. Their object fields are
 closed and exact. An additive field therefore requires a new side-by-side schema
@@ -36,7 +39,10 @@ during migration.
 Storage-policy v1 roots are migrated by verified copy into a newly initialized
 v2 root. Readers must validate the original with its v1 release; neither the v1
 marker nor its manifests are rewritten. An empty v1 root may be archived and a
-v2 root initialized at the operational path, as recorded in ADR 0050.
+v2 root initialized at the operational path, as recorded in ADR 0050. A v2
+root may transition to v3 only after archiving the exact marker, publishing an
+immutable migration record, rechecking the source identity under the admission
+fence, and atomically installing the v3 marker as recorded in ADR 0062.
 
 Provider-neutral ingestion checkpoints use a closed internal JSON contract at
 `1.0.0`. A reader rejects any other version or field set. Additive fields need a

@@ -2338,7 +2338,7 @@ def build_and_publish_feature_dataset(
                 "storage_admission": {
                     "admitted_output_bytes_decimal": output_estimate,
                     "actual_output_bytes_decimal": written_bytes,
-                    "hard_data_root_limit_bytes_decimal": 100_000_000_000,
+                    "hard_data_root_limit_bytes_decimal": 800_000_000_000,
                 },
             }
             manifest_sha256 = _digest(body)

@@ -78,7 +78,7 @@ only. VALIDATION and TEST never alter fitted state.
 ## Storage and acceptance
 
 The builder estimates output at 1,024 bytes per canonical input row plus fixed
-metadata overhead. Admission applies the repository's 100 GB hard root limit,
+metadata overhead. Admission applies the repository's 800 GB hard root limit,
 20 GB temporary limit, authoritative quota, and 50 GB free reserve before any
 write. An output that exceeds its admitted estimate fails without a manifest.
 

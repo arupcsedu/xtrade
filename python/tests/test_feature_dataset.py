@@ -1054,7 +1054,7 @@ def test_tick_grid_change_and_sample_input_contracts() -> None:
 def test_storage_admission_rejects_projected_dataset(tmp_path: Path) -> None:
     builder = FeatureDatasetBuilder(_universe(), _calendar())
     records = tuple(_record(session, 0) for session in range(87))
-    oversized = _FaultSource((INSTRUMENT_HEX,), records, reported_count=100_000_000)
+    oversized = _FaultSource((INSTRUMENT_HEX,), records, reported_count=800_000_000)
     with pytest.raises(RuntimeError, match="admission denied"):
         build_and_publish_feature_dataset(
             _repository(tmp_path), _quota(), builder, oversized
