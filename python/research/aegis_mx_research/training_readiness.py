@@ -72,6 +72,11 @@ EXTERNAL_FEATURES: Final = {
     "macro_event_flag": "event",
 }
 
+EVENT_FEATURE_KINDS: Final = {
+    "news_event_flag": "NEWS",
+    "macro_event_flag": "MACRO",
+}
+
 ALLOWED_DEGRADED_REASONS: Final = (
     "HALT_HISTORY_INCOMPLETE",
     "HISTORICAL_PROVIDER_PUBLICATION_TIME_UNOBSERVED",
@@ -84,14 +89,17 @@ ALLOWED_DEGRADED_REASONS: Final = (
 DEFAULT_BUILDER_SOURCES: Final = (
     "python/research/aegis_mx_research/canonical_minute.py",
     "python/research/aegis_mx_research/feature_dataset.py",
+    "python/research/aegis_mx_research/feature_events.py",
     "python/research/aegis_mx_research/forecast_contracts.py",
     "python/research/aegis_mx_research/real_minute_pipeline.py",
     "python/research/aegis_mx_research/reference_data.py",
     "python/research/aegis_mx_research/training_readiness.py",
     "tools/build_real_feature_dataset.py",
+    "tools/build_feature_event_snapshot.py",
     "tools/check_training_readiness.py",
     "schemas/canonical-minute-record-v1.schema.json",
     "schemas/feature-label-row-v1.schema.json",
+    "schemas/feature-event-snapshot-v1.schema.json",
     "schemas/feature-dataset-manifest-v1.schema.json",
     "schemas/training-readiness-report-v1.schema.json",
     "python/requirements-dev.lock",
@@ -412,6 +420,20 @@ def _feature_profile(  # noqa: C901
         )
     sector_empty = identity.get("sector_snapshot_sha256") == EMPTY_SNAPSHOT_SHA256
     event_empty = identity.get("event_snapshot_sha256") == EMPTY_SNAPSHOT_SHA256
+    raw_event_coverage = identity.get("event_feature_coverage")
+    covered_event_kinds: set[str] = set()
+    if isinstance(raw_event_coverage, list):
+        for raw in raw_event_coverage:
+            if not isinstance(raw, dict) or raw.get("kind") not in {"NEWS", "MACRO"}:
+                raise TrainingReadinessError(
+                    TrainingReadinessCode.CORRUPT_INPUT,
+                    "event feature coverage metadata is malformed",
+                )
+            covered_event_kinds.add(cast("str", raw["kind"]))
+    elif not event_empty:
+        # Legacy manifests authenticated only the combined event snapshot. Preserve
+        # their prior interpretation; new manifests identify coverage per family.
+        covered_event_kinds.update(("NEWS", "MACRO"))
     selected: list[str] = []
     excluded: list[dict[str, object]] = []
     for feature in FEATURE_NAMES:
@@ -428,7 +450,10 @@ def _feature_profile(  # noqa: C901
         source = EXTERNAL_FEATURES.get(feature)
         if source == "sector" and sector_empty:
             reasons.append("SECTOR_SNAPSHOT_UNAVAILABLE")
-        if source == "event" and event_empty:
+        if (
+            source == "event"
+            and EVENT_FEATURE_KINDS[feature] not in covered_event_kinds
+        ):
             reasons.append("EVENT_SNAPSHOT_UNAVAILABLE")
         typed_count = cast("int", count)
         typed_total = cast("int", total)
@@ -545,7 +570,7 @@ def _true_count(mask: object) -> int:
     return cast("int", value or 0)
 
 
-def _model_ready_profile(  # noqa: C901, PLR0912, PLR0915
+def _model_ready_profile(  # noqa: C901, PLR0915
     data_root: Path,
     objects: Sequence[Mapping[str, object]],
     selected_features: Sequence[str],
@@ -730,7 +755,7 @@ def _model_ready_profile(  # noqa: C901, PLR0912, PLR0915
     )
 
 
-def assess_training_readiness(  # noqa: C901, PLR0912, PLR0913, PLR0915
+def assess_training_readiness(  # noqa: C901, PLR0913, PLR0915
     *,
     data_root: Path,
     dataset_manifest_path: Path,

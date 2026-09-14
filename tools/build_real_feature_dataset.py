@@ -16,6 +16,7 @@ from aegis_mx_research.feature_dataset import (
     ParquetCanonicalSource,
     build_and_publish_feature_dataset,
 )
+from aegis_mx_research.feature_events import load_feature_event_snapshot
 from aegis_mx_research.forecast_contracts import (
     ExchangeCalendar,
     InstrumentResolutionCode,
@@ -162,7 +163,10 @@ def _partition_inputs(
 
 
 def build_real_feature_dataset(
-    data_root: Path, backfill_report: Path, promotion_report: Path
+    data_root: Path,
+    backfill_report: Path,
+    promotion_report: Path,
+    event_snapshot: Path | None = None,
 ) -> dict[str, object]:
     """Verify real inputs and publish the deterministic Prompt 57 dataset."""
     backfill = _read_document(backfill_report, "Alpaca backfill report")
@@ -183,7 +187,17 @@ def build_real_feature_dataset(
     if source.record_count != expected:
         msg = "canonical source count does not match its promotion report"
         raise ValueError(msg)
-    builder = FeatureDatasetBuilder(universe, calendar)
+    events = (
+        None
+        if event_snapshot is None
+        else load_feature_event_snapshot(
+            event_snapshot,
+            expected_universe_sha256=universe.universe_snapshot_sha256.hex(),
+            expected_source_universe_sha256=requested_universe_sha256,
+            expected_instrument_ids=tuple(source.instrument_ids),
+        )
+    )
+    builder = FeatureDatasetBuilder(universe, calendar, events=events)
     published = build_and_publish_feature_dataset(
         repository, _quota_evidence(data_root), builder, source
     )
@@ -191,6 +205,8 @@ def build_real_feature_dataset(
         "coverage_rows": len(published.coverage),
         "dataset_id": published.dataset_id,
         "leakage_status": published.leakage.status,
+        "event_snapshot_sha256": builder.events.sha256,
+        "event_feature_coverage": list(builder.events.coverage_document),
         "live_trading_capable": False,
         "manifest_path": str(published.manifest_path),
         "object_count": published.object_count,
@@ -208,6 +224,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--promotion-report", type=Path, default=DEFAULT_PROMOTION_REPORT
     )
+    parser.add_argument("--event-snapshot", type=Path)
     parser.add_argument("--execute", action="store_true")
     parsed = parser.parse_args(arguments)
     if not parsed.execute:
@@ -219,7 +236,10 @@ def main(arguments: Sequence[str] | None = None) -> int:
         }
     else:
         output = build_real_feature_dataset(
-            parsed.data_root, parsed.backfill_report, parsed.promotion_report
+            parsed.data_root,
+            parsed.backfill_report,
+            parsed.promotion_report,
+            parsed.event_snapshot,
         )
     print(json.dumps(output, indent=2, sort_keys=True))
     return 0

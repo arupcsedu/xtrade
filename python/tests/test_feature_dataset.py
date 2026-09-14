@@ -36,6 +36,7 @@ from aegis_mx_research.feature_dataset import (
     CanonicalPartitionInput,
     DatasetBuildCode,
     DatasetBuildError,
+    EventCoverage,
     EventIndex,
     FeatureDatasetBuilder,
     FeatureEventKind,
@@ -57,11 +58,14 @@ from aegis_mx_research.feature_dataset import (
 from aegis_mx_research.forecast_contracts import (
     REQUIRED_HORIZON_LABELS,
     ExchangeCalendar,
+    HorizonSpec,
+    HorizonTarget,
     InstrumentResolutionCode,
     StaticInstrumentResolver,
     TradingSession,
     UniverseSnapshot,
     parse_ticker_universe,
+    resolve_horizon,
 )
 from jsonschema import (  # type: ignore[import-untyped]
     Draft202012Validator,
@@ -256,6 +260,25 @@ def test_builder_derives_features_labels_summaries_and_deterministic_ids() -> No
     assert validate_leakage(samples, split, normalization).status == "PASS"
 
 
+def test_builder_fit_skips_future_labels_and_matches_reference(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    builder, source = _builder_events()
+    split = build_split_plan(builder.observed_sessions(source))
+    aggregates = builder.cross_sectional_aggregates(source)
+    reference = fit_normalization(
+        sample
+        for sample in builder.iter_samples(source, split, aggregates)
+        if sample.split == "TRAIN"
+    )
+
+    def unexpected_labels(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError
+
+    monkeypatch.setattr(FeatureDatasetBuilder, "_labels", unexpected_labels)
+    assert builder.fit(source, split, aggregates) == reference
+
+
 def test_cross_sectional_features_never_use_later_processed_bars() -> None:
     second_instrument = InstrumentId(Identifier128(0xA57, 2))
     second_hex = cast("Identifier128", second_instrument).hex()
@@ -363,6 +386,32 @@ def test_future_event_revision_is_not_exposed_and_direct_poison_is_rejected() ->
             max_event_availability_time_ns=after.knowledge_cutoff_time_ns + 1,
         )
     assert error.value.code is DatasetBuildCode.FUTURE_EVENT_REVISION
+
+
+def test_event_flags_distinguish_unobserved_source_from_observed_no_event(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    uncovered = EventIndex(())
+    assert uncovered.active(INSTRUMENT_HEX, BASE_NS)[:2] == (None, None)
+    coverage = EventCoverage(
+        FeatureEventKind.NEWS,
+        "TEST_NEWS",
+        BASE_NS,
+        BASE_NS + DAY_NS,
+        SOURCE_SHA,
+    )
+    covered = EventIndex((), (coverage,))
+    assert covered.active(INSTRUMENT_HEX, BASE_NS)[:2] == (False, None)
+    assert covered.active(INSTRUMENT_HEX, BASE_NS - 1)[:2] == (None, None)
+    with pytest.raises(DatasetBuildError):
+        replace(coverage, kind=cast("FeatureEventKind", "bad"))
+    with pytest.raises(DatasetBuildError):
+        replace(coverage, end_time_ns=BASE_NS)
+    with pytest.raises(DatasetBuildError):
+        EventIndex((), authenticated_snapshot_sha256="bad")
+    monkeypatch.setattr(feature_module, "MAX_EVENT_COVERAGE", 0)
+    with pytest.raises(DatasetBuildError):
+        EventIndex((), (coverage,))
 
 
 def test_future_corporate_action_invalidates_cross_action_label() -> None:
@@ -789,10 +838,12 @@ def test_sector_and_event_contract_guards(monkeypatch: pytest.MonkeyPatch) -> No
         BASE_NS + DAY_NS,
         SOURCE_SHA,
     )
-    assert EventIndex((event,)).active(INSTRUMENT_HEX, BASE_NS)[:2] == (False, True)
+    assert EventIndex((event,)).active(INSTRUMENT_HEX, BASE_NS)[:2] == (None, True)
     for event_changes in (
         {"kind": cast("FeatureEventKind", "bad")},
         {"event_time_ns": 0},
+        {"available_at_ns": BASE_NS - 1},
+        {"available_at_ns": BASE_NS + DAY_NS},
         {"source_sha256": "bad"},
     ):
         with pytest.raises(DatasetBuildError):
@@ -807,8 +858,95 @@ def test_sector_and_event_contract_guards(monkeypatch: pytest.MonkeyPatch) -> No
     )
     assert EventIndex((ignored_news,)).active(INSTRUMENT_HEX, BASE_NS)[:2] == (
         False,
+        None,
+    )
+
+
+def test_event_interval_index_finds_long_lived_older_event() -> None:
+    events = (
+        TemporalFeatureEvent(
+            "long-lived",
+            "revision-long",
+            FeatureEventKind.MACRO,
+            None,
+            BASE_NS,
+            BASE_NS,
+            BASE_NS + 10 * DAY_NS,
+            SOURCE_SHA,
+        ),
+        TemporalFeatureEvent(
+            "expired-newer",
+            "revision-expired",
+            FeatureEventKind.MACRO,
+            None,
+            BASE_NS + DAY_NS,
+            BASE_NS + DAY_NS,
+            BASE_NS + 2 * DAY_NS,
+            SOURCE_SHA,
+        ),
+        TemporalFeatureEvent(
+            "expired-newest",
+            "revision-newest",
+            FeatureEventKind.MACRO,
+            None,
+            BASE_NS + 3 * DAY_NS,
+            BASE_NS + 3 * DAY_NS,
+            BASE_NS + 4 * DAY_NS,
+            SOURCE_SHA,
+        ),
+    )
+    coverage = EventCoverage(
+        FeatureEventKind.MACRO,
+        "MACRO_FIXTURE",
+        BASE_NS,
+        BASE_NS + 12 * DAY_NS,
+        SOURCE_SHA,
+    )
+    index = EventIndex(events, (coverage,))
+    active = index.active(INSTRUMENT_HEX, BASE_NS + 5 * DAY_NS)
+    assert active[:2] == (None, True)
+    assert active[2] == ("long-lived",)
+    assert index.active(INSTRUMENT_HEX, BASE_NS + 10 * DAY_NS)[:2] == (
+        None,
         False,
     )
+
+
+def test_calendar_horizon_targets_are_bounded_and_cached_across_symbols(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    builder = FeatureDatasetBuilder(_universe(), _calendar())
+    source = InMemoryCanonicalSource(_records(), maximum_records=10_000)
+    record = next(source.iter_instrument(INSTRUMENT_HEX))
+    records_by_endpoint = {record.minute_end_exchange_time_ns: record}
+    original = resolve_horizon
+    calls = 0
+
+    def counted_resolve(
+        spec: HorizonSpec, as_of_ns: int, calendar: ExchangeCalendar
+    ) -> HorizonTarget:
+        nonlocal calls
+        calls += 1
+        return original(spec, as_of_ns, calendar)
+
+    monkeypatch.setattr(feature_module, "resolve_horizon", counted_resolve)
+    first = builder._labels(record, records_by_endpoint)
+    second = builder._labels(record, records_by_endpoint)
+    assert first == second
+    assert calls == len(builder.horizons)
+
+    builder._horizon_targets_by_endpoint[record.minute_end_exchange_time_ns] = tuple(
+        (None, None) for _ in builder.horizons
+    )
+    with pytest.raises(DatasetBuildError) as error:
+        builder._labels(record, records_by_endpoint)
+    assert error.value.code is DatasetBuildCode.CORRUPT_CANONICAL_INPUT
+
+    bounded = FeatureDatasetBuilder(_universe(), _calendar())
+    monkeypatch.setattr(feature_module, "MAX_AGGREGATE_POINTS", 0)
+    with pytest.raises(DatasetBuildError) as error:
+        bounded._horizon_targets(record.minute_end_exchange_time_ns)
+    assert error.value.code is DatasetBuildCode.STORAGE_LIMIT
 
 
 def test_fixture_source_and_split_contract_guards() -> None:
@@ -1024,6 +1162,9 @@ def test_tick_grid_change_and_sample_input_contracts() -> None:
     source_outside = _FaultSource(("ff" * 16,), ())
     with pytest.raises(DatasetBuildError):
         tuple(builder.iter_samples(source_outside, split, aggregates))
+    with pytest.raises(DatasetBuildError) as fit_error:
+        builder.fit(source_outside, split, aggregates)
+    assert fit_error.value.code is DatasetBuildCode.UNRESOLVED_INSTRUMENT
 
     records = list(_records())
     target_index = 5

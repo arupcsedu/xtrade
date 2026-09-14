@@ -22,25 +22,28 @@ report is published last only when all blocking checks pass.
 
 ## Current admitted training scope
 
-The POC can train pooled return models with 16 observed, nonconstant features:
+The POC can train pooled return models with 17 observed, nonconstant features:
 
 - five return windows;
 - volume, relative volume, realized volatility, and high-low range;
 - intraday gap, minute of session, and session position;
 - market return and market-relative return; and
-- rolling five-session return and volume.
+- rolling five-session return and volume; and
+- the SEC-filing-backed news-event flag.
 
-The current dataset excludes six columns from model input:
+The current dataset excludes five columns from model input:
 
 | Feature | Reason |
 | --- | --- |
 | Sector return and relative return | No accepted point-in-time sector snapshot and no TRAIN observations |
-| News and macro flags | Empty event snapshot and zero TRAIN variance |
+| Macro flag | No accepted ALFRED event snapshot and no TRAIN observations |
 | Data-quality valid flag and reason count | Constant in the fixed degraded-reference corpus |
 
-Zero in an excluded news or macro column is not interpreted as evidence that no
-event happened. Optional event sources can be added later only through a new
-point-in-time dataset build and identity.
+The news flag is selected only because the accepted SEC snapshot establishes
+source coverage and both active-event and observed-no-event values occur in
+TRAIN. The macro flag remains null: zero is never substituted for unavailable
+ALFRED coverage. Any later source addition requires a new point-in-time event
+snapshot, dataset build, and dataset identity.
 
 ## Sample admission
 
@@ -92,11 +95,18 @@ apply to the retained data and every derived artifact.
 export AEGIS_PYTHON_ENV=/scratch/djy8hg/env/aegis_mx_contracts
 export PYTHONPATH=python/research:python/contracts:python/intelligence:python/training:python/model_serving:.
 
+# Bind the exact accepted event-aware dataset; multiple immutable generations
+# may coexist and are never selected implicitly.
+MANIFEST=/scratch/djy8hg/aegis_mx_poc_data/datasets/feature-poc/manifests/499bfe4294d362e78d76644ac47e0064d3cbd73c9260eb6063d0cfd8ce25a22b.json
+
 # Inspect without publishing.
-$AEGIS_PYTHON_ENV/bin/python tools/check_training_readiness.py
+$AEGIS_PYTHON_ENV/bin/python tools/check_training_readiness.py \
+  --manifest "$MANIFEST"
 
 # Re-hash every object and publish the accepted report.
-$AEGIS_PYTHON_ENV/bin/python tools/check_training_readiness.py --execute
+$AEGIS_PYTHON_ENV/bin/python tools/check_training_readiness.py \
+  --manifest "$MANIFEST" \
+  --execute
 ```
 
 See [ADR 0061](../adr/0061-training-admission-with-degraded-source-evidence.md)

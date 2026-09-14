@@ -30,16 +30,41 @@ def test_real_feature_wiring_and_fail_closed_count(
         "_read_document",
         lambda _path, label: backfill if "backfill" in label else promotion,
     )
+    universe = SimpleNamespace(
+        universe_snapshot_sha256=SimpleNamespace(hex=lambda: "33" * 32)
+    )
+    calendar = object()
     monkeypatch.setattr(
-        tool, "_universe_and_calendar", lambda _body: (object(), object())
+        tool, "_universe_and_calendar", lambda _body: (universe, calendar)
     )
     monkeypatch.setattr(
         tool, "_partition_inputs", lambda _repository, _body, _universe: ()
     )
-    source = SimpleNamespace(record_count=2)
+    source = SimpleNamespace(record_count=2, instrument_ids=("instrument-1",))
     monkeypatch.setattr(tool, "ParquetCanonicalSource", lambda _partitions: source)
-    builder = object()
-    monkeypatch.setattr(tool, "FeatureDatasetBuilder", lambda *_args: builder)
+    event_index = SimpleNamespace(
+        sha256="22" * 32,
+        coverage_document=({"kind": "NEWS"},),
+    )
+    event_path = tmp_path / "events.json"
+
+    def load_events(path: Path, **expected: object) -> object:
+        assert path == event_path
+        assert expected == {
+            "expected_instrument_ids": ("instrument-1",),
+            "expected_source_universe_sha256": "11" * 32,
+            "expected_universe_sha256": "33" * 32,
+        }
+        return event_index
+
+    monkeypatch.setattr(tool, "load_feature_event_snapshot", load_events)
+    builder = SimpleNamespace(events=event_index)
+
+    def make_builder(*_args: object, events: object | None = None) -> object:
+        assert events is event_index
+        return builder
+
+    monkeypatch.setattr(tool, "FeatureDatasetBuilder", make_builder)
     monkeypatch.setattr(tool, "_quota_evidence", lambda _root: object())
     published = SimpleNamespace(
         coverage=tuple(range(948)),
@@ -54,9 +79,14 @@ def test_real_feature_wiring_and_fail_closed_count(
         tool, "build_and_publish_feature_dataset", lambda *_args: published
     )
     result = tool.build_real_feature_dataset(
-        tmp_path, tmp_path / "backfill.json", tmp_path / "promotion.json"
+        tmp_path,
+        tmp_path / "backfill.json",
+        tmp_path / "promotion.json",
+        event_path,
     )
     assert result["coverage_rows"] == 948
+    assert result["event_feature_coverage"] == [{"kind": "NEWS"}]
+    assert result["event_snapshot_sha256"] == "22" * 32
     assert result["leakage_status"] == "PASS"
     assert result["live_trading_capable"] is False
 

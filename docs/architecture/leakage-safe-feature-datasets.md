@@ -19,6 +19,11 @@ command is dry-run by default, verifies every partition hash and schema,
 requires its record count to match the promotion report, and publishes the
 feature dataset manifest last. It performs no network access.
 
+Optional news and macro inputs use the authenticated tri-state contract in
+[point-in-time feature events](point-in-time-feature-events.md). Source-unavailable
+is `null`, observed no-event is `0`, and an active event is `1`; these states are
+never collapsed during dataset construction.
+
 ## Inputs and trust boundaries
 
 - The ticker universe is bound by its source-file and universe-snapshot
@@ -91,18 +96,20 @@ It is published last.
 
 ## Accepted real build
 
-The 2026-09-13 verification closed the earlier zero-canonical-data blocker:
+The 2026-09-14 event-aware rebuild retained the accepted sample cardinality:
 4,000 accepted canonical partitions yielded 7,684,385 feature rows, 36,520
 session summaries, and 306 immutable objects. The leakage scan passed every
 sample. All 78 resolved symbols have at least 100 valid labels for each of the
 twelve horizons; unsupported OTC symbol `KRKNF` remains an abstention.
 
-The training gate selects the 16 observed, nonconstant price, volume,
-volatility, session, market-relative, and rolling-session features. It excludes
-the unavailable sector columns and constant empty event/data-quality columns;
-zero event flags are not treated as affirmative no-event evidence. See the
-[training-readiness contract](training-readiness.md) and the
-[real coverage report](../testing/forecasting-poc-label-coverage.md).
+The training gate selects 17 observed, nonconstant price, volume, volatility,
+session, market-relative, rolling-session, and SEC-backed news-event features.
+It excludes the unavailable sector columns, unavailable macro flag, and
+constant data-quality columns. The macro flag remains null rather than being
+converted to an affirmative no-event value. See the [training-readiness
+contract](training-readiness.md), [point-in-time feature-event
+contract](point-in-time-feature-events.md), and [real coverage
+report](../testing/forecasting-poc-label-coverage.md).
 
 Training admission additionally scans all feature Parquet in bounded batches.
 After intersecting complete selected features with valid labels, every horizon

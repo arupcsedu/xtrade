@@ -361,6 +361,45 @@ def test_ready_profile_excludes_unavailable_and_constant_features(
     Draft202012Validator(schema, format_checker=FormatChecker()).validate(report)
 
 
+def test_training_profile_uses_covered_variable_news_but_not_uncovered_macro(
+    tmp_path: Path,
+) -> None:
+    fixture = _fixture(tmp_path)
+
+    def add_news_coverage(body: dict[str, object]) -> None:
+        identity = cast("dict[str, object]", body["dataset_identity"])
+        identity["event_snapshot_sha256"] = "a" * 64
+        identity["event_feature_coverage"] = [
+            {
+                "end_time_ns": 300,
+                "kind": "NEWS",
+                "source_id": "SEC_EDGAR_ACCEPTED_FILINGS",
+                "source_snapshot_sha256": "b" * 64,
+                "start_time_ns": 1,
+            }
+        ]
+        normalization = cast("list[dict[str, object]]", identity["normalization"])
+        news = next(
+            item for item in normalization if item["feature_name"] == "news_event_flag"
+        )
+        news.update({"count": 1000, "sum": 100, "sum_squares": 100})
+
+    _rewrite_manifest(fixture, add_news_coverage)
+    report = _assess(fixture)
+    policy = cast("dict[str, object]", report["training_input_policy"])
+    selected = cast("list[str]", policy["selected_features"])
+    assert "news_event_flag" in selected
+    assert "macro_event_flag" not in selected
+    excluded = {
+        item["feature_name"]: item["reason_codes"]
+        for item in cast("list[dict[str, object]]", policy["excluded_features"])
+    }
+    assert excluded["macro_event_flag"] == [
+        "EVENT_SNAPSHOT_UNAVAILABLE",
+        "ZERO_TRAIN_VARIANCE",
+    ]
+
+
 def test_dirty_tree_and_skipped_verification_block_training(tmp_path: Path) -> None:
     fixture = _fixture(tmp_path)
     dirty = _assess(fixture, provenance=_provenance(dirty=True))
@@ -726,6 +765,22 @@ def test_feature_and_coverage_metadata_reject_malformed_contracts() -> None:
     identity["normalization"] = malformed_values
     with pytest.raises(TrainingReadinessError, match="normalization values"):
         readiness._feature_profile(identity)
+
+    identity["normalization"] = _normalization()
+    identity["event_feature_coverage"] = [{}]
+    with pytest.raises(TrainingReadinessError, match="event feature coverage"):
+        readiness._feature_profile(identity)
+    identity.pop("event_feature_coverage")
+    identity["event_snapshot_sha256"] = "a" * 64
+    normalization = cast("list[dict[str, object]]", identity["normalization"])
+    for feature_name in ("news_event_flag", "macro_event_flag"):
+        stat = next(
+            item for item in normalization if item["feature_name"] == feature_name
+        )
+        stat.update({"count": 10, "sum": 1, "sum_squares": 1})
+    selected, _excluded = readiness._feature_profile(identity)
+    assert "news_event_flag" in selected
+    assert "macro_event_flag" in selected
 
     with pytest.raises(TrainingReadinessError, match="not an array"):
         readiness._coverage_profile({}, ("AAA",), 100)

@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 import os
+from bisect import bisect_right
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import StrEnum
@@ -50,6 +51,7 @@ PPM_SCALE: Final = 1_000_000
 MAX_INT64: Final = (1 << 63) - 1
 MINUTE_NS: Final = 60_000_000_000
 MAX_EVENTS: Final = 1_000_000
+MAX_EVENT_COVERAGE: Final = 32
 MAX_SECTOR_REVISIONS: Final = 100_000
 MAX_RECORDS_PER_INSTRUMENT: Final = 1_000_000
 DEFAULT_OUTPUT_BYTES_PER_SAMPLE: Final = 1_024
@@ -143,6 +145,47 @@ class FeatureEventKind(StrEnum):
 
     NEWS = "NEWS"
     MACRO = "MACRO"
+
+
+@dataclass(frozen=True, slots=True)
+class EventCoverage:
+    """A source assertion that one event family was observed over an interval."""
+
+    kind: FeatureEventKind
+    source_id: str
+    start_time_ns: int
+    end_time_ns: int
+    source_snapshot_sha256: str
+
+    def __post_init__(self) -> None:
+        """Reject ambiguous sources, timestamps, and snapshot identities."""
+        if not isinstance(self.kind, FeatureEventKind):
+            raise DatasetBuildError(
+                DatasetBuildCode.INVALID_CONFIGURATION, "event coverage kind is invalid"
+            )
+        _require_text(self.source_id, "event coverage source_id")
+        if not 0 < self.start_time_ns < self.end_time_ns <= MAX_INT64:
+            raise DatasetBuildError(
+                DatasetBuildCode.INVALID_CONFIGURATION,
+                "event coverage interval is invalid",
+            )
+        _require_sha256(
+            self.source_snapshot_sha256, "event coverage source_snapshot_sha256"
+        )
+
+    def covers(self, timestamp_ns: int) -> bool:
+        """Return whether the half-open source interval covers a timestamp."""
+        return self.start_time_ns <= timestamp_ns < self.end_time_ns
+
+    def document(self) -> dict[str, object]:
+        """Return the stable representation included in dataset identity."""
+        return {
+            "end_time_ns": self.end_time_ns,
+            "kind": self.kind.value,
+            "source_id": self.source_id,
+            "source_snapshot_sha256": self.source_snapshot_sha256,
+            "start_time_ns": self.start_time_ns,
+        }
 
 
 class _HexIdentifier(Protocol):
@@ -369,7 +412,7 @@ class TemporalFeatureEvent:
             )
         if not (
             0 < self.event_time_ns < self.valid_until_ns <= MAX_INT64
-            and 0 < self.available_at_ns <= MAX_INT64
+            and self.event_time_ns <= self.available_at_ns < self.valid_until_ns
         ):
             raise DatasetBuildError(
                 DatasetBuildCode.INVALID_CONFIGURATION,
@@ -378,10 +421,44 @@ class TemporalFeatureEvent:
         _require_sha256(self.source_sha256, "event source_sha256")
 
 
+class _TemporalIntervalIndex:
+    """Immutable interval lookup with no full-history scan per feature row."""
+
+    def __init__(self, events: Sequence[TemporalFeatureEvent]) -> None:
+        """Sort intervals and retain prefix maximum ends for bounded lookup."""
+        self._events = tuple(
+            sorted(events, key=lambda item: (item.event_time_ns, item.record_id))
+        )
+        self._starts = tuple(item.event_time_ns for item in self._events)
+        maximum_end = 0
+        prefix_maximum_ends: list[int] = []
+        for event in self._events:
+            maximum_end = max(maximum_end, event.valid_until_ns)
+            prefix_maximum_ends.append(maximum_end)
+        self._prefix_maximum_ends = tuple(prefix_maximum_ends)
+
+    def active(self, as_of_ns: int) -> tuple[TemporalFeatureEvent, ...]:
+        """Return known active intervals without scanning expired history."""
+        index = bisect_right(self._starts, as_of_ns) - 1
+        result: list[TemporalFeatureEvent] = []
+        while index >= 0 and self._prefix_maximum_ends[index] > as_of_ns:
+            event = self._events[index]
+            if event.available_at_ns <= as_of_ns < event.valid_until_ns:
+                result.append(event)
+            index -= 1
+        return tuple(result)
+
+
 class EventIndex:
     """Immutable advisory-event index that exposes no future revisions."""
 
-    def __init__(self, events: Sequence[TemporalFeatureEvent]) -> None:
+    def __init__(
+        self,
+        events: Sequence[TemporalFeatureEvent],
+        coverage: Sequence[EventCoverage] | None = None,
+        *,
+        authenticated_snapshot_sha256: str | None = None,
+    ) -> None:
         """Index bounded events and reject repeated record identities."""
         if len(events) > MAX_EVENTS or len({item.record_id for item in events}) != len(
             events
@@ -398,50 +475,96 @@ class EventIndex:
             elif event.instrument_id is not None:
                 by_instrument[event.instrument_id].append(event)
         self._news = {
-            key: tuple(
-                sorted(values, key=lambda item: (item.event_time_ns, item.record_id))
-            )
-            for key, values in by_instrument.items()
+            key: _TemporalIntervalIndex(values) for key, values in by_instrument.items()
         }
-        self._macro = tuple(
-            sorted(macro, key=lambda item: (item.event_time_ns, item.record_id))
+        self._macro = _TemporalIntervalIndex(macro)
+        inferred_coverage = tuple(
+            EventCoverage(
+                kind,
+                "INFERRED_FROM_EVENTS",
+                min(item.event_time_ns for item in values),
+                max(item.valid_until_ns for item in values),
+                _digest(
+                    [
+                        item.source_sha256
+                        for item in sorted(values, key=lambda value: value.record_id)
+                    ]
+                ),
+            )
+            for kind in FeatureEventKind
+            if (values := tuple(item for item in events if item.kind is kind))
         )
-        self.sha256 = _digest(
-            [
-                {
-                    "available_at_ns": item.available_at_ns,
-                    "event_time_ns": item.event_time_ns,
-                    "instrument_id": item.instrument_id,
-                    "kind": item.kind.value,
-                    "record_id": item.record_id,
-                    "revision_id": item.revision_id,
-                    "source_sha256": item.source_sha256,
-                    "valid_until_ns": item.valid_until_ns,
-                }
-                for item in sorted(events, key=lambda value: value.record_id)
-            ]
+        supplied_coverage = inferred_coverage if coverage is None else tuple(coverage)
+        if len(supplied_coverage) > MAX_EVENT_COVERAGE:
+            raise DatasetBuildError(
+                DatasetBuildCode.INVALID_CONFIGURATION,
+                "event coverage count exceeds its bound",
+            )
+        self._coverage = tuple(
+            sorted(
+                supplied_coverage,
+                key=lambda item: (
+                    item.kind.value,
+                    item.source_id,
+                    item.start_time_ns,
+                    item.end_time_ns,
+                ),
+            )
         )
+        event_documents = [
+            {
+                "available_at_ns": item.available_at_ns,
+                "event_time_ns": item.event_time_ns,
+                "instrument_id": item.instrument_id,
+                "kind": item.kind.value,
+                "record_id": item.record_id,
+                "revision_id": item.revision_id,
+                "source_sha256": item.source_sha256,
+                "valid_until_ns": item.valid_until_ns,
+            }
+            for item in sorted(events, key=lambda value: value.record_id)
+        ]
+        content_sha256 = _digest(
+            {
+                "coverage": [item.document() for item in self._coverage],
+                "events": event_documents,
+            }
+        )
+        if authenticated_snapshot_sha256 is not None:
+            _require_sha256(
+                authenticated_snapshot_sha256, "authenticated event snapshot SHA-256"
+            )
+        self.sha256 = authenticated_snapshot_sha256 or content_sha256
+        self.content_sha256 = content_sha256
+
+    @property
+    def coverage_document(self) -> tuple[dict[str, object], ...]:
+        """Return immutable coverage metadata for dataset and readiness checks."""
+        return tuple(item.document() for item in self._coverage)
 
     def active(
         self, instrument_id: str, as_of_ns: int
-    ) -> tuple[bool, bool, tuple[str, ...], int]:
+    ) -> tuple[bool | None, bool | None, tuple[str, ...], int]:
         """Return news/macro flags and exact point-in-time provenance."""
-        news = tuple(
-            item
-            for item in self._news.get(instrument_id, ())
-            if item.available_at_ns <= as_of_ns
-            and item.event_time_ns <= as_of_ns < item.valid_until_ns
+        news_covered = any(
+            item.kind is FeatureEventKind.NEWS and item.covers(as_of_ns)
+            for item in self._coverage
         )
-        macro = tuple(
-            item
-            for item in self._macro
-            if item.available_at_ns <= as_of_ns
-            and item.event_time_ns <= as_of_ns < item.valid_until_ns
+        macro_covered = any(
+            item.kind is FeatureEventKind.MACRO and item.covers(as_of_ns)
+            for item in self._coverage
         )
+        news_index = self._news.get(instrument_id)
+        news = (
+            ()
+            if not news_covered or news_index is None
+            else news_index.active(as_of_ns)
+        )
+        macro = () if not macro_covered else self._macro.active(as_of_ns)
         selected = news + macro
         return (
-            bool(news),
-            bool(macro),
+            bool(news) if news_covered else None,
+            bool(macro) if macro_covered else None,
             tuple(sorted(item.record_id for item in selected)),
             max((item.available_at_ns for item in selected), default=0),
         )
@@ -1063,6 +1186,13 @@ def fit_normalization(
             )
         for accumulator, value in zip(accumulators, sample.raw_features, strict=True):
             accumulator.add(value, sample.as_of_exchange_time_ns)
+    return _freeze_normalization(accumulators)
+
+
+def _freeze_normalization(
+    accumulators: Sequence[_StatAccumulator],
+) -> tuple[NormalizationStat, ...]:
+    """Freeze accumulators in the canonical feature order."""
     return tuple(
         NormalizationStat(
             name,
@@ -1218,9 +1348,9 @@ class FeatureDatasetBuilder:
         self.horizons = required_horizon_specs(calendar.calendar_version)
         self.maximum_records_per_instrument = maximum_records_per_instrument
         self._session_by_id = {item.session_id: item for item in calendar.sessions}
-        self._calendar_session_order = {
-            item.session_id: index for index, item in enumerate(calendar.sessions)
-        }
+        self._horizon_targets_by_endpoint: dict[
+            int, tuple[tuple[int | None, str | None], ...]
+        ] = {}
         self._resolved = {
             cast("_HexIdentifier", entry.instrument_id).hex(): entry
             for entry in universe.ordered_entries
@@ -1395,12 +1525,11 @@ class FeatureDatasetBuilder:
     ) -> tuple[FeatureLabel, ...]:
         labels: list[FeatureLabel] = []
         action_version = self._corporate_action_version(record)
-        for horizon in self.horizons:
-            try:
-                target_time = resolve_horizon(
-                    horizon, record.minute_end_exchange_time_ns, self.calendar
-                ).target_exchange_event_time_ns
-            except HorizonContractError as error:
+        target_resolutions = self._horizon_targets(record.minute_end_exchange_time_ns)
+        for horizon, (target_time, resolution_error) in zip(
+            self.horizons, target_resolutions, strict=True
+        ):
+            if resolution_error is not None:
                 labels.append(
                     FeatureLabel(
                         horizon.label,
@@ -1410,10 +1539,15 @@ class FeatureDatasetBuilder:
                         None,
                         action_version,
                         LabelValidity.MISSING,
-                        error.code.name,
+                        resolution_error,
                     )
                 )
                 continue
+            if target_time is None:
+                raise DatasetBuildError(
+                    DatasetBuildCode.CORRUPT_CANONICAL_INPUT,
+                    "cached horizon target has no timestamp or error",
+                )
             target = records_by_endpoint.get(target_time)
             if target is None:
                 labels.append(
@@ -1465,6 +1599,32 @@ class FeatureDatasetBuilder:
                 )
             )
         return tuple(labels)
+
+    def _horizon_targets(
+        self, as_of_exchange_time_ns: int
+    ) -> tuple[tuple[int | None, str | None], ...]:
+        """Resolve calendar-only targets once per timestamp across all symbols."""
+        cached = self._horizon_targets_by_endpoint.get(as_of_exchange_time_ns)
+        if cached is not None:
+            return cached
+        if len(self._horizon_targets_by_endpoint) >= MAX_AGGREGATE_POINTS:
+            raise DatasetBuildError(
+                DatasetBuildCode.STORAGE_LIMIT,
+                "horizon target cache point bound is exceeded",
+            )
+        resolutions: list[tuple[int | None, str | None]] = []
+        for horizon in self.horizons:
+            try:
+                target_time = resolve_horizon(
+                    horizon, as_of_exchange_time_ns, self.calendar
+                ).target_exchange_event_time_ns
+            except HorizonContractError as error:
+                resolutions.append((None, error.code.name))
+            else:
+                resolutions.append((target_time, None))
+        result = tuple(resolutions)
+        self._horizon_targets_by_endpoint[as_of_exchange_time_ns] = result
+        return result
 
     @staticmethod
     def _summaries_for_records(
@@ -1611,8 +1771,8 @@ class FeatureDatasetBuilder:
             sector_relative,
             rolling_return,
             rolling_volume,
-            int(news),
-            int(macro),
+            None if news is None else int(news),
+            None if macro is None else int(macro),
             int(record.data_quality_state is MinuteDataQuality.VALID),
             len(record.data_quality_reasons),
         )
@@ -1663,16 +1823,20 @@ class FeatureDatasetBuilder:
             }
             summaries = self._summaries_for_records(records)
             summaries_by_session = {item.session_id: item for item in summaries}
+            prior_summaries_by_session: dict[str, tuple[SessionSummary, ...]] = {}
+            accumulated_summaries: list[SessionSummary] = []
+            for session in self.calendar.sessions:
+                prior_summaries_by_session[session.session_id] = tuple(
+                    accumulated_summaries
+                )
+                summary = summaries_by_session.get(session.session_id)
+                if summary is not None:
+                    accumulated_summaries.append(summary)
             for record in records:
                 split = split_plan.session_splits.get(record.session_id)
                 if split is None:
                     continue
-                session_index = self._calendar_session_order[record.session_id]
-                prior_summaries = tuple(
-                    summaries_by_session[item.session_id]
-                    for item in self.calendar.sessions[:session_index]
-                    if item.session_id in summaries_by_session
-                )
+                prior_summaries = prior_summaries_by_session[record.session_id]
                 raw, validity, reasons, event_ids, event_availability = (
                     self._feature_values(
                         record,
@@ -1747,13 +1911,41 @@ class FeatureDatasetBuilder:
         split_plan: SplitPlan,
         aggregates: Mapping[int, AggregatePoint],
     ) -> tuple[NormalizationStat, ...]:
-        """Run the second pass and fit only rows assigned to TRAIN."""
-        samples = (
-            sample
-            for sample in self.iter_samples(source, split_plan, aggregates)
-            if sample.split == "TRAIN"
-        )
-        return fit_normalization(samples)
+        """Fit TRAIN features without constructing unused labels or row hashes."""
+        accumulators = [_StatAccumulator() for _ in FEATURE_NAMES]
+        for instrument_id in source.instrument_ids:
+            if instrument_id not in self._resolved:
+                raise DatasetBuildError(
+                    DatasetBuildCode.UNRESOLVED_INSTRUMENT,
+                    "source instrument is not resolved in the universe",
+                )
+            records = self._records(source, instrument_id)
+            records_by_endpoint = {
+                record.minute_end_exchange_time_ns: record for record in records
+            }
+            summaries = self._summaries_for_records(records)
+            summaries_by_session = {item.session_id: item for item in summaries}
+            prior_summaries_by_session: dict[str, tuple[SessionSummary, ...]] = {}
+            accumulated_summaries: list[SessionSummary] = []
+            for session in self.calendar.sessions:
+                prior_summaries_by_session[session.session_id] = tuple(
+                    accumulated_summaries
+                )
+                summary = summaries_by_session.get(session.session_id)
+                if summary is not None:
+                    accumulated_summaries.append(summary)
+            for record in records:
+                if split_plan.session_splits.get(record.session_id) != "TRAIN":
+                    continue
+                raw, _, _, _, _ = self._feature_values(
+                    record,
+                    records_by_endpoint,
+                    prior_summaries_by_session[record.session_id],
+                    aggregates,
+                )
+                for accumulator, value in zip(accumulators, raw, strict=True):
+                    accumulator.add(value, record.minute_end_exchange_time_ns)
+        return _freeze_normalization(accumulators)
 
 
 def build_label_coverage(
@@ -2137,6 +2329,7 @@ def build_and_publish_feature_dataset(
         "calendar_version": calendar_version,
         "dataset_seed": DATASET_SEED,
         "event_snapshot_sha256": builder.events.sha256,
+        "event_feature_coverage": list(builder.events.coverage_document),
         "feature_names": list(FEATURE_NAMES),
         "horizons": list(REQUIRED_HORIZON_LABELS),
         "schema_version": FEATURE_DATASET_SCHEMA_VERSION,

@@ -15,6 +15,7 @@ aegis-data = "aegis_mx_research.data_cli:cli_main"
 aegis-alpaca-data = "aegis_mx_research.alpaca_historical:cli_main"
 aegis-real-minute = "aegis_mx_research.real_minute_pipeline:cli_main"
 aegis-real-features = "tools.build_real_feature_dataset:cli_main"
+aegis-feature-events = "tools.build_feature_event_snapshot:cli_main"
 aegis-training-readiness = "tools.check_training_readiness:cli_main"
 aegis-reference = "aegis_mx_research.reference_data:cli_main"
 aegis-sec-edgar = "aegis_mx_research.sec_edgar:cli_main"
@@ -80,6 +81,7 @@ packages = [
 "schemas/canonical-minute-record-v1.schema.json" = "schemas/canonical-minute-record-v1.schema.json"
 "schemas/canonical-minute-quality-report-v1.schema.json" = "schemas/canonical-minute-quality-report-v1.schema.json"
 "schemas/feature-label-row-v1.schema.json" = "schemas/feature-label-row-v1.schema.json"
+"schemas/feature-event-snapshot-v1.schema.json" = "schemas/feature-event-snapshot-v1.schema.json"
 "schemas/derived-session-summary-v1.schema.json" = "schemas/derived-session-summary-v1.schema.json"
 "schemas/feature-label-coverage-v1.schema.json" = "schemas/feature-label-coverage-v1.schema.json"
 "schemas/feature-dataset-manifest-v1.schema.json" = "schemas/feature-dataset-manifest-v1.schema.json"
@@ -136,6 +138,7 @@ include = [
   "/schemas/canonical-minute-record-v1.schema.json",
   "/schemas/canonical-minute-quality-report-v1.schema.json",
   "/schemas/feature-label-row-v1.schema.json",
+  "/schemas/feature-event-snapshot-v1.schema.json",
   "/schemas/derived-session-summary-v1.schema.json",
   "/schemas/feature-label-coverage-v1.schema.json",
   "/schemas/feature-dataset-manifest-v1.schema.json",
@@ -245,8 +248,18 @@ ignore = [
   "PLR0915",
   "TRY301",
 ]
-"python/research/aegis_mx_research/training_readiness.py" = ["TRY301"]
+"python/research/aegis_mx_research/feature_events.py" = [
+  "C901",
+  "EM101",
+  "EM102",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
+  "TRY003",
+]
+"python/research/aegis_mx_research/training_readiness.py" = ["PLR0912", "TRY301"]
 "python/tests/test_feature_dataset.py" = ["SLF001"]
+"python/tests/test_feature_events.py" = ["C901", "SLF001"]
 "python/research/aegis_mx_research/store.py" = [
   "EM101",
   "EM102",

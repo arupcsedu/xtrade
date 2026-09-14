@@ -333,6 +333,14 @@ value. These are offline research contracts and grant no
 trading authority. See
 [ADR 0059](../docs/adr/0059-multi-pass-leakage-safe-feature-datasets.md).
 
+The additive
+[feature-event snapshot](feature-event-snapshot-v1.schema.json) authenticates
+the point-in-time event inputs used by those rows. It distinguishes covered
+no-event observations (`0`) from unavailable source coverage (`null`), binds
+each event to explicit availability and validity times, and independently
+identifies NEWS and MACRO source coverage. See
+[ADR 0063](../docs/adr/0063-tristate-point-in-time-feature-events.md).
+
 The Prompt 57-to-58 boundary is the closed
 [training-readiness report](training-readiness-report-v1.schema.json). It binds
 the accepted dataset, verified object bytes, exact source/dependency hashes,
